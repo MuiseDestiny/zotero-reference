@@ -17,8 +17,12 @@
 ## TODO
 - [ ] 根据反馈，是否需要在主界面（非阅读状态）添加`参考文献`到侧边栏，目前仅阅读状态下添加
 - [ ] 是否需要全部导入，或多选导入功能
-- [ ] 是否需要中文支持
+- [ ] 是否需要中文支持，如果需要请提供网站或参考文献获取方案
 - [ ] 是否需要针对特定期刊改变参考文献获取策略
+
+## 说明
+
+1. 本插件的自动关联功能与`scihub`插件不兼容
 
 ## 致谢
 
@@ -27,4 +31,5 @@
 - [zotero-addon-template](https://github.com/windingwind/zotero-addon-template)
 
 代码参考：
+
 - [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
