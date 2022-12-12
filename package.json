@@ -1,8 +1,8 @@
 {
   "name": "zotero-reference",
-  "addonName": "Zotero Addon Template",
+  "addonName": "Zotero Reference",
   "addonID": "zoteroreference@polygon.org",
-  "addonRef": "addontemplate",
+  "addonRef": "zoteroreference",
   "version": "0.0.0",
   "description": "Zotero Reference",
   "main": "src/index.js",
@@ -17,16 +17,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/windingwind/zotero-addon-template.git"
+    "url": "git+https://github.com/MuiseDestiny/zotero-reference.git"
   },
-  "author": "windingwind",
+  "author": "Polygon",
   "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/windingwind/zotero-addon-template/issues"
+    "url": "https://github.com/MuiseDestiny/zotero-reference/issues"
   },
-  "homepage": "https://github.com/windingwind/zotero-addon-template#readme",
-  "releasepage": "https://github.com/windingwind/zotero-addon-template/releases/latest/download/zotero-addon-template.xpi",
-  "updaterdf": "https://raw.githubusercontent.com/windingwind/zotero-addon-template/master/update.rdf",
+  "homepage": "https://github.com/MuiseDestiny/zotero-reference#readme",
+  "releasepage": "https://github.com/MuiseDestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
+  "updaterdf": "https://raw.githubusercontent.com/MuiseDestiny/zotero-reference/master/update.rdf",
   "dependencies": {
     "compressing": "^1.5.1",
     "esbuild": "^0.14.34",
