@@ -1,7 +1,4 @@
 {
-  "scripts": {
-    "release": "dotenv release-it --"
-  },
   "npm": {
     "publish": false
   },
