@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "release": "read -p 'GITHUB_TOKEN: ' GITHUB_TOKEN && export GITHUB_TOKEN=$GITHUB_TOKEN && release-it"
+  },
   "npm": {
     "publish": false
   },
