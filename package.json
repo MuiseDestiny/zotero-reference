@@ -1,10 +1,10 @@
 {
-  "name": "zotero-addon-template",
+  "name": "zotero-reference",
   "addonName": "Zotero Addon Template",
-  "addonID": "addontemplate@euclpts.com",
+  "addonID": "zoteroreference@polygon.org",
   "addonRef": "addontemplate",
   "version": "0.0.0",
-  "description": "Zotero Addon Template",
+  "description": "Zotero Reference",
   "main": "src/index.js",
   "scripts": {
     "build": "node build.js",

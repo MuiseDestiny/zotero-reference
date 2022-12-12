@@ -12,47 +12,52 @@ class AddonEvents extends AddonModule {
         ids: Array<string>,
         extraData: object
       ) => {
-        // You can add your code to the corresponding notify type
         if (
           event == "select" &&
           type == "tab" &&
           extraData[ids[0]].type == "reader"
         ) {
-          // Select a reader tab
-        }
-        if (event == "add" && type == "item") {
-          // Add an item
+          this.Zotero.debug("ZoteroReference: open attachment event detected.");
+          let reader = this.Zotero.Reader.getByTabID(ids[0]);
+          let delayCount = 0;
+          while (!reader && delayCount < 10) {
+            await this.Zotero.Promise.delay(100);
+            reader = this.Zotero.Reader.getByTabID(ids[0]);
+            delayCount++;
+          }
+          await reader._initPromise;
+          await this.onReaderSelect(reader);
         }
       },
     };
   }
 
-  public async onInit(_Zotero) {
+  public async onInit() {
     // This function is the setup code of the addon
-    console.log(`${addonName}: init called`);
-    _Zotero.debug(`${addonName}: init called`);
+    this.debug(`${addonName}: init called`);
     // alert(112233);
 
     // Reset prefs
     this.resetState();
+    this.Addon.views.initViews();
 
     // Register the callback in Zotero as an item observer
-    let notifierID = _Zotero.Notifier.registerObserver(this.notifierCallback, [
+    let notifierID = this.Zotero.Notifier.registerObserver(this.notifierCallback, [
       "tab",
       "item",
       "file",
     ]);
 
     // Unregister callback when the window closes (important to avoid a memory leak)
-    _Zotero.getMainWindow().addEventListener(
+    this.Zotero.getMainWindow().addEventListener(
       "unload",
-      function (e) {
-        _Zotero.Notifier.unregisterObserver(notifierID);
+      (e) => {
+        this.Zotero.Notifier.unregisterObserver(notifierID);
       },
       false
     );
 
-    this._Addon.views.initViews(_Zotero);
+    
   }
 
   private resetState(): void {
@@ -68,13 +73,17 @@ class AddonEvents extends AddonModule {
     // }
   }
 
-  public onUnInit(_Zotero): void {
-    console.log(`${addonName}: uninit called`);
-    _Zotero.debug(`${addonName}: uninit called`);
+  public async onReaderSelect(reader): Promise<void> {
+    this.debug(this.Addon)
+    await this.Addon.views.updateReferencePanel(reader);
+  }
+
+  public onUnInit(): void {
+    this.debug(`${addonName}: uninit called`);
     //  Remove elements and do clean up
-    this._Addon.views.unInitViews(_Zotero);
+    this.Addon.views.unInitViews();
     // Remove addon object
-    _Zotero.AddonTemplate = undefined;
+    this.Zotero.AddonTemplate = undefined;
   }
 }
 
