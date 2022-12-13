@@ -59,7 +59,7 @@ function shutdown(data, reason) {
   var _Zotero = Components.classes["@zotero.org/Zotero;1"].getService(
     Components.interfaces.nsISupports
   ).wrappedJSObject;
-  _Zotero.AddonTemplate.events.onUnInit(_Zotero);
+  _Zotero.ZoteroReference.events.onUnInit(_Zotero);
 
   Cc["@mozilla.org/intl/stringbundle;1"]
     .getService(Components.interfaces.nsIStringBundleService)

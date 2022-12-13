@@ -61,16 +61,6 @@ class AddonEvents extends AddonModule {
   }
 
   private resetState(): void {
-    /* 
-      For prefs that could be simply set to a static default value,
-      Please use addon/defaults/preferences/defaults.js
-      Reset other preferrences here.
-      Uncomment to use the example code.
-    */
-    // let testPref = Zotero.Prefs.get("addonTemplate.testPref");
-    // if (typeof testPref === "undefined") {
-    //   Zotero.Prefs.set("addonTemplate.testPref", true);
-    // }
   }
 
   public async onReaderSelect(reader): Promise<void> {
@@ -83,7 +73,7 @@ class AddonEvents extends AddonModule {
     //  Remove elements and do clean up
     this.Addon.views.unInitViews();
     // Remove addon object
-    this.Zotero.AddonTemplate = undefined;
+    this.Zotero.ZoteroReference = undefined;
   }
 }
 

@@ -20,16 +20,21 @@ class AddonViews extends AddonModule {
 
   public initViews() {
     this.debug("Initializing UI");
+    let reader = this.getReader()
+    if (reader) {
+      this.reader = reader
+      this.buildSideBarPanel()
+    }
   }
 
   public async updateReferencePanel(reader: _ZoteroReader) {
     // reference Zotero-PDF-Translate
     this.debug("updateReferencePanel is called")
     await this.Zotero.uiReadyPromise;
-
-    if (!reader) {
-      return false;
+    if (!this.Zotero.ZoteroReference) {
+      return this.removeSideBarPanel()
     }
+    if (!reader) { return false }
 
     this.debug("ZoteroPDFTranslate: Update Translate Panels");
 
@@ -40,11 +45,19 @@ class AddonViews extends AddonModule {
     await this.buildSideBarPanel();
   }
 
+  public removeSideBarPanel() {
+    try {
+      const tabContainer = this.document.querySelector(`#${this.window.Zotero_Tabs.selectedID}-context`);
+      tabContainer.querySelector("#zotero-reference-tab").remove()
+      tabContainer.querySelector("#zotero-reference-tabpanel").remove()
+    } catch (e) {}
+  }
+
   async buildSideBarPanel() {
     this.debug("buildSideBarPanel");
     const tabContainer = this.document.querySelector(`#${this.window.Zotero_Tabs.selectedID}-context`);
 
-    if (tabContainer.querySelector("#zotero-reference-tab")) {
+    if (!tabContainer || tabContainer.querySelector("#zotero-reference-tab")) {
       return
     }
 
@@ -121,7 +134,8 @@ class AddonViews extends AddonModule {
   }
 
   public async refreshReference(tabpanel, item) {
-    let getRefData = async (DOI: string) => {
+    
+    let getRefDataFromCrossref = async (DOI: string) => {
       // request or read data
       let refData
       if (DOI in this.Addon.DOIRefData) {
@@ -168,19 +182,78 @@ class AddonViews extends AddonModule {
       }
       return data
     }
+
+    let getRefDataFromCNKI = async (URL: string) => {
+      let refData
+      if (URL in this.Addon.DOIRefData) {
+        refData = this.Addon.DOIRefData[URL]
+      } else {
+        this.debug("get by CNKI", URL)
+        // URL - https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&dbname=CJFDLAST2022&filename=ZYJH202209006&uniplatform=NZKPT&v=4RWl_k1sYrO5ij1n5KXGDdusm5zXyjI12tpcPkSPI4OMnblizxXSTsDcSTbO-AqK
+        //       https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=CJFD&filename=zyjh202209006&RefType=1&vl=
+        let args = this.parseCnkiURL(URL)
+        let htmltext
+        htmltext = (await this.Zotero.HTTP.request(
+          "GET",
+          URL,
+          {
+            responseType: "text"
+          }
+        )).response
+        const vl = htmltext.match(/id="v".+?value="(.+?)"/)[1]
+        this.debug("vl", vl);
+        htmltext = (await this.Zotero.HTTP.request(
+          "GET",
+          `https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=${args.DbCode}&filename=${args.FileName}&RefType=1&vl=${vl}`,
+          {
+            reponseType: "text",
+            headers: {
+              "Referer": `https://kns.cnki.net/kcms/detail/detail.aspx?filename=${args.FileName}`
+            }
+          }
+        )).response
+        let parser = new this.window.DOMParser()
+        const HTML = parser.parseFromString(htmltext, "text/html").body as HTMLElement
+        let refData = [];
+        [...HTML.querySelectorAll("ul li")]
+          .forEach((li: HTMLLIElement) => {
+            let data = {}
+            let a = li.querySelector("a[href]")
+            if (a) {
+              try {
+                args = this.parseCnkiURL(a.getAttribute("href"))
+                data["url"] = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
+              } catch {}
+            }
+            data["unstructured"] = li.innerText
+              .replace(/\n/g, "")
+              .replace(/\[\d+?\]/g, "")
+              .replace(/\s+/g, "")
+              .replace(/\./g, ". ")
+            refData.push(data)
+          })
+        this.Addon.DOIRefData[URL] = refData
+      }
+      return refData;
+    }
+
     let itemDOI = item.getField("DOI")
     const title = item.getField("title")
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
-
+    // update DOI from ubpaywall
     if (!this.Addon.DOIRegex.test(itemDOI)) {
       itemDOI = await getDOIInfo(title)
     }
-    // api res
-    let refData = await getRefData(itemDOI)
-    this.debug(refData)
+    // by crossref
+    let refData = await getRefDataFromCrossref(itemDOI)
+    // return none, by CNKI
+    if (!refData) {
+      refData = await getRefDataFromCNKI(item.getField("url"))
+    }
 
+    this.debug(refData)
     const readerDocument = this.reader._iframeWindow.wrappedJSObject.document
     const aNodes = readerDocument.querySelectorAll("a[href*='doi.org']")
     let pdfDOIs = [...aNodes].map((a: HTMLElement) => a.getAttribute("href").match(this.Addon.DOIRegex)[0])
@@ -230,8 +303,7 @@ class AddonViews extends AddonModule {
     // add line
     let reference = {}
     refData.forEach(async (data: any, i: number) => {
-      let titleName = "article-title"
-      let title = data[titleName]
+      let title = data["article-title"]
       let year = data.year
       let author = data.author
 
@@ -258,7 +330,7 @@ class AddonViews extends AddonModule {
             content = `[${i + 1}] DOI: ${DOI}`
           }
         } else {
-          content = `[${i + 1}] ` + (data.unstructured || title || author || year || "unknown");
+          content = `[${i + 1}] ` + (data.unstructured || title || data["journal-title"] || author || year || "unknown");
         }
       }
       DOI = DOI || content;
@@ -269,7 +341,7 @@ class AddonViews extends AddonModule {
       while (true) {
         if (i in reference) {
           let [content, DOI] = reference[i];
-          this.addRow(tabpanel, content, DOI);
+          this.addRow(tabpanel, content, DOI, refData[i]);
           break;
         } else {
           await this.Zotero.Promise.delay(100);
@@ -321,7 +393,7 @@ class AddonViews extends AddonModule {
     )
   }
 
-  public addRow(tabpanel, content, DOI) {
+  public addRow(tabpanel, content, DOI, _data) {
     let row = this.document.createElement("row");
     let box = this.document.createElement("box");
     box.setAttribute("class", "zotero-clicky");
@@ -337,7 +409,7 @@ class AddonViews extends AddonModule {
     label.setAttribute("flex", "1");
     box.append(image, label);
     box.addEventListener("click", () => {
-      this.showProgressWindow(this.Addon.DOIRegex.test(DOI) ? DOI : "No DOI", content, "success")
+      this.showProgressWindow(this.Addon.DOIRegex.test(DOI) ? DOI : "No DOI found", content)
       new CopyHelper()
         .addText(content + "\n" + DOI, "text/unicode")
         .copy();
@@ -349,65 +421,195 @@ class AddonViews extends AddonModule {
     let relatedDOIs = relatedItems.map(item => item.getField("DOI"))
     let relatedTitles = relatedItems.map(item => item.getField("title"))
 
+    let setState = (state: string = "") => {
+      switch (state) {
+        case "+":
+          label.setAttribute("class", "zotero-clicky zotero-clicky-plus");
+          label.setAttribute("value", "+");
+          label.style.opacity = "1";
+          break;
+        case "-":
+          label.setAttribute("class", "zotero-clicky zotero-clicky-minus");
+          label.setAttribute("value", "-");
+          label.style.opacity = "1";
+          break
+        case "":
+          label.setAttribute("value", "");
+          label.style.opacity = ".23";
+          break
+      }
+    }
+
     let remove = async () => {
       this.debug("removeRelatedItem")
-      label.classList.remove("zotero-clicky")
-      label.setAttribute("value", "");
+      this.showProgressWindow("移除关联", DOI)
+      setState()
+
       let relatedItems = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key))
-      let relatedItem = relatedItems.filter(item => item.getField("DOI") == DOI || item.getField("title") == DOI)[0]
-      relatedItem.removeRelatedItem(item)
-      item.removeRelatedItem(relatedItem)
-      await item.saveTx()
-      await relatedItem.saveTx()
-      label.setAttribute("class", "zotero-clicky zotero-clicky-plus");
-      label.setAttribute("value", "+");
-      this.showProgressWindow("关联移除成功", DOI, "success")
+      relatedItems = relatedItems.filter(item => item.getField("DOI") == DOI || DOI.includes(item.getField("title")))
+      if (relatedItems.length == 0) {
+        this.showProgressWindow("已经移除", DOI)
+        tabpanel.querySelector("#refreshButton").click()
+        return
+      }
+      for (let relatedItem of relatedItems) {
+        relatedItem.removeRelatedItem(item)
+        item.removeRelatedItem(relatedItem)
+        await item.saveTx()
+        await relatedItem.saveTx()
+      }
+
+      setState("+")
+      this.showProgressWindow("移除成功", DOI, "success")
     }
+    
     let add = async () => {
       this.debug("addRelatedItem", DOI)
       // check DOI
-      if (!this.Addon.DOIRegex.test(DOI)) {
-        this.showProgressWindow("无效的DOI", DOI, "fail")
-        return
-      }
-      this.showProgressWindow("正在关联", DOI, "success")
-      label.classList.remove("zotero-clicky")
-      label.setAttribute("value", "");
-      var translate = new this.Zotero.Translate.Search();
-      translate.setIdentifier({ "DOI": DOI });
+      let refItem, source
+      // CNKI
+      if (!this.Addon.DOIRegex.test(DOI) && this.Zotero.Jasminum) {
+        setState()
+        this.showProgressWindow("CNKI", DOI)
 
-      let translators = await translate.getTranslators();
-      translate.setTranslator(translators);
-      try {
-        let libraryID = this.window.ZoteroPane.getSelectedLibraryID();
-        let collection = this.window.ZoteroPane.getSelectedCollection();
-        let collections = collection ? [collection.id] : false;
-        let refItem = (await translate.translate({
-          libraryID,
-          collections,
-          saveAttachments: true
-        }))[0];
-        // addRelatedItem
-        this.debug("item.addRelatedItem(refItem)")
-        item.addRelatedItem(refItem)
-        this.debug("refItem.addRelatedItem(item)")
-        refItem.addRelatedItem(item)
-        await item.saveTx()
-        await refItem.saveTx()
-      } catch (e) {
-        this.debug(e)
+        // extract author and title
+        // [1] 张 宁, 张 雨青, 吴 坎坎. 信任的心理和神经生理机制. 2011, 1137-1143.
+        // [1] 中央环保督察视角下的城市群高质量发展研究——以成渝城市群为例[J].李毅.  环境生态学.2022(04) 
+        this.debug("content", content)
+        let parts = content
+          .replace(/\[.+?\]/g, "")
+          .replace(/\s+/g, "")
+          .split(/[.,，]/)
+          .filter(e => e)
+        let authors = []
+        let titles = []
+        for (let part of parts) {
+          if (part.length <= 3) {
+            authors.push(part);
+          } else {
+            titles.push(part);
+          }
+        }
+        let title = titles.sort(title=>title.length).slice(-1)[0]
+        let author = authors[0]
+
+        // search DOI in local
+        let s = new this.Zotero.Search;
+        s.addCondition("title", "contains", title);
+        var ids = await s.search();
+        let items = await this.Zotero.Items.getAsync(ids);
+        
+        if (ids.length) {
+          source = "已有条目"
+          refItem = items[0]
+        } else {
+          this.debug({ author, title })
+          let cnkiURL
+          if (_data.url) {
+            cnkiURL = _data.url
+          } else {
+            let oldFunc = this.Zotero.Jasminum.Scrape.getItemFromSearch
+            this.Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
+              console.log(htmlString)
+              let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/)
+              if (res.length) {
+                  return res[1]
+              }
+            }.bind(this.Zotero.Jasminum);
+            
+            cnkiURL = await this.Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
+            this.Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(this.Zotero.Jasminum);
+            console.log(cnkiURL)
+          }
+  
+          // Jasminum
+          let articleId = this.Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
+          let postData = this.Zotero.Jasminum.Scrape.createRefPostData([articleId])
+          this.debug(postData);
+          let data = await this.Zotero.Jasminum.Scrape.getRefText(postData)
+  
+          console.log(data) 
+          let refItems = await this.Zotero.Jasminum.Utils.trans2Items(data, 1);
+          console.log(refItems)
+          refItem = refItems[0]
+          // for find PDF
+          let args = this.parseCnkiURL(cnkiURL)
+          cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
+          refItem.setField("url", cnkiURL)
+          console.log(refItem)
+          source = "CNKI"
+        }
+        this.debug("addToCollection")
+        for (let collectionID of item.getCollections()) {
+          refItem.addToCollection(collectionID)
+          await refItem.saveTx()
+        }
       }
-      label.setAttribute("class", "zotero-clicky zotero-clicky-minus");
-      label.setAttribute("value", "-");
-      this.showProgressWindow("文献关联成功", DOI, "success")
+      // DOI
+      else {
+        // done
+        let reltaedDOIs = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key).getField("DOI"))
+        if (reltaedDOIs.indexOf(DOI) != -1) {
+          this.showProgressWindow("已经关联", DOI, "success");
+          tabpanel.querySelector("#refreshButton").click()
+          return
+        }
+        this.showProgressWindow("正在关联", DOI)
+        setState()
+        // search DOI in local
+        let s = new this.Zotero.Search;
+        s.addCondition("DOI", "is", DOI);
+        var ids = await s.search();
+        let items = await this.Zotero.Items.getAsync(ids);
+        
+        if (ids.length) {
+          source = "已有条目"
+          refItem = items[0]
+        } else {
+          source = "新建条目"
+          var translate = new this.Zotero.Translate.Search();
+          translate.setIdentifier({ "DOI": DOI });
+    
+          let translators = await translate.getTranslators();
+          translate.setTranslator(translators);
+          try {
+            let libraryID = this.window.ZoteroPane.getSelectedLibraryID();
+            // let collection = this.window.ZoteroPane.getSelectedCollection();
+            // let collections = collection ? [collection.id] : false;
+            let collections = item.getCollections()
+            refItem = (await translate.translate({
+              libraryID,
+              collections,
+              saveAttachments: true
+            }))[0];
+          } catch (e) {
+            this.showProgressWindow(`与${source}关联失败`, DOI + "\n" + e.toString(), "fail")
+            setState("+")
+            this.debug(e)
+            return
+          }
+        }
+      }
+      // addRelatedItem
+      this.debug("item.addRelatedItem(refItem)")
+      item.addRelatedItem(refItem)
+      this.debug("refItem.addRelatedItem(item)")
+      refItem.addRelatedItem(item)
+      await item.saveTx()
+      await refItem.saveTx()
+      // button
+      setState("-")
+      this.showProgressWindow(`与${source}关联成功`, DOI, "success")
     }
+
     label = this.document.createElement("label");
-    if ([...relatedDOIs, ...relatedTitles].indexOf(DOI) != -1) {
-      label.setAttribute("class", "zotero-clicky zotero-clicky-minus");
-      label.setAttribute("value", "-");
+    if (
+      [...relatedDOIs, ...relatedTitles].indexOf(DOI) != -1 ||
+      relatedTitles.filter(title=>DOI.includes(title)).length > 0
+    ) {
+      setState("-")
     } else {
-      label.setAttribute("class", "zotero-clicky zotero-clicky-plus");
-      label.setAttribute("value", "+");
+      setState("+")
     }
     label.addEventListener("click", async () => {
       if (label.value == "+") {
@@ -434,9 +636,22 @@ class AddonViews extends AddonModule {
     }
   }
 
-  public unInitViews() {
+  public getReader() {
+    return this.Zotero.Reader.getByTabID(((this.window as any).Zotero_Tabs as typeof Zotero_Tabs).selectedID)
   }
 
+  public unInitViews() {
+    this.removeSideBarPanel()
+  }
+
+  public parseCnkiURL(cnkiURL) {
+    this.debug(cnkiURL)
+    let FileName = cnkiURL.match(/FileName=(\w+)/i)[1]
+    let DbName = cnkiURL.match(/DbName=(\w+)/i)[1]
+    let DbCode = cnkiURL.match(/DbCode=(\w+)/i)[1]
+    this.debug({FileName, DbName, DbCode})
+    return {FileName, DbName, DbCode}
+  }
   public showProgressWindow(
     header: string,
     context: string,
