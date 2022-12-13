@@ -3,9 +3,9 @@
 
 侧边栏快速检索，点击参考文献右侧`+`可将其与正在阅读文献双向关联，`-`号与`关联文献`里的`-`号效果一致，会将关联移除。
 
-![image](https://user-images.githubusercontent.com/51939531/207200870-b1c202c9-831b-49b3-9d60-d2aae8247414.png)
+![image](https://user-images.githubusercontent.com/51939531/207201084-f23bab21-3c9a-49d6-98dd-0f3ba694fedb.png)
 
-![image](https://user-images.githubusercontent.com/51939531/207200962-7ed6c689-00e7-4ce8-aa5f-3a87104024be.png)
+![image](https://user-images.githubusercontent.com/51939531/207201099-c0c34b05-7e0c-42b8-941d-48fcb697d6c9.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/207079897-740896a7-5ebe-4aba-b857-5e94d715ba91.png)
 
