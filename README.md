@@ -24,6 +24,10 @@
 ### 4. 关于知网文献
 插件不具备获取`无DOI`文献的参考文献的能力，但若知网文献`包含DOI`插件可以获取它的参考文献列表，若其中包含`无DOI`的参考文献，插件支持添加关联和移除关联（根据标题保证其唯一性）。这一功能借助`茉莉花`插件，所以请确保`茉莉花`插件可正常使用。
 
+![image](https://user-images.githubusercontent.com/51939531/207233841-230e323f-d3d6-40b1-997f-271d7806d173.png)
+![image](https://user-images.githubusercontent.com/51939531/207233859-ea82a266-5253-45c1-9e52-9cb4b5f86ce9.png)
+![image](https://user-images.githubusercontent.com/51939531/207233912-46f13bc4-bc3d-41e7-80d5-482d88ef4bb7.png)
+
 ## TODO
 - [ ] 根据反馈，是否需要在主界面（非阅读状态）添加`参考文献`到侧边栏，目前仅阅读状态下添加
 - [ ] 是否需要全部导入，或多选导入功能
