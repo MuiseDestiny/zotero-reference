@@ -13,7 +13,7 @@
 
 
 ## 实现方法
-> 本插件基于`crossref`和`unpaywall`的API，以及`PDF`内可点击的`包含DOI的a标签`，因此也仅支持大部分英文文献
+> 本插件基于`crossref`和`unpaywall`的API，以及`PDF`内可点击的`包含DOI的a标签`，因此也仅支持包含DOI的文献
 
 ### 1. DOI
 `crossref`返会数据往往不全，当PDF加载完毕，插件会搜索PDF内`包含DOI的a标签`，并以一种匹配方法将`crossref`丢失的DOI信息补全。
