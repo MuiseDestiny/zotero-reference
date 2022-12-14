@@ -20,7 +20,7 @@ class AddonViews extends AddonModule {
 
   public initViews() {
     this.debug("Initializing UI");
-    let reader = this.getReader()
+    let reader = this.Addon.utils.getReader()
     if (reader) {
       this.reader = reader
       this.buildSideBarPanel()
@@ -101,7 +101,10 @@ class AddonViews extends AddonModule {
     button.setAttribute("id", "refreshButton");
     button.setAttribute("label", "刷新");
     button.addEventListener("click", async () => {
+      if (tabpanel.classList.contains("refreshing")) { return }
+      tabpanel.classList.add("refreshing")
       await this.refreshReference(tabpanel, this.getItem())
+      tabpanel.classList.remove("refreshing")
     })
 
     hbox.append(label, button)
@@ -134,125 +137,31 @@ class AddonViews extends AddonModule {
   }
 
   public async refreshReference(tabpanel, item) {
-    
-    let getRefDataFromCrossref = async (DOI: string) => {
-      // request or read data
-      let refData
-      if (DOI in this.Addon.DOIRefData) {
-        refData = this.Addon.DOIRefData[DOI]
-      } else {
-        try {
-          const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
-          let res = await this.Zotero.HTTP.request(
-            "GET",
-            crossrefApi,
-            {
-              responseType: "json"
-            }
-          )
-          refData = res.response
-        } catch {
-          return false
-        }
-      }
-      // analysis refData
-      return refData.reference
-    }
-
-    let getDOIInfo = async (DOI: string) => {
-      let data
-      if (DOI in this.Addon.DOIData) {
-        data = this.Addon.DOIData[DOI]
-      } else {
-        try {
-          const unpaywall = `https://api.unpaywall.org/v2/${DOI}?email=zoterostyle@polygon.org`
-          let res = await this.Zotero.HTTP.request(
-            "GET",
-            unpaywall,
-            {
-              responseType: "json"
-            }
-          )
-          data = res.response
-          this.Addon.DOIData[DOI] = data
-        } catch (e) {
-          console.log(e)
-          return false
-        }
-      }
-      return data
-    }
-
-    let getRefDataFromCNKI = async (URL: string) => {
-      let refData
-      if (URL in this.Addon.DOIRefData) {
-        refData = this.Addon.DOIRefData[URL]
-      } else {
-        this.debug("get by CNKI", URL)
-        // URL - https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&dbname=CJFDLAST2022&filename=ZYJH202209006&uniplatform=NZKPT&v=4RWl_k1sYrO5ij1n5KXGDdusm5zXyjI12tpcPkSPI4OMnblizxXSTsDcSTbO-AqK
-        //       https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=CJFD&filename=zyjh202209006&RefType=1&vl=
-        let args = this.parseCnkiURL(URL)
-        let htmltext
-        htmltext = (await this.Zotero.HTTP.request(
-          "GET",
-          URL,
-          {
-            responseType: "text"
-          }
-        )).response
-        const vl = htmltext.match(/id="v".+?value="(.+?)"/)[1]
-        this.debug("vl", vl);
-        htmltext = (await this.Zotero.HTTP.request(
-          "GET",
-          `https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=${args.DbCode}&filename=${args.FileName}&RefType=1&vl=${vl}`,
-          {
-            reponseType: "text",
-            headers: {
-              "Referer": `https://kns.cnki.net/kcms/detail/detail.aspx?filename=${args.FileName}`
-            }
-          }
-        )).response
-        let parser = new this.window.DOMParser()
-        const HTML = parser.parseFromString(htmltext, "text/html").body as HTMLElement
-        let refData = [];
-        [...HTML.querySelectorAll("ul li")]
-          .forEach((li: HTMLLIElement) => {
-            let data = {}
-            let a = li.querySelector("a[href]")
-            if (a) {
-              try {
-                args = this.parseCnkiURL(a.getAttribute("href"))
-                data["url"] = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
-              } catch {}
-            }
-            data["unstructured"] = li.innerText
-              .replace(/\n/g, "")
-              .replace(/\[\d+?\]/g, "")
-              .replace(/\s+/g, "")
-              .replace(/\./g, ". ")
-            refData.push(data)
-          })
-        this.Addon.DOIRefData[URL] = refData
-      }
-      return refData;
-    }
-
     let itemDOI = item.getField("DOI")
-    const title = item.getField("title")
+    const itemTitle = item.getField("title")
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
-    // update DOI from ubpaywall
-    if (!this.Addon.DOIRegex.test(itemDOI)) {
-      itemDOI = await getDOIInfo(title)
-    }
-    // by crossref
-    let refData = await getRefDataFromCrossref(itemDOI)
-    // return none, by CNKI
-    if (!refData) {
-      refData = await getRefDataFromCNKI(item.getField("url"))
-    }
 
+    let refData
+    if (this.Addon.utils.isChinese(itemTitle)) {
+      let cnkiURL = item.getField("url")
+      if (!cnkiURL) {
+        let creator = item._creators[0]
+        let itemAuthor = creator.lastName + creator.firstName
+        cnkiURL = await this.Addon.utils.getCnkiURL(itemTitle, itemAuthor)
+        item.setField("url", cnkiURL)
+        await item.saveTx()
+      }
+      refData = await this.Addon.utils.getRefDataFromCNKI(cnkiURL)
+    } else {
+      if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
+        itemDOI = await this.Addon.utils.getTitleDOI(itemTitle)
+      }
+      refData = await this.Addon.utils.getRefDataFromCrossref(itemDOI)
+    }
+    const referenceNum = refData.length
+    tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} 条参考文献：`);
     this.debug(refData)
     const readerDocument = this.reader._iframeWindow.wrappedJSObject.document
     const aNodes = readerDocument.querySelectorAll("a[href*='doi.org']")
@@ -299,7 +208,6 @@ class AddonViews extends AddonModule {
 
     }
 
-    const referenceNum = refData.length
     // add line
     let reference = {}
     refData.forEach(async (data: any, i: number) => {
@@ -318,7 +226,7 @@ class AddonViews extends AddonModule {
         if (DOI) {
           this.debug(`[${i + 1}] 从unpaywall更新条目中...`, DOI);
           // update DOIInfo by unpaywall
-          let _data = await getDOIInfo(DOI);
+          let _data = await this.Addon.utils.getDOIInfo(DOI);
           try {
             author = _data.z_authors[0]["family"]
             year = _data.year
@@ -411,15 +319,9 @@ class AddonViews extends AddonModule {
     box.addEventListener("click", () => {
       this.showProgressWindow(this.Addon.DOIRegex.test(DOI) ? DOI : "No DOI found", content)
       new CopyHelper()
-        .addText(content + "\n" + DOI, "text/unicode")
+        .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
         .copy();
     })
-
-    // check 
-    let item = this.getItem()
-    let relatedItems = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key))
-    let relatedDOIs = relatedItems.map(item => item.getField("DOI"))
-    let relatedTitles = relatedItems.map(item => item.getField("title"))
 
     let setState = (state: string = "") => {
       switch (state) {
@@ -464,79 +366,22 @@ class AddonViews extends AddonModule {
     }
     
     let add = async () => {
-      this.debug("addRelatedItem", DOI)
+      this.debug("addRelatedItem", content, DOI)
       // check DOI
       let refItem, source
+      let [title, author] = this.Addon.utils.parseContent(content);
       // CNKI
-      if (!this.Addon.DOIRegex.test(DOI) && this.Zotero.Jasminum) {
+      if (this.Addon.utils.isChinese(title) && this.Zotero.Jasminum) {
         setState()
         this.showProgressWindow("CNKI", DOI)
 
-        // extract author and title
-        // [1] 张 宁, 张 雨青, 吴 坎坎. 信任的心理和神经生理机制. 2011, 1137-1143.
-        // [1] 中央环保督察视角下的城市群高质量发展研究——以成渝城市群为例[J].李毅.  环境生态学.2022(04) 
-        this.debug("content", content)
-        let parts = content
-          .replace(/\[.+?\]/g, "")
-          .replace(/\s+/g, "")
-          .split(/[.,，]/)
-          .filter(e => e)
-        let authors = []
-        let titles = []
-        for (let part of parts) {
-          if (part.length <= 3) {
-            authors.push(part);
-          } else {
-            titles.push(part);
-          }
-        }
-        let title = titles.sort(title=>title.length).slice(-1)[0]
-        let author = authors[0]
-
         // search DOI in local
-        let s = new this.Zotero.Search;
-        s.addCondition("title", "contains", title);
-        var ids = await s.search();
-        let items = await this.Zotero.Items.getAsync(ids);
+        refItem = await this.Addon.utils.searchItem("title", "contains", title)
         
-        if (ids.length) {
+        if (refItem) {
           source = "已有条目"
-          refItem = items[0]
         } else {
-          this.debug({ author, title })
-          let cnkiURL
-          if (_data.url) {
-            cnkiURL = _data.url
-          } else {
-            let oldFunc = this.Zotero.Jasminum.Scrape.getItemFromSearch
-            this.Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
-              console.log(htmlString)
-              let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/)
-              if (res.length) {
-                  return res[1]
-              }
-            }.bind(this.Zotero.Jasminum);
-            
-            cnkiURL = await this.Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
-            this.Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(this.Zotero.Jasminum);
-            console.log(cnkiURL)
-          }
-  
-          // Jasminum
-          let articleId = this.Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
-          let postData = this.Zotero.Jasminum.Scrape.createRefPostData([articleId])
-          this.debug(postData);
-          let data = await this.Zotero.Jasminum.Scrape.getRefText(postData)
-  
-          console.log(data) 
-          let refItems = await this.Zotero.Jasminum.Utils.trans2Items(data, 1);
-          console.log(refItems)
-          refItem = refItems[0]
-          // for find PDF
-          let args = this.parseCnkiURL(cnkiURL)
-          cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
-          refItem.setField("url", cnkiURL)
-          console.log(refItem)
+          refItem = await this.Addon.utils.createItemByJasminum(title, author)
           source = "CNKI"
         }
         this.debug("addToCollection")
@@ -547,6 +392,9 @@ class AddonViews extends AddonModule {
       }
       // DOI
       else {
+        if (!this.Addon.utils.isDOI(DOI)) {
+          DOI = await this.Addon.utils.getTitleDOI(title)
+        }
         // done
         let reltaedDOIs = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key).getField("DOI"))
         if (reltaedDOIs.indexOf(DOI) != -1) {
@@ -557,31 +405,14 @@ class AddonViews extends AddonModule {
         this.showProgressWindow("正在关联", DOI)
         setState()
         // search DOI in local
-        let s = new this.Zotero.Search;
-        s.addCondition("DOI", "is", DOI);
-        var ids = await s.search();
-        let items = await this.Zotero.Items.getAsync(ids);
+        refItem = await this.Addon.utils.searchItem("DOI", "is", DOI);
         
-        if (ids.length) {
+        if (refItem) {
           source = "已有条目"
-          refItem = items[0]
         } else {
           source = "新建条目"
-          var translate = new this.Zotero.Translate.Search();
-          translate.setIdentifier({ "DOI": DOI });
-    
-          let translators = await translate.getTranslators();
-          translate.setTranslator(translators);
           try {
-            let libraryID = this.window.ZoteroPane.getSelectedLibraryID();
-            // let collection = this.window.ZoteroPane.getSelectedCollection();
-            // let collections = collection ? [collection.id] : false;
-            let collections = item.getCollections()
-            refItem = (await translate.translate({
-              libraryID,
-              collections,
-              saveAttachments: true
-            }))[0];
+            refItem = await this.Addon.utils.createItemByZotero(DOI, item.getCollections())
           } catch (e) {
             this.showProgressWindow(`与${source}关联失败`, DOI + "\n" + e.toString(), "fail")
             setState("+")
@@ -591,9 +422,8 @@ class AddonViews extends AddonModule {
         }
       }
       // addRelatedItem
-      this.debug("item.addRelatedItem(refItem)")
+      this.debug("addRelatedItem")
       item.addRelatedItem(refItem)
-      this.debug("refItem.addRelatedItem(item)")
       refItem.addRelatedItem(item)
       await item.saveTx()
       await refItem.saveTx()
@@ -603,6 +433,11 @@ class AddonViews extends AddonModule {
     }
 
     label = this.document.createElement("label");
+    // check 
+    let item = this.getItem()
+    let relatedItems = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key))
+    let relatedDOIs = relatedItems.map(item => item.getField("DOI"))
+    let relatedTitles = relatedItems.map(item => item.getField("title"))
     if (
       [...relatedDOIs, ...relatedTitles].indexOf(DOI) != -1 ||
       relatedTitles.filter(title=>DOI.includes(title)).length > 0
@@ -636,27 +471,15 @@ class AddonViews extends AddonModule {
     }
   }
 
-  public getReader() {
-    return this.Zotero.Reader.getByTabID(((this.window as any).Zotero_Tabs as typeof Zotero_Tabs).selectedID)
-  }
-
   public unInitViews() {
     this.removeSideBarPanel()
   }
 
-  public parseCnkiURL(cnkiURL) {
-    this.debug(cnkiURL)
-    let FileName = cnkiURL.match(/FileName=(\w+)/i)[1]
-    let DbName = cnkiURL.match(/DbName=(\w+)/i)[1]
-    let DbCode = cnkiURL.match(/DbCode=(\w+)/i)[1]
-    this.debug({FileName, DbName, DbCode})
-    return {FileName, DbName, DbCode}
-  }
   public showProgressWindow(
     header: string,
     context: string,
     type: string = "default",
-    t: number = 5000
+    t: number = 2500
   ) {
     // A simple wrapper of the Zotero ProgressWindow
     let progressWindow = new this.Zotero.ProgressWindow({ closeOnClick: true });
