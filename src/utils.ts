@@ -7,31 +7,6 @@ class Utils extends AddonModule {
     super(parent);
   }
 
-  async getRefDataFromCrossref(DOI: string) {
-    // request or read data
-    let refData
-    if (DOI in this.Addon.DOIRefData) {
-      refData = this.Addon.DOIRefData[DOI]
-    } else {
-      try {
-        this.Addon.views.showProgressWindow("Crossref", `正在获取参考文献`)
-        const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
-        let res = await this.Zotero.HTTP.request(
-          "GET",
-          crossrefApi,
-          {
-            responseType: "json"
-          }
-        )
-        refData = res.response
-      } catch {
-        return false
-      }
-    }
-    // analysis refData
-    return refData.reference
-  }
-
   async getDOIInfo(DOI: string) {
     let data
     if (DOI in this.Addon.DOIData) {
@@ -80,6 +55,35 @@ class Utils extends AddonModule {
     }
   }
 
+  async getRefDataFromCrossref(DOI: string) {
+    // request or read data
+    let refData
+    if (DOI in this.Addon.DOIRefData) {
+      refData = this.Addon.DOIRefData[DOI]
+    } else {
+      try {
+        this.Addon.views.showProgressWindow("Crossref", `正在获取参考文献`)
+        const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
+        let res = await this.Zotero.HTTP.request(
+          "GET",
+          crossrefApi,
+          {
+            responseType: "json"
+          }
+        )
+        refData = res.response.reference || []
+        if (refData) {
+          this.Addon.DOIRefData[DOI] = refData
+        }
+        this.Addon.views.showProgressWindow("Crossref", `获取${refData.length}条参考文献`, "success")
+      } catch {
+        return false
+      }
+    }
+    // analysis refData
+    return refData
+  }
+
   async getRefDataFromCNKI(URL: string) {
     let refData = []
     if (URL in this.Addon.DOIRefData) {
@@ -118,7 +122,7 @@ class Utils extends AddonModule {
         const HTML = parser.parseFromString(htmltext, "text/html").body as HTMLElement
         let liNodes = [...HTML.querySelectorAll("ul li")]
         if (liNodes.length == 0) { break }
-        this.Addon.views.showProgressWindow("CNKI", `获取第${page}页参考文献`)
+        this.Addon.views.showProgressWindow("CNKI", `获取第${page}页参考文献`, "success")
         liNodes.forEach((li: HTMLLIElement) => {
             let data = {}
             let a = li.querySelector("a[href]")
@@ -136,7 +140,9 @@ class Utils extends AddonModule {
             refData.push(data)
           })
       }
-      this.Addon.DOIRefData[URL] = refData
+      if (refData) {
+        this.Addon.DOIRefData[URL] = refData
+      }
     }
     return refData;
   }

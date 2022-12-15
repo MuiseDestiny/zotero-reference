@@ -36,8 +36,6 @@ class AddonViews extends AddonModule {
     }
     if (!reader) { return false }
 
-    this.debug("ZoteroPDFTranslate: Update Translate Panels");
-
     const item = this.Zotero.Items.get(reader.itemID) as Zotero.Item;
     this.debug(item.getField("title"));
     await reader._waitForReader();
@@ -55,7 +53,8 @@ class AddonViews extends AddonModule {
 
   async buildSideBarPanel() {
     this.debug("buildSideBarPanel");
-    const tabContainer = this.document.querySelector(`#${this.window.Zotero_Tabs.selectedID}-context`);
+    let tabId = this.window.Zotero_Tabs.selectedID
+    const tabContainer = this.document.querySelector(`#${tabId}-context`);
 
     if (!tabContainer || tabContainer.querySelector("#zotero-reference-tab")) {
       return
@@ -101,10 +100,7 @@ class AddonViews extends AddonModule {
     button.setAttribute("id", "refreshButton");
     button.setAttribute("label", "刷新");
     button.addEventListener("click", async () => {
-      if (tabpanel.classList.contains("refreshing")) { return }
-      tabpanel.classList.add("refreshing")
       await this.refreshReference(tabpanel, this.getItem())
-      tabpanel.classList.remove("refreshing")
     })
 
     hbox.append(label, button)
@@ -302,6 +298,9 @@ class AddonViews extends AddonModule {
   }
 
   public addRow(tabpanel, content, DOI, _data) {
+    if ([...tabpanel.querySelectorAll("row label")]
+      .filter(e => e.value == content)
+      .length > 0) { return }
     let row = this.document.createElement("row");
     let box = this.document.createElement("box");
     box.setAttribute("class", "zotero-clicky");
@@ -382,7 +381,7 @@ class AddonViews extends AddonModule {
           source = "已有条目"
         } else {
           refItem = await this.Addon.utils.createItemByJasminum(title, author)
-          source = "CNKI"
+          source = "CNKI文献"
         }
         this.debug("addToCollection")
         for (let collectionID of item.getCollections()) {
