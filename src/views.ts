@@ -369,9 +369,9 @@ class AddonViews extends AddonModule {
       // check DOI
       let refItem, source
       let [title, author] = this.Addon.utils.parseContent(content);
+      setState()
       // CNKI
       if (this.Addon.utils.isChinese(title) && this.Zotero.Jasminum) {
-        setState()
         this.showProgressWindow("CNKI", DOI)
 
         // search DOI in local
@@ -393,6 +393,11 @@ class AddonViews extends AddonModule {
       else {
         if (!this.Addon.utils.isDOI(DOI)) {
           DOI = await this.Addon.utils.getTitleDOI(title)
+          if (!this.Addon.utils.isDOI(DOI)) {
+            setState("+")
+            this.debug("error DOI", DOI)
+            return
+          }
         }
         // done
         let reltaedDOIs = item.relatedItems.map(key => this.Zotero.Items.getByLibraryAndKey(1, key).getField("DOI"))

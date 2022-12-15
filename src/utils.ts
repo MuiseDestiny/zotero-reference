@@ -31,7 +31,27 @@ class Utils extends AddonModule {
     return data
   }
 
-  async getTitleDOI(title: string) {
+  async getTitleDOIByCrossref(title: string) {
+    let res
+    try {
+      const crossref = `https://api.crossref.org/works?query=${title}`
+      res = await this.Zotero.HTTP.request(
+        "GET",
+        crossref,
+        {
+          responseType: "json"
+        }
+      )
+      const DOI = res.response.message.items.filter(e=>e.type != "component")[0].DOI
+      this.debug(`getTitleDOIByCrossref(${title}) -> ${DOI}`)
+      return DOI
+    } catch {
+      this.debug("error, getTitleDOIByCrossref", res.response)
+      return false
+    }
+  }
+
+  async getTitleDOIByUnpaywall(title: string) {
     let res
     try {
       const unpaywall = `https://api.unpaywall.org/v2/search?query=${title}&email=zoterostyle@polygon.org`
@@ -43,16 +63,23 @@ class Utils extends AddonModule {
         }
       )
       const DOI = res.response.results[0].response.doi
-      this.debug(`getTitleDOI(${title}) -> ${DOI}`)
+      this.debug(`getTitleDOIByUnpaywall(${title}) -> ${DOI}`)
       return DOI
     } catch {
-      this.debug("error, getTitleDOI", res.response)
-      title = title.slice(0, parseInt(String(title.length / 2)))
-      if (title) {
-        this.debug("try -> ", title)
-        return await this.getTitleDOI(title)
-      }
+      this.debug("error, getTitleDOIByUnpayWall", res.response)
+      return false
     }
+  }
+
+  async getTitleDOI(title: string) {
+    this.Addon.views.showProgressWindow("通过unpaywall查询DOI", title)
+    let DOI = await this.getTitleDOIByUnpaywall(title)
+    if (!DOI) {
+      this.Addon.views.showProgressWindow("通过crossref查询DOI", title)
+      DOI = await this.getTitleDOIByCrossref(title)
+    }
+    this.Addon.views.showProgressWindow("DOI", DOI)
+    return DOI
   }
 
   async getRefDataFromCrossref(DOI: string) {
