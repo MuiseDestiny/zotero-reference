@@ -57,3 +57,7 @@
 代码参考：
 
 - [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
+
+API：
+- [Unpwywall](https://api.unpaywall.org/)
+- [Crossref](https://github.com/fabiobatalha/crossrefapi)
