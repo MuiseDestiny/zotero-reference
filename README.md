@@ -7,7 +7,7 @@
 
 ![image](https://user-images.githubusercontent.com/51939531/207763139-24b5e2e2-b03a-465d-95ce-f2f5e0e8ad44.png)
 
-![image](https://user-images.githubusercontent.com/51939531/207763767-98565b30-16f3-421a-b4f9-e1d2f9632bf9.png)
+![image](https://user-images.githubusercontent.com/51939531/207764212-48b5b25c-20ec-403f-afb4-02dfa302e48c.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/207763605-b4cc0417-1db7-402d-8099-18afaea9e1d5.png)
 
@@ -24,10 +24,6 @@
 从Zotero打开到关闭期间内所有api返回结果都会以`DOI`作为key储存，所以二次加载会`飞快`。但不长期储存，随着Zotero的关闭，这些数据也将消亡。
 ### 4. 知网文献
 想到仅支持英文，可能有一大部分知网用户用不到这个插件，所以加入知网。因为一些功能茉莉花插件已经实现，所以获取知网文献的参考文献需要安装`茉莉花`插件（必装插件，默认用本插件的都装好且配置好）。Zotero的知网条目需要具备URL字段（如`https://kns.cnki.net/kcms/detail/detail.aspx?xxx`），插件会根据这个页面小`爬`一下参考文献（我实测数量可能跟PDF真正引用的参考文献数量不一致，一般会少，但这就是知网的锅了）。将知网文献添加关联时，会借助`茉莉花`搜索作者和标题，匹配第一个搜索结果，并添加到库。
-
-![image](https://user-images.githubusercontent.com/51939531/207233841-230e323f-d3d6-40b1-997f-271d7806d173.png)
-![image](https://user-images.githubusercontent.com/51939531/207233859-ea82a266-5253-45c1-9e52-9cb4b5f86ce9.png)
-![image](https://user-images.githubusercontent.com/51939531/207233912-46f13bc4-bc3d-41e7-80d5-482d88ef4bb7.png)
 
 ## TODO
 - [ ] 根据反馈，是否需要在主界面（非阅读状态）添加`参考文献`到侧边栏，目前仅阅读状态下添加
