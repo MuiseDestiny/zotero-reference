@@ -42,8 +42,7 @@
 
 1. 本插件的自动关联功能与`scihub`插件不兼容
 
-![未命名文件-导出 (1)](https://user-images.githubusercontent.com/51939531/207202729-8ddf88db-287d-46b1-a124-fa69385c0e0e.png)
-
+![未命名文件-导出 (3)](https://user-images.githubusercontent.com/51939531/208129588-e26ff970-7412-4c3f-9c1c-405514b10509.png)
 
 ## 🍭 致谢
 
