@@ -267,7 +267,7 @@ class Utils extends AddonModule {
     return refData
   }
 
-  public recordlayout(lines, middle) {
+  public recordLayout(lines, middle) {
     let leftLines = lines.filter(line => line.x < middle)
     let rightLines = lines.filter(line => line.x > middle)
     // 储存栏目最小值，用于校正整体偏移，极少数pdf需要
@@ -348,7 +348,7 @@ class Utils extends AddonModule {
 
       // 需要记录一下column，防止相邻页布局更改
       let maxWidth = pdfPage._pageInfo.view[2];
-      [leftSortedX, rightSortedX] = this.recordlayout(lines, maxWidth / 2)
+      [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
 
       if (k != -1) {
         // const maxy = line.y
