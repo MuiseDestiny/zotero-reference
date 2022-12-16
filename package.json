@@ -3,7 +3,7 @@
   "addonName": "Zotero Reference",
   "addonID": "zoteroreference@polygon.org",
   "addonRef": "zoteroreference",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Zotero Reference",
   "main": "src/index.js",
   "scripts": {
