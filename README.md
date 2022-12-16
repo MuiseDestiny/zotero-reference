@@ -12,7 +12,9 @@
 
 ## 🪄实现方法
 配料：PDF文档内所有文字 + `unpaywall api` + `crossref api` + `茉莉花插件` + `知网`
-做法：
+
+具体做法如下：
+
 - 第一步，打开PDF，从最后一页开始获取页面所有文字`getTextContent()`，它是一个`Array=[item1, item2, ...]`每个item包含(x, y)坐标以及宽高，当然也包含文字；
 - 第二步，合并相同高度的item；
 - 第三步，判断所有item里是否包含`参考文献|Reference`截断词，不包含记录下来此次的Array，重复第一步，包含就合并所有Array，并把此次Array用包含截断词的item截断，扔掉item之前的，保留之后的；
