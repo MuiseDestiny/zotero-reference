@@ -52,6 +52,7 @@
 代码参考：
 
 - [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
+- [chartero](https://github.com/volatile-static/Chartero)
 
 API：
 - [unpwywall](https://api.unpaywall.org/)
