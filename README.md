@@ -60,5 +60,5 @@
 - [chartero](https://github.com/volatile-static/Chartero)
 
 API：
-- [unpwywall](https://api.unpaywall.org/)
+- [unpaywall](https://api.unpaywall.org/)
 - [crossref](https://github.com/CrossRef/rest-api-doc)
