@@ -5,12 +5,9 @@
 
 👻 支持绝大部分`含DOI`文献和`知网`文献。
 
-![image](https://user-images.githubusercontent.com/51939531/207763139-24b5e2e2-b03a-465d-95ce-f2f5e0e8ad44.png)
+![image](https://user-images.githubusercontent.com/51939531/208114422-7fd4f9cd-cb49-4c55-98e6-f1f20e1eed20.png)
 
-![image](https://user-images.githubusercontent.com/51939531/207764212-48b5b25c-20ec-403f-afb4-02dfa302e48c.png)
-
-![image](https://user-images.githubusercontent.com/51939531/207763605-b4cc0417-1db7-402d-8099-18afaea9e1d5.png)
-
+![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
 
 ## 🪄实现方法
