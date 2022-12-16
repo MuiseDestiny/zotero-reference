@@ -140,7 +140,7 @@ class AddonViews extends AddonModule {
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
 
     let refData
-    if (this.Addon.utils.isChinese(itemTitle)) {
+    if (this.Addon.utils.isChinese(itemTitle) && !itemDOI) {
       let cnkiURL = item.getField("url")
       if (!cnkiURL) {
         let creator = item._creators[0]
@@ -161,7 +161,7 @@ class AddonViews extends AddonModule {
     this.debug(refData)
     const readerDocument = this.reader._iframeWindow.wrappedJSObject.document
     const aNodes = readerDocument.querySelectorAll("a[href*='doi.org']")
-    let pdfDOIs = [...aNodes].map((a: HTMLElement) => a.getAttribute("href").match(this.Addon.DOIRegex)[0])
+    let pdfDOIs = [...aNodes].map((e: HTMLElement) => e.getAttribute("href").match(this.Addon.DOIRegex)[0])
     pdfDOIs = [...(new Set(pdfDOIs))]
     this.debug(pdfDOIs)
     // find DOI in pdf
@@ -316,7 +316,7 @@ class AddonViews extends AddonModule {
     label.setAttribute("flex", "1");
     box.append(image, label);
     box.addEventListener("click", () => {
-      this.showProgressWindow(this.Addon.DOIRegex.test(DOI) ? DOI : "No DOI found", content)
+      this.showProgressWindow(this.Addon.utils.isDOI(DOI) ? DOI : "No DOI found", content)
       new CopyHelper()
         .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
         .copy();
@@ -483,14 +483,15 @@ class AddonViews extends AddonModule {
     header: string,
     context: string,
     type: string = "default",
-    t: number = 2500
+    t: number = 2500,
+    maxLength: number = 100
   ) {
     // A simple wrapper of the Zotero ProgressWindow
     let progressWindow = new this.Zotero.ProgressWindow({ closeOnClick: true });
     progressWindow.changeHeadline(header);
     progressWindow.progress = new progressWindow.ItemProgress(
       this.progressWindowIcon[type],
-      context
+      context.length > maxLength ? context.slice(0, maxLength) + "..." : context
     );
     progressWindow.show();
     if (t > 0) {

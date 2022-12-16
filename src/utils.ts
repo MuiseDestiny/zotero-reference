@@ -83,13 +83,16 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromCrossref(DOI: string) {
+    let refData = await this.getRefDataFromPDF()
+    if (refData.length > 0) {
+      return refData
+    }
     // request or read data
-    let refData
     if (DOI in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[DOI]
     } else {
       try {
-        this.Addon.views.showProgressWindow("Crossref", `正在获取参考文献`)
+        this.Addon.views.showProgressWindow("Crossref", `从Crossref API获取参考文献`)
         const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
         let res = await this.Zotero.HTTP.request(
           "GET",
@@ -101,10 +104,13 @@ class Utils extends AddonModule {
         refData = res.response.reference || []
         if (refData) {
           this.Addon.DOIRefData[DOI] = refData
+        } else {
+          return await this.getRefDataFromPDF()
         }
         this.Addon.views.showProgressWindow("Crossref", `获取${refData.length}条参考文献`, "success")
-      } catch {
-        return false
+      } catch (e) {
+        this.Addon.views.showProgressWindow("Crossref", e, "fail")
+        return await this.getRefDataFromPDF()
       }
     }
     // analysis refData
@@ -112,7 +118,11 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromCNKI(URL: string) {
-    let refData = []
+    let refData = await this.getRefDataFromPDF()
+    if (refData.length > 0) {
+      return refData
+    }
+    this.Addon.views.showProgressWindow("CNKI", `从知网获取参考文献`, "success")
     if (URL in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[URL]
     } else {
@@ -169,9 +179,216 @@ class Utils extends AddonModule {
       }
       if (refData) {
         this.Addon.DOIRefData[URL] = refData
+      } else {
+        return this.getRefDataFromPDF()
       }
     }
     return refData;
+  }
+
+  async getRefDataFromPDF() {
+    this.Addon.views.showProgressWindow("PDF", "从PDF解析参考文献")
+    let refLines = await this.prepareTextContent()
+    if (!refLines) {
+      this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
+      return []
+    }
+
+    let isRefStart = (text) => {
+      let regexArray = [
+        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]/,
+        /^\d+\s[^\d]+?[\,\.\uff0c\uff0e]/,
+        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]/,
+        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]/
+      ]
+      for (let i = 0; i < regexArray.length; i++) {
+        if (regexArray[i].test(text)) {
+          return true
+        }
+      }
+    }
+
+    // 获取左右栏分界线，这里中间可能对个别奇怪排版pdf不适用，但应该可以应对大多数情况
+    let firstLine = refLines[0]
+    // 已知新一行参考文献缩进
+    let firstX = firstLine.x
+    // 分成左栏和右栏，未必真的会分，有的文章只有一栏
+    let leftLines, rightLines
+    leftLines = refLines.filter(line => line.column.side == "left")
+    rightLines = refLines.filter(line => line.column.side == "right")
+    // 找到两栏最小的x
+    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
+    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
+    // 如果已知条目缩进是在左侧，且含右栏
+    if (firstLine.column.side == "left" && rightSortedX) {
+      // 将右栏移到左栏
+      rightLines.forEach(line => {
+        line.x = line.x - rightSortedX[0] + firstX
+      })
+    }
+    // 如果已知条目缩进是在右侧，且含左栏
+    else if (firstLine.column.side == "right" && leftSortedX) {
+      // 将左栏移到右栏
+      leftLines.forEach(line => {
+        line.x = rightSortedX[0] + line.x - leftSortedX[0]
+      })
+    }
+
+    let references = []
+    for (let i = 0; i < refLines.length; i++) {
+      let line = refLines[i]
+      let text = line.text 
+      let error = line.x - firstX
+      error = error > 0 ? error : -error
+      if (error < line.height && isRefStart(text)) {
+        references.push(text)
+      } else {
+        references[references.length-1] += text
+      }
+    }
+
+    console.log(references)
+    if (references.length > 0) {
+      this.Addon.views.showProgressWindow("PDF", `${references.length}条参考文献`, "success")
+    } else {
+      this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
+    }
+    let refData = []
+    for (let i = 0; i < references.length; i++) {
+      let reference = references[i].trim()
+      reference = reference.replace(/^\[\d+\]/, "").trim()
+      let matchedDOI = reference.match(this.Addon.DOIRegex)
+      let data = { unstructured: reference }
+      if (matchedDOI) {
+        data["DOI"] = matchedDOI[0]
+      }
+      refData.push(data)
+    } 
+    return refData
+  }
+
+  public recordlayout(lines, middle) {
+    let leftLines = lines.filter(line => line.x < middle)
+    let rightLines = lines.filter(line => line.x > middle)
+    // 储存栏目最小值，用于校正整体偏移，极少数pdf需要
+    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
+    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
+    if (leftSortedX) {
+      leftLines.forEach(line => {
+        line["column"] = {
+          side: "left",
+          minX: leftSortedX[0]
+        }
+      })
+    }
+    if (rightSortedX) {
+      rightLines.forEach(line => {
+        line["column"] = {
+          side: "right",
+          minX: rightSortedX[0]
+        }
+      })
+    }
+    return [leftSortedX, rightSortedX]
+  }
+
+  public mergeSameTop(items) {
+    let toLine = (item) => {
+      return {
+        x: parseFloat(item.transform[4].toFixed(1)),
+        y: parseFloat(item.transform[5].toFixed(1)),
+        text: item.str || "",
+        height: item.height,
+        width: item.width
+      }
+    }
+    let j = 0
+    let lines = [toLine(items[j])]
+    for (j = 1; j < items.length; j++) {
+      let item = toLine(items[j])
+      let error = item.y - lines.slice(-1)[0].y
+      error = error > 0 ? error : -error
+      if (error < item.height * .5) {
+        lines.slice(-1)[0].text += item.text
+        lines.slice(-1)[0].width += item.width
+      } else {
+        lines.push(item)
+      }
+    }
+    return lines
+  }
+
+  async prepareTextContent() {
+    const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
+    await PDFViewerApplication.pdfLoadingTask.promise;
+    await PDFViewerApplication.pdfViewer.pagesPromise;
+    let pages = PDFViewerApplication.pdfViewer._pages
+    this.debug(pages)
+    let refLines = []
+    let flag = false
+    let leftSortedX, rightSortedX
+    for (let i = pages.length - 1; i >= 0; i--) {
+      this.debug("page num", i)
+      let pdfPage = pages[i].pdfPage
+      console.log(pdfPage)
+      let items = (await pdfPage.getTextContent()).items
+      this.debug("ori length", items.length)
+      // 合并同一高度的，同一行
+      let lines = this.mergeSameTop(items)
+      // 判断是否含有参考文献
+      let line = lines.reverse().find(line => {
+        return (
+          /(参考文献|reference)/ig.test(line.text) ||
+          line.text.includes("参考文献") ||
+          line.text.includes("Reference") 
+        ) && line.text.length < 20
+      })
+      lines.reverse()
+      let k = lines.indexOf(line);
+
+      // 需要记录一下column，防止相邻页布局更改
+      let maxWidth = pdfPage._pageInfo.view[2];
+      [leftSortedX, rightSortedX] = this.recordlayout(lines, maxWidth / 2)
+
+      if (k != -1) {
+        // const maxy = line.y
+        // lines = lines.filter(line=>line.y<maxy)
+        flag = true
+        refLines = [...lines.slice(k+1), ...refLines]
+        break
+      } else {
+        refLines = [...lines, ...refLines]
+      }
+    }
+    if (flag) {
+      this.debug("refLines", [...refLines])
+      // 校正不同页面整体偏移
+      // leftSortedX, rightSortedX记录的是参考文献页面
+      if (leftSortedX) {
+        let minX = leftSortedX[0]
+        refLines.forEach(line => {
+          if (line.column.side == "left" && line.column.minX != minX) {
+            let offset = minX - line.column.minX
+            line.column.minX += offset
+            line.x += offset
+          }
+        })
+      }
+      if (rightSortedX) {
+        let minX = rightSortedX[0]
+        refLines.forEach(line => {
+          if (line.column.side == "right" && line.column.minX != minX) {
+            let offset = minX - line.column.minX
+            line.column.minX += offset
+            line.x += offset
+          }
+        })
+      }
+      this.debug("refLines", [...refLines])
+      return refLines
+    } else {
+      return []
+    }
   }
 
   public parseContent(content) {
@@ -194,7 +411,7 @@ class Utils extends AddonModule {
         titles.push(part);
       }
     }
-    let title = titles.sort(title=>title.length).slice(-1)[0]
+    let title = titles.sort((a, b) => b.length-a.length)[0]
     let author = authors[0]
     this.debug(content, "\n->\n", title, author)
     return [title, author]
@@ -218,7 +435,7 @@ class Utils extends AddonModule {
             return res[1]
         }
       } catch {
-        this.debug(htmlString)
+        console.log(htmlString)
       }
     }.bind(this.Zotero.Jasminum);
     cnkiURL = await this.Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
@@ -276,14 +493,12 @@ class Utils extends AddonModule {
   }
 
   public isDOI(text) {
-    return this.Addon.DOIRegex.test(text)
+    return this.Addon.absoluteDOIRegex.test(text)
   }
 
   public getReader() {
     return this.Zotero.Reader.getByTabID(((this.window as any).Zotero_Tabs as typeof Zotero_Tabs).selectedID)
   }
-
-  
 }
 
 export default Utils
