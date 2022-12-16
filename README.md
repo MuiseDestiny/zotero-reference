@@ -1,4 +1,10 @@
 # Zotero Reference
+
+[![Latest release](https://img.shields.io/github/v/release/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/releases)
+![Release Date](https://img.shields.io/github/release-date/MuiseDestiny/zotero-reference?color=9cf)
+[![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
+![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
+
 > 为Zotero扩展`参考文献`侧边栏，让`关联文献`不再孤单
 
 📖 侧边栏快速检索，点击参考文献右侧`+`可将其与正在阅读文献双向关联，`-`号与`关联文献`里的`-`号效果一致，会将关联移除。
