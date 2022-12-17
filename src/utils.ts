@@ -12,20 +12,44 @@ class Utils extends AddonModule {
     if (DOI in this.Addon.DOIData) {
       data = this.Addon.DOIData[DOI]
     } else {
-      try {
-        const unpaywall = `https://api.unpaywall.org/v2/${DOI}?email=zoterostyle@polygon.org`
+      const configs = {
+        semanticscholar: {
+          url: `https://api.semanticscholar.org/graph/v1/paper/${DOI}?fields=title,year,authors`,
+          parse: (response) => {
+            let author = response.authors[0].name
+            let title = response.title
+            let year = response.year
+            return {
+              author, title, year
+            }
+          }
+        },
+        unpaywall: {
+          url: `https://api.unpaywall.org/v2/${DOI}?email=zoterostyle@polygon.org`,
+          parse: (response) => {
+            let author = response.z_authors[0].family
+            let title = response.title
+            let year = response.year
+            return {
+              author, title, year
+            }
+          }
+        }
+      }
+      for (let method in configs) {
         let res = await this.Zotero.HTTP.request(
           "GET",
-          unpaywall,
+          configs[method].url,
           {
             responseType: "json"
           }
         )
-        data = res.response
-        this.Addon.DOIData[DOI] = data
-      } catch (e) {
-        console.log(e)
-        return false
+        if (res.status == 200) {
+          data = configs[method].parse(res.response)
+          this.debug(data)
+          this.Addon.DOIData[DOI] = data
+          break
+        }
       }
     }
     return data
@@ -166,7 +190,7 @@ class Utils extends AddonModule {
             if (a) {
               try {
                 let _args = this.parseCnkiURL(a.getAttribute("href"))
-                data["url"] = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${_args.FileName}&DbName=${_args.DbName}&DbCode=${_args.DbCode}`
+                data["URL"] = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${_args.FileName}&DbName=${_args.DbName}&DbCode=${_args.DbCode}`
               } catch {}
             }
             data["unstructured"] = li.innerText
@@ -257,10 +281,22 @@ class Utils extends AddonModule {
     for (let i = 0; i < references.length; i++) {
       let reference = references[i].trim()
       reference = reference.replace(/^\[\d+\]/, "").trim()
-      let matchedDOI = reference.match(this.Addon.DOIRegex)
-      let data = { unstructured: reference }
-      if (matchedDOI) {
-        data["DOI"] = matchedDOI[0]
+      let data = {
+        unstructured: reference
+      }
+      const regex = {
+        "DOI": this.Addon.DOIRegex,
+        "URL": /https?:\/\/[^\s]+/
+      }
+      for (let key in regex) {
+        let matchedRes = reference.match(regex[key])
+        if (matchedRes) {
+          let value = matchedRes[0] as string
+          if (value.endsWith(".")) {
+            value = value.slice(0, -1)
+          }
+          data[key] = value
+        }
       }
       refData.push(data)
     } 
@@ -318,6 +354,29 @@ class Utils extends AddonModule {
     return lines
   }
 
+  public adjustPageOffset(refLines, leftSortedX, rightSortedX) {
+    if (leftSortedX) {
+      let minX = leftSortedX[0]
+      refLines.forEach(line => {
+        if (line.column.side == "left" && line.column.minX != minX) {
+          let offset = minX - line.column.minX
+          line.column.minX += offset
+          line.x += offset
+        }
+      })
+    }
+    if (rightSortedX) {
+      let minX = rightSortedX[0]
+      refLines.forEach(line => {
+        if (line.column.side == "right" && line.column.minX != minX) {
+          let offset = minX - line.column.minX
+          line.column.minX += offset
+          line.x += offset
+        }
+      })
+    }
+  }
+
   async prepareTextContent() {
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
@@ -332,9 +391,15 @@ class Utils extends AddonModule {
       let pdfPage = pages[i].pdfPage
       console.log(pdfPage)
       let items = (await pdfPage.getTextContent()).items
-      this.debug("ori length", items.length)
+      this.debug("items", items)
+
       // 合并同一高度的，同一行
       let lines = this.mergeSameTop(items)
+
+      // 需要记录一下column，防止相邻页布局更改
+      let maxWidth = pdfPage._pageInfo.view[2];
+      [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
+
       // 判断是否含有参考文献
       let line = lines.reverse().find(line => {
         return (
@@ -346,13 +411,7 @@ class Utils extends AddonModule {
       lines.reverse()
       let k = lines.indexOf(line);
 
-      // 需要记录一下column，防止相邻页布局更改
-      let maxWidth = pdfPage._pageInfo.view[2];
-      [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
-
       if (k != -1) {
-        // const maxy = line.y
-        // lines = lines.filter(line=>line.y<maxy)
         flag = true
         refLines = [...lines.slice(k+1), ...refLines]
         break
@@ -361,29 +420,8 @@ class Utils extends AddonModule {
       }
     }
     if (flag) {
-      this.debug("refLines", [...refLines])
-      // 校正不同页面整体偏移
       // leftSortedX, rightSortedX记录的是参考文献页面
-      if (leftSortedX) {
-        let minX = leftSortedX[0]
-        refLines.forEach(line => {
-          if (line.column.side == "left" && line.column.minX != minX) {
-            let offset = minX - line.column.minX
-            line.column.minX += offset
-            line.x += offset
-          }
-        })
-      }
-      if (rightSortedX) {
-        let minX = rightSortedX[0]
-        refLines.forEach(line => {
-          if (line.column.side == "right" && line.column.minX != minX) {
-            let offset = minX - line.column.minX
-            line.column.minX += offset
-            line.x += offset
-          }
-        })
-      }
+      this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
       this.debug("refLines", [...refLines])
       return refLines
     } else {
@@ -392,29 +430,45 @@ class Utils extends AddonModule {
   }
 
   public parseContent(content) {
-    // extract author and title
-    // [1] 张 宁, 张 雨青, 吴 坎坎. 信任的心理和神经生理机制. 2011, 1137-1143.
-    // [1] 中央环保督察视角下的城市群高质量发展研究——以成渝城市群为例[J].李毅.  环境生态学.2022(04) 
-    let parts = content
-      .replace(/\[.+?\]/g, "")
-      .replace(/\s+/g, " ")
-      .split(/(\.\s+|,|，)/)
-      .map(e=>e.trim())
-      .filter(e => e)
-    this.debug("parts", parts)
-    let authors = []
-    let titles = []
-    for (let part of parts) {
-      if (part.length <= 3 && part.length >= 2) {
-        authors.push(part);
-      } else {
-        titles.push(part);
+    if (this.isChinese(content)) {
+      // extract author and title
+      // [1] 张 宁, 张 雨青, 吴 坎坎. 信任的心理和神经生理机制. 2011, 1137-1143.
+      // [1] 中央环保督察视角下的城市群高质量发展研究——以成渝城市群为例[J].李毅.  环境生态学.2022(04) 
+      let parts = content
+        .replace(/\[.+?\]/g, "")
+        .replace(/\s+/g, " ")
+        .split(/(\.\s+|,|，)/)
+        .map(e=>e.trim())
+        .filter(e => e)
+      this.debug("parts", parts)
+      let authors = []
+      let titles = []
+      for (let part of parts) {
+        if (part.length <= 3 && part.length >= 2) {
+          authors.push(part);
+        } else {
+          titles.push(part);
+        }
       }
+      let title = titles.sort((a, b) => b.length-a.length)[0]
+      let author = authors[0]
+      this.debug(content, "\n->\n", title, author)
+      return [title, author]
+    } else {
+      let authors = []
+      const authorRegexs = [/[A-Za-z,\.\s]+?\.?[\.,]/g, /[A-Z][a-z]+ et al.,/]
+      authorRegexs.forEach(regex => {        
+        content.match(regex)?.forEach(author => {
+          authors.push(author.slice(0, -1))
+          content = content.replace(regex, "")
+        })
+      })
+      let title = content
+        .replace(/\[\d+\]/, "")
+        .replace(/\d{4}\./, "")
+        .trim()
+      return [title, authors[0]]
     }
-    let title = titles.sort((a, b) => b.length-a.length)[0]
-    let author = authors[0]
-    this.debug(content, "\n->\n", title, author)
-    return [title, author]
   }
 
   public parseCnkiURL(cnkiURL) {

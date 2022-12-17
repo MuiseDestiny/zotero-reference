@@ -220,11 +220,11 @@ class AddonViews extends AddonModule {
         content = `[${i + 1}] ${data.unstructured}`
       } else {
         if (DOI) {
-          this.debug(`[${i + 1}] 从unpaywall更新条目中...`, DOI);
+          this.debug(`[${i + 1}] getDOIInfo更新条目中...`, DOI);
           // update DOIInfo by unpaywall
           let _data = await this.Addon.utils.getDOIInfo(DOI);
           try {
-            author = _data.z_authors[0]["family"]
+            author = _data.author
             year = _data.year
             title = _data.title
             content = `[${i + 1}] ${author} et al., ${year}. ${title}`
@@ -297,7 +297,7 @@ class AddonViews extends AddonModule {
     )
   }
 
-  public addRow(tabpanel, content, DOI, _data) {
+  public addRow(tabpanel, content, DOI, ref) {
     if ([...tabpanel.querySelectorAll("row label")]
       .filter(e => e.value == content)
       .length > 0) { return }
@@ -315,11 +315,19 @@ class AddonViews extends AddonModule {
     label.setAttribute("crop", "end");
     label.setAttribute("flex", "1");
     box.append(image, label);
-    box.addEventListener("click", () => {
-      this.showProgressWindow(this.Addon.utils.isDOI(DOI) ? DOI : "No DOI found", content)
-      new CopyHelper()
-        .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
-        .copy();
+    box.addEventListener("click", (event) => {
+      if (event.ctrlKey) {
+        const URL = ref.URL || `https://doi.org/${DOI}`
+        this.showProgressWindow("Open", URL)
+        this.debug("ctrl点击", URL)
+        this.Zotero.launchURL(URL);
+      } else {
+        let [title, _] = this.Addon.utils.parseContent(content)
+        this.showProgressWindow(this.Addon.utils.isDOI(DOI) ? DOI : "No DOI found", `${title}`)
+        new CopyHelper()
+          .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
+          .copy();
+      }
     })
 
     let setState = (state: string = "") => {
