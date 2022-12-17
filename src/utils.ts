@@ -58,6 +58,7 @@ class Utils extends AddonModule {
   async getTitleDOIByCrossref(title: string) {
     let res
     try {
+      this.Addon.views.showProgressWindow("通过crossref查询DOI", title)
       const crossref = `https://api.crossref.org/works?query=${title}`
       res = await this.Zotero.HTTP.request(
         "GET",
@@ -78,6 +79,7 @@ class Utils extends AddonModule {
   async getTitleDOIByUnpaywall(title: string) {
     let res
     try {
+      this.Addon.views.showProgressWindow("通过unpaywall查询DOI", title)
       const unpaywall = `https://api.unpaywall.org/v2/search?query=${title}&email=zoterostyle@polygon.org`
       res = await this.Zotero.HTTP.request(
         "GET",
@@ -96,10 +98,8 @@ class Utils extends AddonModule {
   }
 
   async getTitleDOI(title: string) {
-    this.Addon.views.showProgressWindow("通过unpaywall查询DOI", title)
     let DOI = await this.getTitleDOIByUnpaywall(title)
     if (!DOI) {
-      this.Addon.views.showProgressWindow("通过crossref查询DOI", title)
       DOI = await this.getTitleDOIByCrossref(title)
     }
     this.Addon.views.showProgressWindow("DOI", DOI)
@@ -511,17 +511,17 @@ class Utils extends AddonModule {
       return [title, author]
     } else {
       let authors = []
+      content = content.replace(/[\u4e00-\u9fa5]/g, "")
       const authorRegexs = [/[A-Za-z,\.\s]+?\.?[\.,;]/g, /[A-Z][a-z]+ et al.,/]
       authorRegexs.forEach(regex => {        
         content.match(regex)?.forEach(author => {
           authors.push(author.slice(0, -1))
-          content = content.replace(regex, "")
         })
       })
       let title = content
-        .replace(/\[\d+\]/, "")
-        .replace(/\d{4}\./, "")
-        .trim()
+        .split(/[,\.]\s/g)
+        .filter((e: string)=>!e.includes("http"))
+        .sort((a,b)=>b.length-a.length)[0]
       return [title, authors[0]]
     }
   }
@@ -549,6 +549,12 @@ class Utils extends AddonModule {
     }.bind(this.Zotero.Jasminum);
     cnkiURL = await this.Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
     this.Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(this.Zotero.Jasminum);
+    if (!cnkiURL && title) {
+      return await this.getCnkiURL(title.slice(0, parseInt(String(title.length/2))), author)
+    } else if (!title) {
+      this.Addon.views.showProgressWindow("CNKI", "知网检索失败", "fail")
+      return false
+    }
     let args = this.parseCnkiURL(cnkiURL)
     cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
     console.log(cnkiURL)
@@ -598,7 +604,7 @@ class Utils extends AddonModule {
   }
 
   public isChinese(text) {
-    return /[\u4e00-\u9fa5]+/.test(text)
+    return (text.match(/[^a-zA-Z]/g)?.length || 0) / text.length > .9
   }
 
   public isDOI(text) {

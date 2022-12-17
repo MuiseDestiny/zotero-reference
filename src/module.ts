@@ -16,10 +16,9 @@ class AddonModule {
 
   public debug(...msg) {
     if (this.isDebug) {
-      this.Zotero.debug("[zotero-reference]: ", ...msg)
+      this.Zotero.debug("[zotero-reference]: " + msg)
       console.log("[zotero-reference]: ", ...msg)
     }
-
   }
 }
 

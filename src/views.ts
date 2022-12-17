@@ -323,14 +323,16 @@ class AddonViews extends AddonModule {
           if (this.Addon.utils.isChinese(content)) {
             URL = await this.Addon.utils.getCnkiURL(title, author)
           } else {
-            DOI = await this.Addon.utils.getTitleDOI(title)
+            DOI = await this.Addon.utils.getTitleDOIByCrossref(ref.unstructured)
             ref["DOI"] = DOI
             URL = `https://doi.org/${DOI}`
           }
         }
         this.showProgressWindow("Open", URL)
         this.debug("ctrl点击", URL)
-        this.Zotero.launchURL(URL);
+        if (URL) {
+          this.Zotero.launchURL(URL);
+        }
       } else {
         let [title, _] = this.Addon.utils.parseContent(content)
         this.showProgressWindow(this.Addon.utils.isDOI(DOI) ? DOI : "No DOI found", `${title}`)
