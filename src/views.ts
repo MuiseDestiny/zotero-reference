@@ -315,9 +315,19 @@ class AddonViews extends AddonModule {
     label.setAttribute("crop", "end");
     label.setAttribute("flex", "1");
     box.append(image, label);
-    box.addEventListener("click", (event) => {
+    box.addEventListener("click", async (event) => {
       if (event.ctrlKey) {
-        const URL = ref.URL || `https://doi.org/${DOI}`
+        let URL = ref.URL || (ref.DOI && `https://doi.org/${ref.DOI}`)
+        if (!URL) {
+          let [title, author] = this.Addon.utils.parseContent(content)
+          if (this.Addon.utils.isChinese(content)) {
+            URL = await this.Addon.utils.getCnkiURL(title, author)
+          } else {
+            DOI = await this.Addon.utils.getTitleDOI(title)
+            ref["DOI"] = DOI
+            URL = `https://doi.org/${DOI}`
+          }
+        }
         this.showProgressWindow("Open", URL)
         this.debug("ctrl点击", URL)
         this.Zotero.launchURL(URL);

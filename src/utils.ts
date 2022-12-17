@@ -212,93 +212,42 @@ class Utils extends AddonModule {
 
   async getRefDataFromPDF() {
     this.Addon.views.showProgressWindow("PDF", "从PDF解析参考文献")
-    let refLines = await this.prepareTextContent()
-    if (!refLines) {
+    let refLines = await this.getRefLines()
+    if (refLines.length == 0) {
       this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
       return []
     }
 
-    let isRefStart = (text) => {
-      let regexArray = [
-        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]/,
-        /^\d+\s[^\d]+?[\,\.\uff0c\uff0e]/,
-        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]/,
-        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]/
-      ]
-      for (let i = 0; i < regexArray.length; i++) {
-        if (regexArray[i].test(text)) {
-          return true
-        }
-      }
-    }
-
-    // 获取左右栏分界线，这里中间可能对个别奇怪排版pdf不适用，但应该可以应对大多数情况
-    let firstLine = refLines[0]
-    // 已知新一行参考文献缩进
-    let firstX = firstLine.x
-    // 分成左栏和右栏，未必真的会分，有的文章只有一栏
-    let leftLines, rightLines
-    leftLines = refLines.filter(line => line.column.side == "left")
-    rightLines = refLines.filter(line => line.column.side == "right")
-    // 找到两栏最小的x
-    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
-    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
-    // 如果已知条目缩进是在左侧，且含右栏
-    if (firstLine.column.side == "left" && rightSortedX) {
-      // 将右栏移到左栏
-      rightLines.forEach(line => {
-        line.x = line.x - rightSortedX[0] + firstX
-      })
-    }
-    // 如果已知条目缩进是在右侧，且含左栏
-    else if (firstLine.column.side == "right" && leftSortedX) {
-      // 将左栏移到右栏
-      leftLines.forEach(line => {
-        line.x = rightSortedX[0] + line.x - leftSortedX[0]
-      })
-    }
-
-    let references = []
-    for (let i = 0; i < refLines.length; i++) {
-      let line = refLines[i]
-      let text = line.text 
-      let error = line.x - firstX
-      error = error > 0 ? error : -error
-      if (error < line.height && isRefStart(text)) {
-        references.push(text)
-      } else {
-        references[references.length-1] += text
-      }
-    }
-
-    console.log(references)
-    if (references.length > 0) {
-      this.Addon.views.showProgressWindow("PDF", `${references.length}条参考文献`, "success")
+    let refData = this.mergeSameRef(refLines)
+    
+    if (refData.length > 0) {
+      this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
     } else {
       this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
     }
-    let refData = []
-    for (let i = 0; i < references.length; i++) {
-      let reference = references[i].trim()
-      reference = reference.replace(/^\[\d+\]/, "").trim()
-      let data = {
-        unstructured: reference
-      }
+
+    this.debug(refData)
+    for (let i = 0; i < refData.length; i++) {
+      let ref = refData[i]
+      let unstructured = ref.text
+      unstructured = unstructured
+        .trim()
+        .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
+      ref["unstructured"] = unstructured
       const regex = {
         "DOI": this.Addon.DOIRegex,
         "URL": /https?:\/\/[^\s]+/
       }
       for (let key in regex) {
-        let matchedRes = reference.match(regex[key])
+        let matchedRes = ref.unstructured.match(regex[key]) || (ref?.url || "").match(regex[key])
         if (matchedRes) {
           let value = matchedRes[0] as string
           if (value.endsWith(".")) {
             value = value.slice(0, -1)
           }
-          data[key] = value
+          ref[key] = value
         }
       }
-      refData.push(data)
     } 
     return refData
   }
@@ -335,23 +284,90 @@ class Utils extends AddonModule {
         y: parseFloat(item.transform[5].toFixed(1)),
         text: item.str || "",
         height: item.height,
-        width: item.width
+        width: item.width,
+        url: item?.url
       }
     }
     let j = 0
     let lines = [toLine(items[j])]
     for (j = 1; j < items.length; j++) {
-      let item = toLine(items[j])
-      let error = item.y - lines.slice(-1)[0].y
+      let line = toLine(items[j])
+      let lastLine = lines.slice(-1)[0]
+      let error = line.y - lastLine.y
       error = error > 0 ? error : -error
-      if (error < item.height * .5) {
-        lines.slice(-1)[0].text += item.text
-        lines.slice(-1)[0].width += item.width
+      if (error < line.height * .5) {
+        lastLine.text += line.text
+        lastLine.width += line.width
+        lastLine.url = lastLine.url || line.url
       } else {
-        lines.push(item)
+        lines.push(line)
       }
     }
     return lines
+  }
+
+  public mergeSameRef(refLines) {
+    let isRefStart = (text) => {
+      let regexArray = [
+        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]/,
+        /^\d+[\s\.]?[^\d]+?[\,\.\uff0c\uff0e]/,
+        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]/,
+        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]/
+      ]
+      for (let i = 0; i < regexArray.length; i++) {
+        if (regexArray[i].test(text)) {
+          return true
+        }
+      }
+    }
+
+    let firstLine = refLines[0]
+    // 已知新一行参考文献缩进
+    let firstX = firstLine.x
+    let ref
+    for (let i = 0; i < refLines.length; i++) {
+      let line = refLines[i]
+      let text = line.text 
+      let error = line.x - firstX
+      error = error > 0 ? error : -error
+      if (error < line.height && isRefStart(text)) {
+        // new ref start
+        ref = line
+      } else {
+        ref.text += text
+        if (line.url) {
+          ref.url = line.url
+        }
+        refLines[i] = false
+      }
+    }
+    return refLines.filter(e => e)
+  }
+
+  public alignColumns(refLines) {
+    let firstLine = refLines[0]
+    let firstX = firstLine.x
+    // 分成左栏和右栏，未必真的会分，有的文章只有一栏
+    let leftLines, rightLines
+    leftLines = refLines.filter(line => line.column.side == "left")
+    rightLines = refLines.filter(line => line.column.side == "right")
+    // 找到两栏最小的x
+    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
+    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
+    // 如果已知条目缩进是在左侧，且含右栏
+    if (firstLine.column.side == "left" && rightSortedX) {
+      // 将右栏移到左栏
+      rightLines.forEach(line => {
+        line.x = line.x - rightSortedX[0] + firstX
+      })
+    }
+    // 如果已知条目缩进是在右侧，且含左栏
+    else if (firstLine.column.side == "right" && leftSortedX) {
+      // 将左栏移到右栏
+      leftLines.forEach(line => {
+        line.x = rightSortedX[0] + line.x - leftSortedX[0]
+      })
+    } 
   }
 
   public adjustPageOffset(refLines, leftSortedX, rightSortedX) {
@@ -377,7 +393,38 @@ class Utils extends AddonModule {
     }
   }
 
-  async prepareTextContent() {
+  public updateItemsAnnotions(items, annotations) {
+    // annotations {rect: [416, 722, 454, 733]}
+    // items {transform: [...x, y], width: 82}
+    let toBox = (rect) => {
+      let [left, bottom, right, top] = rect;
+      return {left, bottom, right, top}
+    }
+    let isIntersect = (A, B) => {
+      if (
+        B.right < A.left || 
+        B.left > A.right || 
+        B.bottom > A.top ||
+        B.top < A.bottom
+      ) {
+        return false
+      } else {
+        return true
+      }
+    }
+    annotations.forEach(annotation => {
+      let annoBox = toBox(annotation.rect)
+      items.forEach(item => {
+        let [x, y] = item.transform.slice(4)
+        let itemBox = toBox([x, y, x + item.width, y + item.height])
+        if (isIntersect(annoBox, itemBox)) {
+          item["url"] = annotation?.url || annotation?.unsafeUrl
+        }
+      })
+    })
+  }
+
+  async getRefLines() {
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
@@ -387,33 +434,40 @@ class Utils extends AddonModule {
     let flag = false
     let leftSortedX, rightSortedX
     for (let i = pages.length - 1; i >= 0; i--) {
-      this.debug("page num", i)
+      this.debug("current page", i)
       let pdfPage = pages[i].pdfPage
-      console.log(pdfPage)
-      let items = (await pdfPage.getTextContent()).items
-      this.debug("items", items)
 
-      // 合并同一高度的，同一行
+      let items = (await pdfPage.getTextContent()).items
+      let annotations = (await pdfPage.getAnnotations())
+      // add URL to item with annotation
+      this.updateItemsAnnotions(items, annotations)
+      this.debug("after updateItemsAnnotions", items)
+
       let lines = this.mergeSameTop(items)
+      this.debug("after mergeSameTop", lines)
 
       // 需要记录一下column，防止相邻页布局更改
       let maxWidth = pdfPage._pageInfo.view[2];
+      let maxHeight = pdfPage._pageInfo.view[3];
+      console.log("maxWidth", maxWidth, "maxHeight", maxHeight)
+      lines = lines.filter(line => line.y / maxHeight < .9);
       [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
 
       // 判断是否含有参考文献
       let line = lines.reverse().find(line => {
         return (
-          /(参考文献|reference)/ig.test(line.text) ||
+          /(\u53c2\u8003\u6587\u732e|reference)/i.test(line.text) ||
           line.text.includes("参考文献") ||
-          line.text.includes("Reference") 
+          line.text.includes("Reference") ||
+          line.text.includes("REFERENCES") 
         ) && line.text.length < 20
       })
       lines.reverse()
-      let k = lines.indexOf(line);
+      let breakIndex = lines.indexOf(line);
 
-      if (k != -1) {
+      if (breakIndex != -1) {
         flag = true
-        refLines = [...lines.slice(k+1), ...refLines]
+        refLines = [...lines.slice(breakIndex+1), ...refLines]
         break
       } else {
         refLines = [...lines, ...refLines]
@@ -422,6 +476,7 @@ class Utils extends AddonModule {
     if (flag) {
       // leftSortedX, rightSortedX记录的是参考文献页面
       this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
+      this.alignColumns(refLines)
       this.debug("refLines", [...refLines])
       return refLines
     } else {
@@ -456,7 +511,7 @@ class Utils extends AddonModule {
       return [title, author]
     } else {
       let authors = []
-      const authorRegexs = [/[A-Za-z,\.\s]+?\.?[\.,]/g, /[A-Z][a-z]+ et al.,/]
+      const authorRegexs = [/[A-Za-z,\.\s]+?\.?[\.,;]/g, /[A-Z][a-z]+ et al.,/]
       authorRegexs.forEach(regex => {        
         content.match(regex)?.forEach(author => {
           authors.push(author.slice(0, -1))
