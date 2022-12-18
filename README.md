@@ -16,10 +16,11 @@
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
 ## 👋 使用
+![image](https://user-images.githubusercontent.com/51939531/208303590-dfe6f3cf-cd48-4afe-90a0-9cce6ff5f9cb.png)
 
-单击`参考文献` -> 复制此条参考文献信息；
+单击蓝色区域 -> 复制此条参考文献信息；
 
-ctrl+单击`参考文献` -> 用默认浏览器打开文献地址；
+ctrl+单击蓝色区域 -> 用默认浏览器打开文献地址；
 
 单击`+` -> 添加参考文献至`正在阅读文献`所在文件夹下并与之双向关联；
 
