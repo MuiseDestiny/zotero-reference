@@ -347,11 +347,15 @@ class AddonViews extends AddonModule {
       }
     })
 
+    let timer = null
     box.addEventListener("mouseenter", () => {
-      this.showTip(headLine, content, box)
+      timer = this.window.setTimeout(() => {
+        this.showTip(headLine, content, box)
+      }, 100);
     })
 
     box.addEventListener("mouseleave", () => {
+      this.window.clearTimeout(timer)
       this.document.querySelectorAll(".zotero-reference-tip").forEach(e=>e.remove())
     })
 
@@ -566,10 +570,11 @@ class AddonViews extends AddonModule {
       titleSpan,
       contentSpan
     )
+    // bottom: ${winRect.height - rect.bottom}px;
 
     div.style = `
       position: fixed;
-      right: ${winRect.width - rect.left + 23}px;
+      right: ${winRect.width - rect.left + 22}px;
       top: ${rect.top}px;
       width: 600px;
       z-index: 999;
@@ -578,6 +583,13 @@ class AddonViews extends AddonModule {
       border: 2px solid #7a0000;
     `
     this.document.querySelector('#main-window').appendChild(div)
+
+    let boxRect = div.getBoundingClientRect()
+    console.log(boxRect, winRect)
+    if (boxRect.bottom >= winRect.height) {
+      div.style.top = ""
+      div.style.bottom = `${winRect.height - rect.bottom}px`
+    }
   }
 
   public showProgressWindow(
