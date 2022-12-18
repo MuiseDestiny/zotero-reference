@@ -52,12 +52,15 @@ class AddonViews extends AddonModule {
     } catch (e) {}
   }
 
+  public getTabContainer() {
+    let tabId = this.window.Zotero_Tabs.selectedID
+    return this.document.querySelector(`#${tabId}-context`)
+  }
+
   async buildSideBarPanel() {
     this.debug("buildSideBarPanel");
-    let tabId = this.window.Zotero_Tabs.selectedID
-    const tabContainer = this.document.querySelector(`#${tabId}-context`);
-
-    if (!tabContainer || tabContainer.querySelector("#zotero-reference-tab")) {
+    let tabContainer = this.getTabContainer()
+    if (tabContainer.querySelector("#zotero-reference-tab")) {
       return
     }
 
@@ -134,12 +137,13 @@ class AddonViews extends AddonModule {
   }
 
   public async refreshReference(tabpanel, item) {
+    tabpanel.classList.toggle("PDF")
+
     let itemDOI = item.getField("DOI")
     const itemTitle = item.getField("title")
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
-    tabpanel.classList.toggle("PDF")
     let refData
     if (this.Addon.utils.isChinese(itemTitle) && !itemDOI) {
       let cnkiURL = item.getField("url")
@@ -331,13 +335,12 @@ class AddonViews extends AddonModule {
           }
         }
         this.showProgressWindow("Open", URL)
-        this.debug("ctrl点击", URL)
         if (URL) {
           this.Zotero.launchURL(URL);
         }
       } else {
         let [title, _] = this.Addon.utils.parseContent(content)
-        this.showProgressWindow(headLine, `${title}`)
+        this.showProgressWindow(headLine, "复制成功", "success")
         new CopyHelper()
           .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
           .copy();
@@ -345,11 +348,11 @@ class AddonViews extends AddonModule {
     })
 
     box.addEventListener("mouseenter", () => {
-      this.showProgressWindow(headLine, content, "default", -1, -1)
+      this.showTip(headLine, content, box)
     })
 
     box.addEventListener("mouseleave", () => {
-      this.progressWindow.close();
+      this.document.querySelectorAll(".zotero-reference-tip").forEach(e=>e.remove())
     })
 
     let setState = (state: string = "") => {
@@ -394,7 +397,7 @@ class AddonViews extends AddonModule {
       this.showProgressWindow("移除成功", DOI, "success")
     }
     
-    let add = async () => {
+    let add = async (collections: number[] = []) => {
       this.debug("addRelatedItem", content, DOI)
       // check DOI
       let refItem, source
@@ -414,7 +417,7 @@ class AddonViews extends AddonModule {
           source = "CNKI文献"
         }
         this.debug("addToCollection")
-        for (let collectionID of item.getCollections()) {
+        for (let collectionID of (collections || item.getCollections())) {
           refItem.addToCollection(collectionID)
           await refItem.saveTx()
         }
@@ -443,10 +446,14 @@ class AddonViews extends AddonModule {
         
         if (refItem) {
           source = "已有条目"
+          for (let collectionID of (collections || item.getCollections())) {
+            refItem.addToCollection(collectionID)
+            await refItem.saveTx()
+          }
         } else {
           source = "新建条目"
           try {
-            refItem = await this.Addon.utils.createItemByZotero(DOI, item.getCollections())
+            refItem = await this.Addon.utils.createItemByZotero(DOI, (collections || item.getCollections()))
           } catch (e) {
             this.showProgressWindow(`与${source}关联失败`, DOI + "\n" + e.toString(), "fail")
             setState("+")
@@ -480,9 +487,36 @@ class AddonViews extends AddonModule {
     } else {
       setState("+")
     }
-    label.addEventListener("click", async () => {
+    let getCollectionPath = async (id) => {
+      let path = []
+      while (true) {
+        let collection = await this.Zotero.Collections.getAsync(id)
+        path.push(collection._name)
+        if (collection._parentID) {
+          id = collection._parentID
+        } else {
+          break
+        }
+      }
+      console.log(path)
+      return path.reverse().join("/")
+    }
+
+    label.addEventListener("click", async (event) => {
+      console.log(event)
       if (label.value == "+") {
-        await add()
+        if (event.ctrlKey) {
+          let collection = this.window.ZoteroPane.getSelectedCollection();
+          console.log(collection)
+          if (collection) {
+            this.showProgressWindow("关联至", `${await getCollectionPath(collection.id)}`)
+            await add([collection.id])
+          } else {
+            this.showProgressWindow("失败", "请在主界面选择文件夹后重试")
+          }
+        } else {
+          await add()
+        }
       } else if (label.value == "-") {
         await remove()
       }
@@ -509,6 +543,43 @@ class AddonViews extends AddonModule {
     this.removeSideBarPanel()
   }
 
+  public showTip(title, content, element) {
+    const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
+    const rect = element.getBoundingClientRect()
+    let xmlns = "http://www.w3.org/1999/xhtml"
+    let div = this.document.createElementNS(xmlns, "div")
+    div.setAttribute("class", "zotero-reference-tip")
+    let titleSpan = this.document.createElementNS(xmlns, "span")
+    titleSpan.innerText = title
+    titleSpan.style = `
+      display: block;
+      font-weight: bold;
+      margin-bottom: .5em;
+    `
+    let contentSpan = this.document.createElementNS(xmlns, "span")
+    contentSpan.innerText = content
+    contentSpan.style = `
+      line-height: 1.5em;
+      opacity: .73;
+    `
+    div.append(
+      titleSpan,
+      contentSpan
+    )
+
+    div.style = `
+      position: fixed;
+      right: ${winRect.width - rect.left + 23}px;
+      top: ${rect.top}px;
+      width: 600px;
+      z-index: 999;
+      background-color: #f0f0f0;
+      padding: .5em;
+      border: 2px solid #7a0000;
+    `
+    this.document.querySelector('#main-window').appendChild(div)
+  }
+
   public showProgressWindow(
     header: string,
     context: string,
@@ -517,9 +588,9 @@ class AddonViews extends AddonModule {
     maxLength: number = 100
   ) {
     console.log(arguments)
-    if (this.progressWindow) {
-      this.progressWindow.close();
-    }
+    // if (this.progressWindow && ) {
+    //   this.progressWindow.close();
+    // }
     let progressWindow = new this.Zotero.ProgressWindow({ closeOnClick: true });
     this.progressWindow = progressWindow
     progressWindow.changeHeadline(header);

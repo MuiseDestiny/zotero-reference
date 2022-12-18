@@ -113,11 +113,11 @@ class Utils extends AddonModule {
       return refData
     }
     // request or read data
+    this.Addon.views.showProgressWindow("Crossref", `从Crossref API获取参考文献`)
     if (DOI in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[DOI]
     } else {
       try {
-        this.Addon.views.showProgressWindow("Crossref", `从Crossref API获取参考文献`)
         const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
         let res = await this.Zotero.HTTP.request(
           "GET",
@@ -212,8 +212,7 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromPDF() {
-    let tabId = this.window.Zotero_Tabs.selectedID
-    const tabContainer = this.document.querySelector(`#${tabId}-context`);
+    let tabContainer = this.Addon.views.getTabContainer()
     if (!tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")) {
       return []
     }
