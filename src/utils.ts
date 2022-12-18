@@ -128,6 +128,11 @@ class Utils extends AddonModule {
         )
         refData = res.response.reference || []
         if (refData) {
+          refData.forEach(ref => {
+            if (ref.unstructured) {
+              this.unpackUnstructured(ref)
+            }
+          })
           this.Addon.DOIRefData[DOI] = refData
         } else {
           return await this.getRefDataFromPDF()
@@ -240,31 +245,46 @@ class Utils extends AddonModule {
           .trim()
           .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
         ref["unstructured"] = unstructured
-        const regex = {
-          "DOI": this.Addon.DOIRegex,
-          "URL": /https?:\/\/[^\s]+/
-        }
-        for (let key in regex) {
-          let matchedRes = ref.unstructured.match(regex[key]) || (ref?.url || "").match(regex[key])
-          if (matchedRes) {
-            let value = matchedRes[0] as string
-            if (value.endsWith(".")) {
-              value = value.slice(0, -1)
-            }
-            ref[key] = value
-          }
-        }
+        this.unpackUnstructured(ref)
       } 
       return refData
     } catch (e) {
+      console.error(e)
       this.Addon.views.showProgressWindow("PDF", e, "fail")
       return []
     }
   }
 
+  public unpackUnstructured(ref) {
+    const regex = {
+      "DOI": this.Addon.DOIRegex,
+      "URL": /https?:\/\/[^\s]+/
+    }
+    for (let key in regex) {
+      if (key in ref) { continue }
+      let matchedRes = (ref?.url || "").match(regex[key]) || ref.unstructured.match(regex[key])
+      if (matchedRes) {
+        let value = matchedRes[0] as string
+        if (value.endsWith(".")) {
+          value = value.slice(0, -1)
+        }
+        ref[key] = value
+      }
+    }
+  }
+
   public recordLayout(lines, middle) {
     let leftLines = lines.filter(line => line.x < middle)
-    let rightLines = lines.filter(line => line.x > middle)
+    let rightLines
+    rightLines = lines.filter(line => line.x > middle)
+    if (leftLines) {
+      let values = leftLines.map(line => line.x + line.width).sort((a, b) => b - a)
+      let value = values.reduce((a, b) => a + b) / values.length;
+      console.log(values, value)
+      rightLines = rightLines.filter(line => line.x > value)
+      leftLines = lines.filter(line=>rightLines.indexOf(line) == -1)
+    }
+    console.log("left", leftLines, "right", rightLines)
     // 储存栏目最小值，用于校正整体偏移，极少数pdf需要
     let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
     let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
@@ -307,9 +327,10 @@ class Utils extends AddonModule {
       let error = line.y - lastLine.y
       error = error > 0 ? error : -error
       if (error < line.height * .5 && lastLine.y - line.y < 2 * line.height) {
-        lastLine.text += line.text
+        lastLine.text += " " + line.text
         lastLine.width += line.width
         lastLine.url = lastLine.url || line.url
+        lastLine.fontName = line.fontName
       } else {
         lines.push(line)
       }
@@ -319,11 +340,12 @@ class Utils extends AddonModule {
 
   public mergeSameRef(refLines) {
     let isRefStart = (text) => {
+      return true
       let regexArray = [
-        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]/,
-        /^\d+[\.]?[^\d]+?[\,\.\uff0c\uff0e]/,
-        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]/,
-        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]/
+        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/,
+        /^\d+[^\d]+?[\,\.\uff0c\uff0e]?/,
+        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/,
+        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/
       ]
       for (let i = 0; i < regexArray.length; i++) {
         if (regexArray[i].test(text.replace(/\s+/g, ""))) {
@@ -342,6 +364,7 @@ class Utils extends AddonModule {
       let text = line.text 
       let error = line.x - firstX
       error = error > 0 ? error : -error
+      // this.debug(error, error < line.height, isRefStart(text), line.text)
       if (error < line.height && isRefStart(text)) {
         // new ref start
         ref = line
@@ -448,8 +471,9 @@ class Utils extends AddonModule {
       if (
         i + 1 < lines.length &&
         (
+          (lines[i].y < lines[i + 1].y && !(lines[i].column.side == "left" && lines[i + 1].column.side == "right")) ||
           lines[i].y - lines[i + 1].y > 2 * lines[i].height ||
-          lines[i].column.side == "right" && lines[i+1].column.side == "left"
+          (lines[i].column.side == "right" && lines[i+1].column.side == "left")
         )
       ) {
         break
@@ -475,6 +499,10 @@ class Utils extends AddonModule {
     for (let i = pages.length - 1; i >= 0; i--) {
       this.debug("current page", i + 1)
       let pdfPage = pages[i].pdfPage
+      let maxWidth = pdfPage._pageInfo.view[2];
+      let maxHeight = pdfPage._pageInfo.view[3];
+      this.debug(maxWidth, maxHeight);
+
       let textContent = await pdfPage.getTextContent()
       this.debug("textContent", textContent)
 
@@ -488,21 +516,18 @@ class Utils extends AddonModule {
 
       let lines = this.mergeSameTop(items)
       await this.Zotero.Promise.delay(1000);
-      this.debug("after mergeSameTop", this.copy(lines))
-
-      // 需要记录一下column，防止相邻页布局更改
-      let maxWidth = pdfPage._pageInfo.view[2];
-      let maxHeight = pdfPage._pageInfo.view[3];
-      this.debug(maxWidth, maxHeight);
+      this.debug("after mergeSameTop", this.copy(lines));
+      
       [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
       // 判断是否含有参考文献
       let line = lines.reverse().find(line => {
+        let text = line.text.replace(/\s+/g, "")
         return (
-          /(\u53c2\u8003\u6587\u732e|reference)/i.test(line.text) ||        
-          line.text.includes("参考文献") ||
-          line.text.includes("Reference") ||
-          line.text.includes("REFERENCES")
-        ) && line.text.length < 20
+          /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) ||        
+          text.includes("参考文献") ||
+          text.includes("Reference") ||
+          text.includes("REFERENCES")
+        ) && text.length < 20
       })
       lines.reverse()
       let breakIndex = lines.indexOf(line);
@@ -512,10 +537,13 @@ class Utils extends AddonModule {
         this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
         this.alignColumns(refLines)
         refLines = this.removeNotRefFontName(refLines)
-        this.debug("refLines", refLines)
+        this.debug("refLines", this.copy(refLines))
         return refLines
       } else {
         refLines = [...this.removeMargin(lines), ...refLines]
+        if ((pages.length-i) / pages.length >= .5) {
+          break
+        }
       }
     }
     return []

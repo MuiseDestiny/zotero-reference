@@ -320,7 +320,6 @@ class AddonViews extends AddonModule {
     label.setAttribute("crop", "end");
     label.setAttribute("flex", "1");
     box.append(image, label);
-    const headLine = (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference"
     box.addEventListener("click", async (event) => {
       if (event.ctrlKey) {
         let URL = ref.URL || (ref.DOI && `https://doi.org/${ref.DOI}`)
@@ -339,8 +338,7 @@ class AddonViews extends AddonModule {
           this.Zotero.launchURL(URL);
         }
       } else {
-        let [title, _] = this.Addon.utils.parseContent(content)
-        this.showProgressWindow(headLine, "复制成功", "success")
+        this.showProgressWindow("Reference", "复制成功", "success")
         new CopyHelper()
           .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
           .copy();
@@ -350,7 +348,11 @@ class AddonViews extends AddonModule {
     let timer = null
     box.addEventListener("mouseenter", () => {
       timer = this.window.setTimeout(() => {
-        this.showTip(headLine, content, box)
+        this.showTip(
+          (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference",
+          content.replace(/^\[\d+\]/, ""),
+          box
+        )
       }, 100);
     })
 
@@ -585,10 +587,12 @@ class AddonViews extends AddonModule {
     this.document.querySelector('#main-window').appendChild(div)
 
     let boxRect = div.getBoundingClientRect()
-
+    this.debug(boxRect, winRect)
     if (boxRect.bottom >= winRect.height) {
       div.style.top = ""
-      div.style.bottom = `${winRect.height - rect.bottom}px`
+      // div.style.bottom = `${winRect.height - rect.bottom}px`
+      div.style.bottom = "0px"
+
     }
   }
 
@@ -596,7 +600,7 @@ class AddonViews extends AddonModule {
     header: string,
     context: string,
     type: string = "default",
-    t: number = 2500,
+    t: number = 5000,
     maxLength: number = 100
   ) {
     console.log(arguments)
