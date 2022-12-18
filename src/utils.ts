@@ -288,7 +288,6 @@ class Utils extends AddonModule {
   }
 
   public mergeSameTop(items) {
-    this.debug("mergeSameTop input", [...items])
     let toLine = (item) => {
       return {
         x: parseFloat(item.transform[4].toFixed(1)),
@@ -296,7 +295,8 @@ class Utils extends AddonModule {
         text: item.str || "",
         height: item.height,
         width: item.width,
-        url: item?.url
+        fontName: item.fontName,
+        url: item?.url,
       }
     }
     let j = 0
@@ -306,7 +306,7 @@ class Utils extends AddonModule {
       let lastLine = lines.slice(-1)[0]
       let error = line.y - lastLine.y
       error = error > 0 ? error : -error
-      if (error < line.height * .5) {
+      if (error < line.height * .5 && lastLine.y - line.y < 2 * line.height) {
         lastLine.text += line.text
         lastLine.width += line.width
         lastLine.url = lastLine.url || line.url
@@ -438,29 +438,49 @@ class Utils extends AddonModule {
   }
 
   public removeMargin(lines) {
-    // 第一行与第二行间距过大，跳过第一行
-    if (lines[0].y - lines[1].y > lines[0].height * 1.5) {
-      lines[0] = false
+    // 第一行与第二行间距过大，跳过第一行，可能是页眉
+    if (lines[0].y - lines[1].y > lines[0].height * 2.5) {
+      lines = lines.slice(1)
     }
-    return lines.filter(e=>e)
-    // TODO
-    // if (lines.slice(-2)[0].y - lines.slice(-2)[0].y)
+    // 同一栏间距太大，可能参考文献段落结束
+    let i
+    for (i = 1; i < lines.length; i++) {
+      if (
+        i + 1 < lines.length &&
+        (
+          lines[i].y - lines[i + 1].y > 2 * lines[i].height ||
+          lines[i].column.side == "right" && lines[i+1].column.side == "left"
+        )
+      ) {
+        break
+      }
+    }
+    this.debug("after removeMargin", this.copy(lines.slice(0, i+1)))
+    return lines.slice(0, i+1)
   }
 
-  async getRefLines() {
+  public removeNotRefFontName(lines) {
+    let refFontName = lines[0].fontName
+    return lines.filter(line=>line.fontName == refFontName)
+  }
+
+  async getRefLines() { 
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
     let pages = PDFViewerApplication.pdfViewer._pages
     this.debug(pages)
     let refLines = []
-    let flag = false
     let leftSortedX, rightSortedX
     for (let i = pages.length - 1; i >= 0; i--) {
-      this.debug("current page", i)
+      this.debug("current page", i + 1)
       let pdfPage = pages[i].pdfPage
+      let textContent = await pdfPage.getTextContent()
+      this.debug("textContent", textContent)
 
-      let items = (await pdfPage.getTextContent()).items
+      let items = textContent.items
+
+      this.debug("items", items)
       let annotations = (await pdfPage.getAnnotations())
       // add URL to item with annotation
       this.updateItemsAnnotions(items, annotations)
@@ -488,21 +508,17 @@ class Utils extends AddonModule {
       let breakIndex = lines.indexOf(line);
       this.debug("breakIndex", breakIndex)
       if (breakIndex != -1) {
-        flag = true
         refLines = [...this.removeMargin(lines.slice(breakIndex + 1)), ...refLines]
-        break
+        this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
+        this.alignColumns(refLines)
+        refLines = this.removeNotRefFontName(refLines)
+        this.debug("refLines", refLines)
+        return refLines
       } else {
         refLines = [...this.removeMargin(lines), ...refLines]
       }
     }
-    if (flag) {
-      // leftSortedX, rightSortedX记录的是参考文献页面
-      this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
-      this.alignColumns(refLines)
-      return refLines
-    } else {
-      return []
-    }
+    return []
   }
 
   public copy(obj) {

@@ -585,7 +585,7 @@ class AddonViews extends AddonModule {
     this.document.querySelector('#main-window').appendChild(div)
 
     let boxRect = div.getBoundingClientRect()
-    console.log(boxRect, winRect)
+
     if (boxRect.bottom >= winRect.height) {
       div.style.top = ""
       div.style.bottom = `${winRect.height - rect.bottom}px`
