@@ -11,7 +11,7 @@
 
 👻 优先从PDF直接提取，提取失败会借助API。
 
-![image](https://user-images.githubusercontent.com/51939531/208114422-7fd4f9cd-cb49-4c55-98e6-f1f20e1eed20.png)
+![image](https://user-images.githubusercontent.com/51939531/208280890-582f40f4-8ea4-41dd-b09e-5ef1f077b8c4.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
