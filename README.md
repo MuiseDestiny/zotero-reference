@@ -5,15 +5,15 @@
 [![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
-> Hello, Reference
+> 一个插件的自述
 
-🎉 这个插件会帮你看PDF的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
+🎉 我，一个插件，开发者叫我zotero reference，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
 
-🐇 虽然它的理解力有限，有时候会很慢🐌，但它会，毫无保留地，告诉你它所知道的，关于参考文献的一切。
+🐇 虽然我的理解力有限，有时候会很慢🐌，但请你相信我，我总会，毫无保留地，告诉你我所知道的，关于参考文献的一切。
 
-👻 是的，它有两个小帮手一个叫`crossref`一个叫`cnki`，一旦它理解不了便会向这二位求助，当然，毕竟是求助，结果可能并不理想。
+👻 是的，我有两个小帮手一个叫`crossref`一个叫`cnki`，一旦我理解不了便会向这二位求助，当然，毕竟是求助，结果可能并不理想。另外，如果你知道其它帮手，欢迎加入我们。
 
-👋 如果你发现了它的知识盲点，你认为这是它这个年纪应该可以理解的，你可以把它提交到[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了你的调教，相信它会无限进步！
+👋 如果你发现了我的知识盲点，你认为这是我这个年纪应该可以参悟的，你可以把它提交到我的[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了你和开发者的调教，相信我将永远进步！
 
 --- 
 
