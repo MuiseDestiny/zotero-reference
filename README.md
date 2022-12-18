@@ -5,11 +5,19 @@
 [![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
-> 为Zotero扩展`参考文献`侧边栏，让`关联文献`不再孤单
+> Hello, Reference
 
-📖 侧边栏快速检索，点击参考文献右侧`+`可将其与正在阅读文献双向关联，`-`号与`关联文献`里的`-`号效果一致，会将关联移除。
+🎉 这个插件会帮你看PDF的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
 
-👻 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
+🐇 虽然它的理解力有限，有时候会很慢🐌，但它会，毫无保留地，告诉你它所知道的，关于参考文献的一切。
+
+👻 是的，它有两个小帮手一个叫`crossref`一个叫`cnki`，一旦它理解不了便会向这二位求助，当然，毕竟是求助，结果可能并不理想。
+
+👋 如果你发现了它的知识盲点，你认为这是它这个年纪应该可以理解的，你可以把它提交到[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了你的调教，相信它会无限进步！
+
+--- 
+
+🎈 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
 
 ![image](https://user-images.githubusercontent.com/51939531/208280890-582f40f4-8ea4-41dd-b09e-5ef1f077b8c4.png)
 
