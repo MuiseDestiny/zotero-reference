@@ -5,6 +5,7 @@ const { addonRef } = require("../package.json");
 
 class AddonViews extends AddonModule {
   private progressWindowIcon: object;
+  private progressWindow: any;
   public tabpanel: XUL.Element;
   public reader: _ZoteroReader;
 
@@ -138,7 +139,7 @@ class AddonViews extends AddonModule {
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
-
+    tabpanel.classList.toggle("PDF")
     let refData
     if (this.Addon.utils.isChinese(itemTitle) && !itemDOI) {
       let cnkiURL = item.getField("url")
@@ -315,6 +316,7 @@ class AddonViews extends AddonModule {
     label.setAttribute("crop", "end");
     label.setAttribute("flex", "1");
     box.append(image, label);
+    const headLine = (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference"
     box.addEventListener("click", async (event) => {
       if (event.ctrlKey) {
         let URL = ref.URL || (ref.DOI && `https://doi.org/${ref.DOI}`)
@@ -335,11 +337,19 @@ class AddonViews extends AddonModule {
         }
       } else {
         let [title, _] = this.Addon.utils.parseContent(content)
-        this.showProgressWindow(this.Addon.utils.isDOI(DOI) ? DOI : "No DOI found", `${title}`)
+        this.showProgressWindow(headLine, `${title}`)
         new CopyHelper()
           .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
           .copy();
       }
+    })
+
+    box.addEventListener("mouseenter", () => {
+      this.showProgressWindow(headLine, content, "default", -1, -1)
+    })
+
+    box.addEventListener("mouseleave", () => {
+      this.progressWindow.close();
     })
 
     let setState = (state: string = "") => {
@@ -506,12 +516,16 @@ class AddonViews extends AddonModule {
     t: number = 2500,
     maxLength: number = 100
   ) {
-    // A simple wrapper of the Zotero ProgressWindow
+    console.log(arguments)
+    if (this.progressWindow) {
+      this.progressWindow.close();
+    }
     let progressWindow = new this.Zotero.ProgressWindow({ closeOnClick: true });
+    this.progressWindow = progressWindow
     progressWindow.changeHeadline(header);
     progressWindow.progress = new progressWindow.ItemProgress(
       this.progressWindowIcon[type],
-      context.length > maxLength ? context.slice(0, maxLength) + "..." : context
+      (maxLength > 0 && context.length > maxLength) ? context.slice(0, maxLength) + "..." : context
     );
     progressWindow.show();
     if (t > 0) {

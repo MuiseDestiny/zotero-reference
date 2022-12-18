@@ -2,6 +2,7 @@ import AddonModule from "./module";
 import { Addon } from "./addon";
 
 class Utils extends AddonModule {
+
   constructor(parent: Addon) {
     console.log("Utils constructor")
     super(parent);
@@ -211,45 +212,55 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromPDF() {
-    this.Addon.views.showProgressWindow("PDF", "从PDF解析参考文献")
-    let refLines = await this.getRefLines()
-    if (refLines.length == 0) {
-      this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
+    let tabId = this.window.Zotero_Tabs.selectedID
+    const tabContainer = this.document.querySelector(`#${tabId}-context`);
+    if (!tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")) {
       return []
     }
-
-    let refData = this.mergeSameRef(refLines)
-    
-    if (refData.length > 0) {
-      this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
-    } else {
-      this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
-    }
-
-    this.debug(refData)
-    for (let i = 0; i < refData.length; i++) {
-      let ref = refData[i]
-      let unstructured = ref.text
-      unstructured = unstructured
-        .trim()
-        .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
-      ref["unstructured"] = unstructured
-      const regex = {
-        "DOI": this.Addon.DOIRegex,
-        "URL": /https?:\/\/[^\s]+/
+    try {
+      this.Addon.views.showProgressWindow("PDF", "从PDF解析参考文献")
+      let refLines = await this.getRefLines()
+      if (refLines.length == 0) {
+        this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
+        return []
       }
-      for (let key in regex) {
-        let matchedRes = ref.unstructured.match(regex[key]) || (ref?.url || "").match(regex[key])
-        if (matchedRes) {
-          let value = matchedRes[0] as string
-          if (value.endsWith(".")) {
-            value = value.slice(0, -1)
-          }
-          ref[key] = value
+  
+      let refData = this.mergeSameRef(refLines)
+      
+      if (refData.length > 0) {
+        this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
+      } else {
+        this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
+      }
+  
+      this.debug(refData)
+      for (let i = 0; i < refData.length; i++) {
+        let ref = refData[i]
+        let unstructured = ref.text
+        unstructured = unstructured
+          .trim()
+          .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
+        ref["unstructured"] = unstructured
+        const regex = {
+          "DOI": this.Addon.DOIRegex,
+          "URL": /https?:\/\/[^\s]+/
         }
-      }
-    } 
-    return refData
+        for (let key in regex) {
+          let matchedRes = ref.unstructured.match(regex[key]) || (ref?.url || "").match(regex[key])
+          if (matchedRes) {
+            let value = matchedRes[0] as string
+            if (value.endsWith(".")) {
+              value = value.slice(0, -1)
+            }
+            ref[key] = value
+          }
+        }
+      } 
+      return refData
+    } catch (e) {
+      this.Addon.views.showProgressWindow("PDF", e, "fail")
+      return []
+    }
   }
 
   public recordLayout(lines, middle) {
@@ -278,6 +289,7 @@ class Utils extends AddonModule {
   }
 
   public mergeSameTop(items) {
+    this.debug("mergeSameTop input", [...items])
     let toLine = (item) => {
       return {
         x: parseFloat(item.transform[4].toFixed(1)),
@@ -310,15 +322,16 @@ class Utils extends AddonModule {
     let isRefStart = (text) => {
       let regexArray = [
         /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]/,
-        /^\d+[\s\.]?[^\d]+?[\,\.\uff0c\uff0e]/,
+        /^\d+[\.]?[^\d]+?[\,\.\uff0c\uff0e]/,
         /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]/,
         /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]/
       ]
       for (let i = 0; i < regexArray.length; i++) {
-        if (regexArray[i].test(text)) {
+        if (regexArray[i].test(text.replace(/\s+/g, ""))) {
           return true
         }
       }
+      return false
     }
 
     let firstLine = refLines[0]
@@ -371,6 +384,7 @@ class Utils extends AddonModule {
   }
 
   public adjustPageOffset(refLines, leftSortedX, rightSortedX) {
+    console.log(leftSortedX, rightSortedX)
     if (leftSortedX) {
       let minX = leftSortedX[0]
       refLines.forEach(line => {
@@ -424,6 +438,16 @@ class Utils extends AddonModule {
     })
   }
 
+  public removeMargin(lines) {
+    // 第一行与第二行间距过大，跳过第一行
+    if (lines[0].y - lines[1].y > lines[0].height * 1.5) {
+      lines[0] = false
+    }
+    return lines.filter(e=>e)
+    // TODO
+    // if (lines.slice(-2)[0].y - lines.slice(-2)[0].y)
+  }
+
   async getRefLines() {
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
@@ -441,47 +465,49 @@ class Utils extends AddonModule {
       let annotations = (await pdfPage.getAnnotations())
       // add URL to item with annotation
       this.updateItemsAnnotions(items, annotations)
-      this.debug("after updateItemsAnnotions", items)
+      this.debug("after updateItemsAnnotions", this.copy(items))
 
       let lines = this.mergeSameTop(items)
-      this.debug("after mergeSameTop", lines)
+      await this.Zotero.Promise.delay(1000);
+      this.debug("after mergeSameTop", this.copy(lines))
 
       // 需要记录一下column，防止相邻页布局更改
       let maxWidth = pdfPage._pageInfo.view[2];
       let maxHeight = pdfPage._pageInfo.view[3];
-      console.log("maxWidth", maxWidth, "maxHeight", maxHeight)
-      lines = lines.filter(line => line.y / maxHeight < .9);
+      this.debug(maxWidth, maxHeight);
       [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
-
       // 判断是否含有参考文献
       let line = lines.reverse().find(line => {
         return (
-          /(\u53c2\u8003\u6587\u732e|reference)/i.test(line.text) ||
+          /(\u53c2\u8003\u6587\u732e|reference)/i.test(line.text) ||        
           line.text.includes("参考文献") ||
           line.text.includes("Reference") ||
-          line.text.includes("REFERENCES") 
+          line.text.includes("REFERENCES")
         ) && line.text.length < 20
       })
       lines.reverse()
       let breakIndex = lines.indexOf(line);
-
+      this.debug("breakIndex", breakIndex)
       if (breakIndex != -1) {
         flag = true
-        refLines = [...lines.slice(breakIndex+1), ...refLines]
+        refLines = [...this.removeMargin(lines.slice(breakIndex + 1)), ...refLines]
         break
       } else {
-        refLines = [...lines, ...refLines]
+        refLines = [...this.removeMargin(lines), ...refLines]
       }
     }
     if (flag) {
       // leftSortedX, rightSortedX记录的是参考文献页面
       this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
       this.alignColumns(refLines)
-      this.debug("refLines", [...refLines])
       return refLines
     } else {
       return []
     }
+  }
+
+  public copy(obj) {
+    return JSON.parse(JSON.stringify(obj))
   }
 
   public parseContent(content) {
