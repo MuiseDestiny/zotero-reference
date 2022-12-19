@@ -347,12 +347,37 @@ class AddonViews extends AddonModule {
 
     let timer = null
     box.addEventListener("mouseenter", () => {
-      timer = this.window.setTimeout(() => {
+      const unstructured = content.replace(/^\[\d+\]/, "")
+      timer = this.window.setTimeout(async () => {
+        let toPlainText = (text) => {
+          return text.replace(/<\/?em>/g, "")
+        }
+        let toTimeInfo = (t) => {
+          let info = (new Date(t)).toString().split(" ")
+          return `${info[1]} ${info[3]}`
+        }
+
         this.showTip(
           (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference",
-          content.replace(/^\[\d+\]/, ""),
+          "",
+          unstructured,
+          [],
           box
         )
+        let data = await this.Addon.utils.getTitleInfo(unstructured)
+        if (data) {
+          let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
+          this.showTip(
+            toPlainText(data.title),
+            [
+              author,
+              data.primaryVenue + (data.publishDate ? (" \u00b7 " + toTimeInfo(data.publishDate)) : "")
+            ],
+            toPlainText(data.summary),
+            data.venueTags || [],
+            box
+          )
+        }
       }, 100);
     })
 
@@ -549,7 +574,8 @@ class AddonViews extends AddonModule {
     this.removeSideBarPanel()
   }
 
-  public showTip(title, content, element) {
+  public showTip(title, descriptions, content, tags, element) {
+    this.document.querySelectorAll(".zotero-reference-tip").forEach(e=>e.remove())
     const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
     const rect = element.getBoundingClientRect()
     let xmlns = "http://www.w3.org/1999/xhtml"
@@ -560,16 +586,54 @@ class AddonViews extends AddonModule {
     titleSpan.style = `
       display: block;
       font-weight: bold;
-      margin-bottom: .5em;
     `
+
+    let despDiv = this.document.createElementNS(xmlns, "div")
+    despDiv.style = `
+      margin-bottom: .25em;
+    `
+    for (let description of descriptions) {      
+      let despSpan = this.document.createElementNS(xmlns, "span")
+      despSpan.innerText = description
+      despSpan.style = `
+        display: block;
+        line-height: 1.5em;
+        opacity: .5;
+      `
+      despDiv.appendChild(despSpan)
+    }
+
     let contentSpan = this.document.createElementNS(xmlns, "span")
     contentSpan.innerText = content
     contentSpan.style = `
+      display: block;
       line-height: 1.5em;
       opacity: .73;
+      text-align: justify;
     `
+
+    let tagDiv = this.document.createElementNS(xmlns, "div")
+    tagDiv.style = `
+      width: 100%;
+      margin: .5em 0;
+    `
+    for (let tag of tags) {
+      let tagSpan = this.document.createElementNS(xmlns, "span")
+      tagSpan.innerText = tag
+      tagSpan.style = `
+        background-color: #97DECE;
+        border-radius: 10px;
+        margin-right: 1em;
+        padding: 0 8px;
+        color: white;
+      `
+      tagDiv.appendChild(tagSpan)
+    }
+
     div.append(
       titleSpan,
+      tagDiv,
+      despDiv,
       contentSpan
     )
     // bottom: ${winRect.height - rect.bottom}px;
@@ -578,7 +642,7 @@ class AddonViews extends AddonModule {
       position: fixed;
       right: ${winRect.width - rect.left + 22}px;
       top: ${rect.top}px;
-      width: 600px;
+      width: 800px;
       z-index: 999;
       background-color: #f0f0f0;
       padding: .5em;

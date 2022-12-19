@@ -3,7 +3,7 @@
   "addonName": "Zotero Reference",
   "addonID": "zoteroreference@polygon.org",
   "addonRef": "zoteroreference",
-  "version": "0.0.9",
+  "version": "0.1.0",
   "description": "侧边栏展示正在阅读文献的所有参考文献，双向关联，浏览器快速打开文献网址",
   "main": "src/index.js",
   "scripts": {

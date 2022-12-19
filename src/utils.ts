@@ -56,6 +56,42 @@ class Utils extends AddonModule {
     return data
   }
 
+  async getTitleInfo(title: string) {
+    console.log("getTitleInfo", title)
+    let data
+    const key = `readpaper - ${title}`
+    if (key in this.Addon.DOIData) {
+      data = this.Addon.DOIData[key]
+    } else {
+      const readpaperApi = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
+      let res = await this.Zotero.HTTP.request(
+        "POST",
+        readpaperApi,
+        {
+          responseType: "json",
+          headers: {
+						"Content-Type": "application/json"
+					},
+          body: JSON.stringify({
+            keywords: title,
+            page: 1,
+            pageSize: 1,
+            searchType: 0
+          })
+        }
+      )
+      data = res.response?.data?.list[0]
+      console.log(data)
+      if (data) {
+        // TODO: 评价匹配成功度，低不返回
+        this.Addon.DOIData[key] = data
+      } else {
+        data = []
+      }
+    }
+    return data
+  }
+
   async getTitleDOIByCrossref(title: string) {
     let res
     try {
@@ -485,7 +521,13 @@ class Utils extends AddonModule {
 
   public removeMargin(lines, maxHeiht) {
     // 先初步去除
-    lines = lines.filter(line=>line.y / maxHeiht > 0.08 && line.y / maxHeiht < 0.92)
+    console.log(
+      "top / bottom", maxHeiht,
+      lines.filter(line => line.y / maxHeiht < 0.07 || line.y / maxHeiht > 0.93)
+    )
+    let marginPct = 0.07
+    // lines = lines.filter(line => line.y / maxHeiht > marginPct && line.y / maxHeiht < 1 - marginPct)
+    
     // 第一行与第二行间距过大，跳过第一行，可能是页眉
     if (lines[0].y - lines[1].y > lines[0].height * 2.5) {
       lines = lines.slice(1)
@@ -501,6 +543,11 @@ class Utils extends AddonModule {
           (lines[i].column.side == "right" && lines[i+1].column.side == "left")
         )
       ) {
+        console.log("x", lines[i].text, "because",
+          (lines[i].y < lines[i + 1].y && !(lines[i].column.side == "left" && lines[i + 1].column.side == "right")),
+          ((new Set(lines.slice(i-1, i+2).map(line=>line.column.side))).size == 1 && lines[i].y - lines[i + 1].y > 1.5 * (lines[i - 1].y - lines[i].y)),
+          (lines[i].column.side == "right" && lines[i+1].column.side == "left")
+        )
         break
       }
     }
