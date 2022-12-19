@@ -265,9 +265,6 @@ class Utils extends AddonModule {
       let matchedRes = (ref?.url || "").match(regex[key]) || ref.unstructured.match(regex[key])
       if (matchedRes) {
         let value = matchedRes[0] as string
-        if (value.endsWith(".")) {
-          value = value.slice(0, -1)
-        }
         ref[key] = value
       }
     }
@@ -285,9 +282,26 @@ class Utils extends AddonModule {
       leftLines = lines.filter(line=>rightLines.indexOf(line) == -1)
     }
     console.log("left", leftLines, "right", rightLines)
-    // 储存栏目最小值，用于校正整体偏移，极少数pdf需要
+
+    // 找到左右分栏的最左端
     let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
     let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
+    console.log(leftSortedX, rightSortedX)
+    // 去除只出现几次的异常值
+    let minTotalNum = 3
+    let n = 1
+    if (leftSortedX.length > minTotalNum) {
+      leftSortedX = leftSortedX.filter(x => {
+        return leftLines.filter(line=>line.x == x).length > n
+      })
+    }
+    if (rightSortedX.length > minTotalNum) {
+      rightSortedX = rightSortedX.filter(x => {
+        return rightLines.filter(line=>line.x == x).length > n
+      })
+    }
+    console.log(leftSortedX, rightSortedX)
+
     if (leftSortedX) {
       leftLines.forEach(line => {
         line["column"] = {
@@ -315,7 +329,6 @@ class Utils extends AddonModule {
         text: item.str || "",
         height: item.height,
         width: item.width,
-        fontName: item.fontName,
         url: item?.url,
       }
     }
@@ -330,7 +343,6 @@ class Utils extends AddonModule {
         lastLine.text += " " + line.text
         lastLine.width += line.width
         lastLine.url = lastLine.url || line.url
-        lastLine.fontName = line.fontName
       } else {
         lines.push(line)
       }
@@ -339,40 +351,51 @@ class Utils extends AddonModule {
   }
 
   public mergeSameRef(refLines) {
+    let abs = (v) => {
+      return v > 0 ? v: -v
+    }
     let isRefStart = (text) => {
-      return true
       let regexArray = [
-        /^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/,
-        /^\d+[^\d]+?[\,\.\uff0c\uff0e]?/,
-        /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/,
-        /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/
+        [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
+        [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/],
+        [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],
+        
       ]
       for (let i = 0; i < regexArray.length; i++) {
-        if (regexArray[i].test(text.replace(/\s+/g, ""))) {
-          return true
+        let flags = new Set(regexArray[i].map(regex => regex.test(text.replace(/\s+/g, ""))))
+        if (flags.has(true)) {
+            return [true, i]
         }
       }
-      return false
+      return [false, -1]
     }
 
     let firstLine = refLines[0]
     // 已知新一行参考文献缩进
     let firstX = firstLine.x
-    let ref
+    let [_, refType] = isRefStart(firstLine.text)
+    console.log(firstLine.text, refType)
+    let ref, indent = 0
     for (let i = 0; i < refLines.length; i++) {
       let line = refLines[i]
       let text = line.text 
-      let error = line.x - firstX
-      error = error > 0 ? error : -error
-      // this.debug(error, error < line.height, isRefStart(text), line.text)
-      if (error < line.height && isRefStart(text)) {
-        // new ref start
+      let error = abs(line.x - firstX)
+      let isRef = isRefStart(text)
+      if (error < line.height * .8 && isRef[0] && isRef[1] == refType) {
+        console.log("->", line.text, line.height, error, isRef)
         ref = line
       } else {
+        if (ref && indent > 0 && abs(abs(ref.x - line.x) - indent) > line.height) {
+          refLines = refLines.slice(0, i)
+          break
+        }
+        console.log("+", line.text, line.height, error, isRef)
         ref.text += text
         if (line.url) {
           ref.url = line.url
         }
+        // 记录缩进
+        indent = abs(ref.x - line.x) || indent
         refLines[i] = false
       }
     }
@@ -460,7 +483,9 @@ class Utils extends AddonModule {
     })
   }
 
-  public removeMargin(lines) {
+  public removeMargin(lines, maxHeiht) {
+    // 先初步去除
+    lines = lines.filter(line=>line.y / maxHeiht > 0.08 && line.y / maxHeiht < 0.92)
     // 第一行与第二行间距过大，跳过第一行，可能是页眉
     if (lines[0].y - lines[1].y > lines[0].height * 2.5) {
       lines = lines.slice(1)
@@ -472,7 +497,7 @@ class Utils extends AddonModule {
         i + 1 < lines.length &&
         (
           (lines[i].y < lines[i + 1].y && !(lines[i].column.side == "left" && lines[i + 1].column.side == "right")) ||
-          lines[i].y - lines[i + 1].y > 2 * lines[i].height ||
+          ((new Set(lines.slice(i-1, i+2).map(line=>line.column.side))).size == 1 && lines[i].y - lines[i + 1].y > 1.5 * (lines[i - 1].y - lines[i].y)) ||
           (lines[i].column.side == "right" && lines[i+1].column.side == "left")
         )
       ) {
@@ -483,11 +508,25 @@ class Utils extends AddonModule {
     return lines.slice(0, i+1)
   }
 
-  public removeNotRefFontName(lines) {
-    let refFontName = lines[0].fontName
-    return lines.filter(line=>line.fontName == refFontName)
+  public removeNotRefFontSize(lines) {
+    let fontSize = lines[0].height
+    return lines.filter(line=>line.height == fontSize)
   }
 
+  public getRefBreak(lines) {
+    let line = lines.reverse().find(line => {
+      let text = line.text.replace(/\s+/g, "")
+      return (
+        /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) ||        
+        text.includes("参考文献") ||
+        text.includes("Reference") ||
+        text.includes("REFERENCES")
+      ) && text.length < 20
+    })
+    lines.reverse()
+    let breakIndex = lines.indexOf(line);
+    return breakIndex
+  }
   async getRefLines() { 
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
@@ -506,7 +545,7 @@ class Utils extends AddonModule {
       let textContent = await pdfPage.getTextContent()
       this.debug("textContent", textContent)
 
-      let items = textContent.items
+      let items = textContent.items.filter(item=>item.str.trim().length)
 
       this.debug("items", items)
       let annotations = (await pdfPage.getAnnotations())
@@ -515,32 +554,22 @@ class Utils extends AddonModule {
       this.debug("after updateItemsAnnotions", this.copy(items))
 
       let lines = this.mergeSameTop(items)
-      await this.Zotero.Promise.delay(1000);
+
       this.debug("after mergeSameTop", this.copy(lines));
       
       [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
       // 判断是否含有参考文献
-      let line = lines.reverse().find(line => {
-        let text = line.text.replace(/\s+/g, "")
-        return (
-          /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) ||        
-          text.includes("参考文献") ||
-          text.includes("Reference") ||
-          text.includes("REFERENCES")
-        ) && text.length < 20
-      })
-      lines.reverse()
-      let breakIndex = lines.indexOf(line);
+      let breakIndex = this.getRefBreak(lines);
       this.debug("breakIndex", breakIndex)
       if (breakIndex != -1) {
-        refLines = [...this.removeMargin(lines.slice(breakIndex + 1)), ...refLines]
+        refLines = [...this.removeMargin(lines.slice(breakIndex + 1), maxHeight), ...refLines]
         this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
         this.alignColumns(refLines)
-        refLines = this.removeNotRefFontName(refLines)
+        refLines = this.removeNotRefFontSize(refLines)
         this.debug("refLines", this.copy(refLines))
         return refLines
       } else {
-        refLines = [...this.removeMargin(lines), ...refLines]
+        refLines = [...this.removeMargin(lines, maxHeight), ...refLines]
         if ((pages.length-i) / pages.length >= .5) {
           break
         }
@@ -677,7 +706,12 @@ class Utils extends AddonModule {
   }
 
   public isDOI(text) {
-    return this.Addon.absoluteDOIRegex.test(text)
+    let res = text.match(this.Addon.DOIRegex)
+    if (res) {
+      return res[0] == text
+    } else {
+      return false
+    }
   }
 
   public getReader() {

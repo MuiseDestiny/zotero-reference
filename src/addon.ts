@@ -12,8 +12,7 @@ class Addon {
   public utils: Utils;
   public DOIData = {};
   public DOIRefData = {};
-  public DOIRegex = /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9]+/;
-  public absoluteDOIRegex = /^10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+$/;
+  public DOIRegex = /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/;
 
 
   constructor() {
