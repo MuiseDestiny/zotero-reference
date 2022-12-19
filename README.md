@@ -21,8 +21,6 @@
 
 ![image](https://user-images.githubusercontent.com/51939531/208407722-7e6466ad-2409-4621-bd57-4ea566d995f2.png)
 
-![image](https://user-images.githubusercontent.com/51939531/208280890-582f40f4-8ea4-41dd-b09e-5ef1f077b8c4.png)
-
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
 ## 👋 使用
