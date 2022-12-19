@@ -19,7 +19,7 @@
 
 🎈 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
 
-![image](https://user-images.githubusercontent.com/51939531/208406855-105b812b-21ee-4e05-be52-4f35859d9e05.png)
+![image](https://user-images.githubusercontent.com/51939531/208407722-7e6466ad-2409-4621-bd57-4ea566d995f2.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/208280890-582f40f4-8ea4-41dd-b09e-5ef1f077b8c4.png)
 
