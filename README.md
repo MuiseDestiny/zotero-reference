@@ -40,7 +40,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ## 🌸 实现
 
-保密
+[视频介绍](https://www.bilibili.com/video/BV17v4y1Q7gn/?spm_id_from=333.999.0.0&vd_source=5a8c42dfa6d28820002ecae5a4a4fa64)
 
 ## 🕊️ TODO
 - [ ] 根据反馈，是否需要在主界面（非阅读状态）添加`参考文献`到侧边栏，目前仅阅读状态下添加
