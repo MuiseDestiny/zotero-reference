@@ -19,9 +19,8 @@
 
 🎈 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
 
-![image](https://user-images.githubusercontent.com/51939531/208407722-7e6466ad-2409-4621-bd57-4ea566d995f2.png)
-
-![image](https://user-images.githubusercontent.com/51939531/208280890-582f40f4-8ea4-41dd-b09e-5ef1f077b8c4.png)
+绿色分区，蓝色被引用量
+![image](https://user-images.githubusercontent.com/51939531/208426046-4bd3276c-2e85-43f0-9c67-2a08ed872f91.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
@@ -38,7 +37,11 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ![image](https://user-images.githubusercontent.com/51939531/208303399-0dc09046-997c-4809-8639-9100001e6002.png)
 
-如，这里的GEE就是当前文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
+如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
+
+单击红框，复制内容，可用于进一步翻译等操作。
+![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
+
 
 ## 🌸 实现
 
