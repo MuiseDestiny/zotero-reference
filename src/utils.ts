@@ -81,7 +81,6 @@ class Utils extends AddonModule {
         }
       )
       data = res.response?.data?.list[0]
-      console.log(data)
       if (data) {
         // TODO: 评价匹配成功度，低不返回
         this.Addon.DOIData[key] = data
@@ -257,38 +256,37 @@ class Utils extends AddonModule {
     if (!tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")) {
       return []
     }
-    try {
-      this.Addon.views.showProgressWindow("PDF", "从PDF解析参考文献")
-      let refLines = await this.getRefLines()
-      if (refLines.length == 0) {
-        this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
-        return []
-      }
-  
-      let refData = this.mergeSameRef(refLines)
-      
-      if (refData.length > 0) {
-        this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
-      } else {
-        this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
-      }
-  
-      this.debug(refData)
-      for (let i = 0; i < refData.length; i++) {
-        let ref = refData[i]
-        let unstructured = ref.text
-        unstructured = unstructured
-          .trim()
-          .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
-        ref["unstructured"] = unstructured
-        this.unpackUnstructured(ref)
-      } 
-      return refData
-    } catch (e) {
-      console.error(e)
-      this.Addon.views.showProgressWindow("PDF", e, "fail")
+    // try {
+    let refLines = await this.getRefLines()
+    if (refLines.length == 0) {
+      this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
       return []
     }
+
+    let refData = this.mergeSameRef(refLines)
+    
+    if (refData.length > 0) {
+      this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
+    } else {
+      this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
+    }
+
+    this.debug(refData)
+    for (let i = 0; i < refData.length; i++) {
+      let ref = refData[i]
+      let unstructured = ref.text
+      unstructured = unstructured
+        .trim()
+        .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
+      ref["unstructured"] = unstructured
+      this.unpackUnstructured(ref)
+    }
+    return refData
+    // } catch (e) {
+    //   console.error(e)
+    //   this.Addon.views.showProgressWindow("PDF", e, "fail")
+    //   return []
+    // }
   }
 
   public unpackUnstructured(ref) {
@@ -386,106 +384,101 @@ class Utils extends AddonModule {
     return lines
   }
 
-  public mergeSameRef(refLines) {
-    let abs = (v) => {
-      return v > 0 ? v: -v
-    }
-    let isRefStart = (text) => {
-      let regexArray = [
-        [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
-        [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/],
-        [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],
-        
-      ]
-      for (let i = 0; i < regexArray.length; i++) {
-        let flags = new Set(regexArray[i].map(regex => regex.test(text.replace(/\s+/g, ""))))
-        if (flags.has(true)) {
-            return [true, i]
-        }
+  public mergeSameLine(items) {
+
+    let toLine = (item) => {
+      return {
+        x: parseFloat(item.transform[4].toFixed(1)),
+        y: parseFloat(item.transform[5].toFixed(1)),
+        text: item.str || "",
+        height: item.height,
+        width: item.width,
+        url: item?.url,
       }
-      return [false, -1]
     }
 
+    let j = 0
+    let lines = [toLine(items[j])]
+    for (j = 1; j < items.length; j++) {
+      let line = toLine(items[j])
+      let lastLine = lines.slice(-1)[0]
+      let error = line.y - lastLine.y
+      error = error > 0 ? error : -error
+      if (error < line.height) {
+        lastLine.text += " " + line.text
+        lastLine.width += line.width
+        lastLine.url = lastLine.url || line.url
+        lastLine.height = line.height
+      } else {
+        lines.push(line)
+      }
+    }
+    return lines
+  }
+
+  public isRefStart(text) {
+    let regexArray = [
+      [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
+      [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/],
+      [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],
+    ]
+    for (let i = 0; i < regexArray.length; i++) {
+      let flags = new Set(regexArray[i].map(regex => regex.test(text.replace(/\s+/g, ""))))
+      if (flags.has(true)) {
+          return [true, i]
+      }
+    }
+    return [false, -1]
+  }
+
+  public mergeSameRef(refLines) {
     let firstLine = refLines[0]
     // 已知新一行参考文献缩进
     let firstX = firstLine.x
-    let [_, refType] = isRefStart(firstLine.text)
+    let secondLine = refLines.slice(1).find(line => {
+      return this.abs(line.x - firstX) < 10 * firstLine.height
+    })
+    let delta = firstX - secondLine.x
+    console.log("delta", delta)
+    let [_, refType] = this.isRefStart(firstLine.text)
     console.log(firstLine.text, refType)
-    let ref, indent = 0
+    let ref
     for (let i = 0; i < refLines.length; i++) {
       let line = refLines[i]
       let text = line.text 
-      let error = abs(line.x - firstX)
-      let isRef = isRefStart(text)
-      if (error < line.height * .8 && isRef[0] && isRef[1] == refType) {
-        console.log("->", line.text, line.height, error, isRef)
+      let isRef = this.isRefStart(text)
+      if (
+        // this.abs(line.x - firstX) < line.height * 1.2 &&
+        isRef[0] &&
+        isRef[1] == refType &&
+        refLines.find(_line => {
+          return (
+            line != _line &&
+            _line.column == line.column &&
+            _line.pageNum == line.pageNum &&
+            (line.x - _line.x) * delta > 0
+          )
+        }) !== undefined
+      ) {
+        console.log("->", line.text, isRef, refLines.find(_line => {
+          return line != _line && _line.pageNum == line.pageNum && (line.x - _line.x) * delta > 0
+        }))
         ref = line
       } else {
-        if (ref && indent > 0 && abs(abs(ref.x - line.x) - indent) > line.height) {
+        if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(delta)) > 5 * line.height) {
           refLines = refLines.slice(0, i)
+          console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
           break
         }
-        console.log("+", line.text, line.height, error, isRef)
+        console.log("+", text)
         ref.text += text
         if (line.url) {
           ref.url = line.url
         }
-        // 记录缩进
-        indent = abs(ref.x - line.x) || indent
         refLines[i] = false
       }
     }
     return refLines.filter(e => e)
-  }
-
-  public alignColumns(refLines) {
-    let firstLine = refLines[0]
-    let firstX = firstLine.x
-    // 分成左栏和右栏，未必真的会分，有的文章只有一栏
-    let leftLines, rightLines
-    leftLines = refLines.filter(line => line.column.side == "left")
-    rightLines = refLines.filter(line => line.column.side == "right")
-    // 找到两栏最小的x
-    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
-    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
-    // 如果已知条目缩进是在左侧，且含右栏
-    if (firstLine.column.side == "left" && rightSortedX) {
-      // 将右栏移到左栏
-      rightLines.forEach(line => {
-        line.x = line.x - rightSortedX[0] + firstX
-      })
-    }
-    // 如果已知条目缩进是在右侧，且含左栏
-    else if (firstLine.column.side == "right" && leftSortedX) {
-      // 将左栏移到右栏
-      leftLines.forEach(line => {
-        line.x = rightSortedX[0] + line.x - leftSortedX[0]
-      })
-    } 
-  }
-
-  public adjustPageOffset(refLines, leftSortedX, rightSortedX) {
-    console.log(leftSortedX, rightSortedX)
-    if (leftSortedX) {
-      let minX = leftSortedX[0]
-      refLines.forEach(line => {
-        if (line.column.side == "left" && line.column.minX != minX) {
-          let offset = minX - line.column.minX
-          line.column.minX += offset
-          line.x += offset
-        }
-      })
-    }
-    if (rightSortedX) {
-      let minX = rightSortedX[0]
-      refLines.forEach(line => {
-        if (line.column.side == "right" && line.column.minX != minX) {
-          let offset = minX - line.column.minX
-          line.column.minX += offset
-          line.x += offset
-        }
-      })
-    }
   }
 
   public updateItemsAnnotions(items, annotations) {
@@ -495,6 +488,7 @@ class Utils extends AddonModule {
       let [left, bottom, right, top] = rect;
       return {left, bottom, right, top}
     }
+
     let isIntersect = (A, B) => {
       if (
         B.right < A.left || 
@@ -507,6 +501,7 @@ class Utils extends AddonModule {
         return true
       }
     }
+
     annotations.forEach(annotation => {
       let annoBox = toBox(annotation.rect)
       items.forEach(item => {
@@ -519,116 +514,198 @@ class Utils extends AddonModule {
     })
   }
 
-  public removeMargin(lines, maxHeiht) {
-    // 先初步去除
-    console.log(
-      "top / bottom", maxHeiht,
-      lines.filter(line => line.y / maxHeiht < 0.07 || line.y / maxHeiht > 0.93)
-    )
-    let marginPct = 0.07
-    // lines = lines.filter(line => line.y / maxHeiht > marginPct && line.y / maxHeiht < 1 - marginPct)
-    
-    // 第一行与第二行间距过大，跳过第一行，可能是页眉
-    if (lines[0].y - lines[1].y > lines[0].height * 2.5) {
-      lines = lines.slice(1)
-    }
-    // 同一栏间距太大，可能参考文献段落结束
-    let i
-    for (i = 1; i < lines.length; i++) {
-      if (
-        i + 1 < lines.length &&
-        (
-          (lines[i].y < lines[i + 1].y && !(lines[i].column.side == "left" && lines[i + 1].column.side == "right")) ||
-          ((new Set(lines.slice(i-1, i+2).map(line=>line.column.side))).size == 1 && lines[i].y - lines[i + 1].y > 1.5 * (lines[i - 1].y - lines[i].y)) ||
-          (lines[i].column.side == "right" && lines[i+1].column.side == "left")
-        )
-      ) {
-        console.log("x", lines[i].text, "because",
-          (lines[i].y < lines[i + 1].y && !(lines[i].column.side == "left" && lines[i + 1].column.side == "right")),
-          ((new Set(lines.slice(i-1, i+2).map(line=>line.column.side))).size == 1 && lines[i].y - lines[i + 1].y > 1.5 * (lines[i - 1].y - lines[i].y)),
-          (lines[i].column.side == "right" && lines[i+1].column.side == "left")
-        )
-        break
-      }
-    }
-    this.debug("after removeMargin", this.copy(lines.slice(0, i+1)))
-    return lines.slice(0, i+1)
+  async readPdfPage(pdfPage) {
+    let textContent = await pdfPage.getTextContent()
+    let items = textContent.items.filter(item=>item.str.trim().length)
+    let annotations = (await pdfPage.getAnnotations())
+
+    // add URL to item with annotation
+    this.updateItemsAnnotions(items, annotations)
+
+    // merge items with the same y to lines
+    let lines = this.mergeSameLine(items);
+    `{
+      x: parseFloat(item.transform[4].toFixed(1)),
+      y: parseFloat(item.transform[5].toFixed(1)),
+      text: item.str || "",
+      height: item.height,
+      width: item.width,
+      url: item?.url,
+    }`
+    return lines
   }
 
-  public removeNotRefFontSize(lines) {
-    let fontSize = lines[0].height
-    return lines.filter(line=>line.height == fontSize)
-  }
-
-  public getRefBreak(lines) {
-    let line = lines.reverse().find(line => {
-      let text = line.text.replace(/\s+/g, "")
-      return (
-        /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) ||        
-        text.includes("参考文献") ||
-        text.includes("Reference") ||
-        text.includes("REFERENCES")
-      ) && text.length < 20
-    })
-    lines.reverse()
-    let breakIndex = lines.indexOf(line);
-    return breakIndex
-  }
-  async getRefLines() { 
+  async getRefLines() {
     const PDFViewerApplication = this.Addon.views.reader._iframeWindow.wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
-    let pages = PDFViewerApplication.pdfViewer._pages
-    this.debug(pages)
-    let refLines = []
-    let leftSortedX, rightSortedX
-    for (let i = pages.length - 1; i >= 0; i--) {
-      this.debug("current page", i + 1)
-      let pdfPage = pages[i].pdfPage
-      let maxWidth = pdfPage._pageInfo.view[2];
-      let maxHeight = pdfPage._pageInfo.view[3];
-      this.debug(maxWidth, maxHeight);
+    let pages = PDFViewerApplication.pdfViewer._pages;
+    // skip the pdf with page less than 3
+    let pageLines = {};
+    // read 2 page to remove head and tail
+    let maxWidth, maxHeight
+    let preLoadPageNum = pages.length - 2
 
-      let textContent = await pdfPage.getTextContent()
-      this.debug("textContent", textContent)
+    const progressWindow = this.Addon.views.showProgressWindow(
+      "[Pending] Zotero Reference",
+      `[0/${preLoadPageNum}] Analysis PDF`,
+      "success",
+      -1
+    );
 
-      let items = textContent.items.filter(item=>item.str.trim().length)
+    progressWindow.progress.setProgress(1);
 
-      this.debug("items", items)
-      let annotations = (await pdfPage.getAnnotations())
-      // add URL to item with annotation
-      this.updateItemsAnnotions(items, annotations)
-      this.debug("after updateItemsAnnotions", this.copy(items))
+    for (let pageNum = pages.length - 1; pageNum >= pages.length - preLoadPageNum; pageNum--) {
+      let pdfPage = pages[pageNum].pdfPage
+      maxWidth = pdfPage._pageInfo.view[2];
+      maxHeight = pdfPage._pageInfo.view[3];
 
-      let lines = this.mergeSameTop(items)
+      let lines = await this.readPdfPage(pdfPage)
+      pageLines[pageNum] = lines;
+      progressWindow.progress.setProgress(((pages.length - pageNum) / preLoadPageNum) * 100)
+      progressWindow.progress._itemText.innerHTML = `[${pages.length - pageNum }/${preLoadPageNum}] Read PDF`;
+    }
+    progressWindow.progress.setProgress(100);
+    // analysis maxPct
+    // 可能奇数页没有，偶数有
+    let parts = []
+    let part = []
+    for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
+      let show = pageNum + 1 == 20
+      if (show) { this.debug("current page", pageNum + 1) }
+      let pdfPage = pages[pageNum].pdfPage
+      maxWidth = pdfPage._pageInfo.view[2];
+      maxHeight = pdfPage._pageInfo.view[3];
+      if (show) { console.log(maxWidth, maxHeight) }
 
-      this.debug("after mergeSameTop", this.copy(lines));
-      
-      [leftSortedX, rightSortedX] = this.recordLayout(lines, maxWidth / 2)
-      // 判断是否含有参考文献
-      let breakIndex = this.getRefBreak(lines);
-      this.debug("breakIndex", breakIndex)
-      if (breakIndex != -1) {
-        refLines = [...this.removeMargin(lines.slice(breakIndex + 1), maxHeight), ...refLines]
-        this.adjustPageOffset(refLines, leftSortedX, rightSortedX)
-        this.alignColumns(refLines)
-        refLines = this.removeNotRefFontSize(refLines)
-        this.debug("refLines", this.copy(refLines))
-        return refLines
-      } else {
-        refLines = [...this.removeMargin(lines, maxHeight), ...refLines]
-        if ((pages.length-i) / pages.length >= .5) {
-          break
+      let lines = (pageNum in pageLines && [...pageLines[pageNum]]) || await this.readPdfPage(pdfPage);
+      if (show) { console.log("lines", this.copy(lines)) }
+      for (let i = 0; i < lines.length;i++) {
+        let pct = 0.3
+        let line = lines[i]
+        if (
+          !(
+            line.x / maxWidth < pct ||
+            line.x / maxWidth > 1 - pct ||
+            line.y / maxHeight < pct ||
+            line.y / maxHeight > 1 - pct 
+          )
+        ) { continue }
+        
+        let n = 0
+        for (let _pageNum in pageLines) {
+          if (Number(_pageNum) == pageNum) { continue }
+          n += Number(
+            pageLines[_pageNum].find(_line => {
+              let removeNumber = (text) => {
+                return text.replace(/\s+/g, "").replace(/\d+/g, "")
+              }
+              return (
+                removeNumber(_line.text) == removeNumber(line.text) &&
+                this.abs(_line.x - line.x) < line.height &&
+                this.abs(_line.y - line.y) < line.height
+              ) 
+            }) != undefined
+          )
+        }
+        if (n > 2) {
+          if (show) { console.log("remove", line.text) }
+          lines[i] = false
+        }
+      }
+
+      lines = lines.filter(e=>e)
+      if (show) { console.log("remove margin", this.copy(lines)) }
+
+      // remove indent
+      // 分析页面缩进
+      let columns = [[lines[0]]]
+      for (let i = 1; i < lines.length; i++) {
+        let line = lines[i]
+        let column = columns.slice(-1)[0]
+        if (
+          column
+            .map(_line => Number(line.x > _line.x + _line.width || line.x < _line.x))
+            .reduce((a, b) => a + b) == column.length
+        ) {
+          columns.push([line])
+        } else {
+          column.push(line)
+        }
+      }
+      if (show) { console.log("columns", columns) }
+      columns.forEach((column, columnIndex) => {
+        let indent = column.map(line => line.x).sort((a, b) => a - b)[0]
+        column.forEach(line => {
+          line.x -= indent
+          line["column"] = columnIndex
+          line["pageNum"] = pageNum
+        })
+      })
+      if (show) { console.log("remove indent", this.copy(lines)) }
+
+      // part
+      let abs = (n) => {
+        return n >= 0 ? n : -n
+      }
+
+      let isStart = false
+      for (let i = lines.length - 1; i >= 0; i--) {
+        let line = lines[i]
+        if (
+          !isStart &&
+          // 图表等
+          line.y / maxHeight > .5  
+        ) {
+          continue
+        } else {
+          isStart = true
+        }
+        part.push(line)
+        if (
+          (
+            lines[i - 1] && 
+            (
+              abs(line.height != lines[i - 1].height) ||
+              lines[i].column < lines[i - 1].column ||
+              (
+                line.pageNum == lines[i - 1].pageNum &&
+                line.column == lines[i - 1].column &&
+                abs(line.y - lines[i - 1].y) > 2 * line.height
+              )
+            )
+            // /^(\[1\]|1\.)/.test(line.text)
+          )
+        ) {
+          if (lines[i - 1]) {
+            if (show) {
+              console.log("break", line.text, lines[i - 1].text, this.copy(line), this.copy(lines[i - 1]))
+            }
+          }
+          part.reverse()
+          parts.push(part)
+          part = []
         }
       }
     }
-    return []
+    console.log("parts", this.copy(parts)) 
+    let partRefNum = []
+    for (let i = 0; i < parts.length; i++) {
+      let isRefs = parts[i].map(line => Number(this.isRefStart(line.text)[0]))
+      partRefNum.push([i, isRefs.reduce((a, b) => a + b)])
+    }
+    let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
+    part = parts[i]
+    console.log("part", this.copy(part))
+    progressWindow.changeHeadline("[Done] Zotero Reference");
+    progressWindow.startCloseTimer(5000)
+    return part
   }
 
   public copy(obj) {
     return JSON.parse(JSON.stringify(obj))
   }
-
+  
   public parseContent(content) {
     if (this.isChinese(content)) {
       // extract author and title
@@ -764,6 +841,11 @@ class Utils extends AddonModule {
   public getReader() {
     return this.Zotero.Reader.getByTabID(((this.window as any).Zotero_Tabs as typeof Zotero_Tabs).selectedID)
   }
+
+  public abs(v) {
+    return v > 0 ? v: -v
+  }
+  
 }
 
 export default Utils

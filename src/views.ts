@@ -8,6 +8,7 @@ class AddonViews extends AddonModule {
   private progressWindow: any;
   public tabpanel: XUL.Element;
   public reader: _ZoteroReader;
+  public tipTimer: number | null;
 
   constructor(parent: Addon) {
     console.log("AddonViews constructor")
@@ -225,16 +226,14 @@ class AddonViews extends AddonModule {
         content = `[${i + 1}] ${data.unstructured}`
       } else {
         if (DOI) {
-          this.debug(`[${i + 1}] getDOIInfo更新条目中...`, DOI);
           // update DOIInfo by unpaywall
-          let _data = await this.Addon.utils.getDOIInfo(DOI);
           try {
+            let _data = await this.Addon.utils.getDOIInfo(DOI);
             author = _data.author
             year = _data.year
             title = _data.title
             content = `[${i + 1}] ${author} et al., ${year}. ${title}`
           } catch (e) {
-            this.debug(_data)
             this.debug(e)
             content = `[${i + 1}] DOI: ${DOI}`
           }
@@ -345,36 +344,42 @@ class AddonViews extends AddonModule {
       }
     })
 
-    let timer = null
+    let timer = null, tipNode
     box.addEventListener("mouseenter", () => {
+      console.log("mouseenter box")
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = this.window.setTimeout(async () => {
+
         let toPlainText = (text) => {
           return text.replace(/<\/?em>/g, "")
         }
         let toTimeInfo = (t) => {
+          if (!t) { return undefined }
           let info = (new Date(t)).toString().split(" ")
           return `${info[1]} ${info[3]}`
         }
 
-        this.showTip(
+        tipNode = this.showTip(
           (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference",
           "",
           unstructured,
           [],
           box
         )
-        let data = await this.Addon.utils.getTitleInfo(unstructured)
+        let data = await this.Addon.utils.getTitleInfo(this.Addon.utils.parseContent(unstructured)[0])
         if (data) {
           let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
-          this.showTip(
+          let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate)].filter(e => e).join(" \u00b7 ")
+          let tags = (data.venueTags || []).map(text => { return { color: "#59C1BD", text } })
+          if (data.citationCount) {tags.push({color: "#1f71e0", text: data.citationCount})}
+          tipNode = this.showTip(
             toPlainText(data.title),
             [
               author,
-              data.primaryVenue + (data.publishDate ? (" \u00b7 " + toTimeInfo(data.publishDate)) : "")
+              publish
             ],
             toPlainText(data.summary),
-            data.venueTags || [],
+            tags,
             box
           )
         }
@@ -382,8 +387,11 @@ class AddonViews extends AddonModule {
     })
 
     box.addEventListener("mouseleave", () => {
-      this.window.clearTimeout(timer)
-      this.document.querySelectorAll(".zotero-reference-tip").forEach(e=>e.remove())
+      console.log("mouseleave box")
+      this.window.clearTimeout(timer);
+      this.tipTimer = this.window.setTimeout(() => {
+        tipNode && tipNode.remove()
+      }, 1000)
     })
 
     let setState = (state: string = "") => {
@@ -575,7 +583,8 @@ class AddonViews extends AddonModule {
   }
 
   public showTip(title, descriptions, content, tags, element) {
-    this.document.querySelectorAll(".zotero-reference-tip").forEach(e=>e.remove())
+    this.window.clearTimeout(this.tipTimer)
+    this.document.querySelectorAll(".zotero-reference-tip").forEach(e => e.remove())
     const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
     const rect = element.getBoundingClientRect()
     let xmlns = "http://www.w3.org/1999/xhtml"
@@ -619,9 +628,9 @@ class AddonViews extends AddonModule {
     `
     for (let tag of tags) {
       let tagSpan = this.document.createElementNS(xmlns, "span")
-      tagSpan.innerText = tag
+      tagSpan.innerText = tag.text
       tagSpan.style = `
-        background-color: #97DECE;
+        background-color: ${tag.color};
         border-radius: 10px;
         margin-right: 1em;
         padding: 0 8px;
@@ -655,8 +664,28 @@ class AddonViews extends AddonModule {
       div.style.top = ""
       // div.style.bottom = `${winRect.height - rect.bottom}px`
       div.style.bottom = "0px"
-
     }
+
+    div.addEventListener("mouseenter", (event) => {
+      console.log("mouseenter div", this.tipTimer)
+      this.window.clearTimeout(this.tipTimer);
+    })
+
+    div.addEventListener("click", (event) => {
+      this.showProgressWindow("Reference", "复制成功", "success")
+      new CopyHelper()
+        .addText(div.innerText, "text/unicode")
+        .copy();
+    })
+
+
+    div.addEventListener("mouseleave", (event) => {
+      console.log("mouseleave div")
+      this.tipTimer = this.window.setTimeout(() => {
+        div.remove()
+      }, 1000)
+    })
+    return div
   }
 
   public showProgressWindow(
@@ -681,6 +710,7 @@ class AddonViews extends AddonModule {
     if (t > 0) {
       progressWindow.startCloseTimer(t);
     }
+    return progressWindow
   }
 }
 
