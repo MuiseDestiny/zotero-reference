@@ -20,7 +20,7 @@
 🎈 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
 
 绿色分区，蓝色被引用量
-![image](https://user-images.githubusercontent.com/51939531/208426046-4bd3276c-2e85-43f0-9c67-2a08ed872f91.png)
+![image](https://user-images.githubusercontent.com/51939531/208918462-b51f0f32-5267-47cc-9fed-083e717e1a04.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
 
