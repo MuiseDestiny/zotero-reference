@@ -129,7 +129,7 @@ class AddonViews extends AddonModule {
 
     const tabpanels = tabbox.querySelector("tabpanels") as HTMLElement;
     this.insertAfter(tabpanel, tabpanels.childNodes[2]);
-    this.refreshReference(tabpanel, this.getItem())
+    // this.refreshReference(tabpanel, this.getItem())
 
   }
 
@@ -337,7 +337,7 @@ class AddonViews extends AddonModule {
           this.Zotero.launchURL(URL);
         }
       } else {
-        this.showProgressWindow("Reference", "复制成功", "success")
+        this.showProgressWindow("Reference", content, "success", 2500, -1)
         new CopyHelper()
           .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
           .copy();
@@ -346,7 +346,6 @@ class AddonViews extends AddonModule {
 
     let timer = null, tipNode
     box.addEventListener("mouseenter", () => {
-      console.log("mouseenter box")
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = this.window.setTimeout(async () => {
 
@@ -366,7 +365,16 @@ class AddonViews extends AddonModule {
           [],
           box
         )
-        let data = await this.Addon.utils.getTitleInfo(this.Addon.utils.parseContent(unstructured)[0])
+        // 匹配年份
+        let years = unstructured.match(/[^\d](\d{4})[^\d]/)
+        let body = {}
+        if (years && Number(years[1]) <= (new Date()).getFullYear()) {
+          body["startYear"] = years[1];
+          body["endYear"] = years[1];
+        }
+        console.log(body)
+        let data = await this.Addon.utils.getTitleInfo(unstructured, body)
+
         if (data) {
           let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
           let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate)].filter(e => e).join(" \u00b7 ")
@@ -378,7 +386,7 @@ class AddonViews extends AddonModule {
               author,
               publish
             ],
-            toPlainText(data.summary),
+            toPlainText(data.summary || ""),
             tags,
             box
           )
@@ -387,7 +395,6 @@ class AddonViews extends AddonModule {
     })
 
     box.addEventListener("mouseleave", () => {
-      console.log("mouseleave box")
       this.window.clearTimeout(timer);
       this.tipTimer = this.window.setTimeout(() => {
         tipNode && tipNode.remove()
@@ -526,6 +533,7 @@ class AddonViews extends AddonModule {
     } else {
       setState("+")
     }
+
     let getCollectionPath = async (id) => {
       let path = []
       while (true) {
@@ -656,6 +664,7 @@ class AddonViews extends AddonModule {
       background-color: #f0f0f0;
       padding: .5em;
       border: 2px solid #7a0000;
+      -moz-user-select: text;
     `
     this.document.querySelector('#main-window').appendChild(div)
 
@@ -667,23 +676,13 @@ class AddonViews extends AddonModule {
     }
 
     div.addEventListener("mouseenter", (event) => {
-      console.log("mouseenter div", this.tipTimer)
       this.window.clearTimeout(this.tipTimer);
     })
 
-    div.addEventListener("click", (event) => {
-      this.showProgressWindow("Reference", "复制成功", "success")
-      new CopyHelper()
-        .addText(div.innerText, "text/unicode")
-        .copy();
-    })
-
-
     div.addEventListener("mouseleave", (event) => {
-      console.log("mouseleave div")
       this.tipTimer = this.window.setTimeout(() => {
         div.remove()
-      }, 1000)
+      }, 500)
     })
     return div
   }
