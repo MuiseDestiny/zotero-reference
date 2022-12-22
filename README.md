@@ -42,6 +42,8 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 单击红框，复制内容，可用于进一步翻译等操作。
 ![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
 
+放大/缩小
+![image](https://user-images.githubusercontent.com/51939531/209040199-91a73bf1-5c8d-4ab1-8d0b-5f6dc48daf4f.png)
 
 ## 🌸 实现
 
