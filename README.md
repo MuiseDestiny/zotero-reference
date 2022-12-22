@@ -39,13 +39,16 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
-红框内文字可选择复制
+红框内文字可选择复制：
+
 ![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
 
-放大/缩小
+放大/缩小：
+
 ![image](https://user-images.githubusercontent.com/51939531/209040199-91a73bf1-5c8d-4ab1-8d0b-5f6dc48daf4f.png)
 
-设置
+设置界面：
+
 ![image](https://user-images.githubusercontent.com/51939531/209137335-a4b12fef-35fa-4b48-9c6d-4b658141654a.png)
 
 - `自动抓取参考文献` - 是否在文献被打开时自动抓取参考文献
