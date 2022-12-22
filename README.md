@@ -58,7 +58,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 <details>
 <summary>所有类型中英对照</summary>
   
-  ```python
+  ```
   note=笔记
   annotation=注释
   attachment=附件
