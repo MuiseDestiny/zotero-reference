@@ -346,9 +346,9 @@ class AddonViews extends AddonModule {
 
     let timer = null, tipNode
     box.addEventListener("mouseenter", () => {
+      box.classList.add("active")
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = this.window.setTimeout(async () => {
-
         let toPlainText = (text) => {
           return text.replace(/<\/?em>/g, "")
         }
@@ -372,9 +372,7 @@ class AddonViews extends AddonModule {
           body["startYear"] = years[1];
           body["endYear"] = years[1];
         }
-        console.log(body)
         let data = await this.Addon.utils.getTitleInfo(unstructured, body)
-
         if (data) {
           let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
           let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate)].filter(e => e).join(" \u00b7 ")
@@ -391,14 +389,15 @@ class AddonViews extends AddonModule {
             box
           )
         }
-      }, 100);
+      }, 233);
     })
 
     box.addEventListener("mouseleave", () => {
+      box.classList.remove("active")
       this.window.clearTimeout(timer);
       this.tipTimer = this.window.setTimeout(() => {
         tipNode && tipNode.remove()
-      }, 1000)
+      }, 233)
     })
 
     let setState = (state: string = "") => {
@@ -443,7 +442,7 @@ class AddonViews extends AddonModule {
       this.showProgressWindow("移除成功", DOI, "success")
     }
     
-    let add = async (collections: number[] = []) => {
+    let add = async (collections: undefined | number[] = undefined) => {
       this.debug("addRelatedItem", content, DOI)
       // check DOI
       let refItem, source
@@ -506,7 +505,7 @@ class AddonViews extends AddonModule {
             this.debug(e)
             return
           }
-        }
+        }        
       }
       // addRelatedItem
       this.debug("addRelatedItem")
@@ -590,9 +589,138 @@ class AddonViews extends AddonModule {
     this.removeSideBarPanel()
   }
 
-  public showTip(title, descriptions, content, tags, element) {
+  public _showTip(title, descriptions, content, tags, element) {
     this.window.clearTimeout(this.tipTimer)
-    this.document.querySelectorAll(".zotero-reference-tip").forEach(e => e.remove())
+    let tipDiv = this.document.querySelector(".zotero-reference-tip")
+    const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
+    const rect = element.getBoundingClientRect()
+    let xmlns = "http://www.w3.org/1999/xhtml"
+    let titleSpan, despDiv, contentSpan, tagDiv, oldStyle
+    if (!tipDiv) {
+      tipDiv = this.document.createElementNS(xmlns, "div")
+      tipDiv.setAttribute("class", "zotero-reference-tip")
+      titleSpan = this.document.createElementNS(xmlns, "span")
+      titleSpan.setAttribute("class", "title")
+      titleSpan.innerText = title
+      titleSpan.style = `
+        display: block;
+        font-weight: bold;
+      `
+      despDiv = this.document.createElementNS(xmlns, "div")
+      despDiv.setAttribute("class", "description")
+      despDiv.style = `
+        margin-bottom: .25em;
+      `
+      contentSpan = this.document.createElementNS(xmlns, "span")
+      contentSpan.setAttribute("class", "content")
+      contentSpan.style = `
+        display: block;
+        line-height: 1.5em;
+        opacity: .73;
+        text-align: justify;
+      `
+  
+      tagDiv = this.document.createElementNS(xmlns, "div")
+      tagDiv.setAttribute("class", "tag")
+      tagDiv.style = `
+        width: 100%;
+        margin: .5em 0;
+      `
+  
+      tipDiv.append(
+        titleSpan,
+        tagDiv,
+        despDiv,
+        contentSpan
+      )
+  
+      tipDiv.style = `
+        position: fixed;
+        width: 800px;
+        z-index: 999;
+        background-color: #f0f0f0;
+        padding: .5em;
+        border: 2px solid #7a0000;
+        -moz-user-select: text;
+        transition: top .5s linear, height .5s linear, bottom .5s linear;
+      `
+
+      this.document.querySelector('#main-window').appendChild(tipDiv)
+      oldStyle = this.window.getComputedStyle(tipDiv)
+      // tipDiv.addEventListener("mouseenter", (event) => {
+      //   this.window.clearTimeout(this.tipTimer);
+      // })
+
+      // tipDiv.addEventListener("mouseleave", (event) => {
+      //   this.tipTimer = this.window.setTimeout(() => {
+      //     tipDiv.remove()
+      //   }, 500)
+      // })
+
+    } else {
+      oldStyle = this.window.getComputedStyle(tipDiv)
+      titleSpan = tipDiv.querySelector("span.title")
+      despDiv = tipDiv.querySelector("div.description")
+      contentSpan = tipDiv.querySelector("span.content")
+      tagDiv = tipDiv.querySelector("div.tag")
+    }
+
+    // change content
+    titleSpan.innerText = title
+    contentSpan.innerText = content
+
+    despDiv.childNodes.forEach(e=>e.remove())
+    for (let description of descriptions) {
+      let despSpan = this.document.createElementNS(xmlns, "span")
+      despSpan.innerText = description
+      despSpan.style = `
+          display: block;
+          line-height: 1.5em;
+          opacity: .5;
+        `
+      despDiv.appendChild(despSpan)
+    }
+
+    tagDiv.childNodes.forEach(e=>e.remove())
+    for (let tag of tags) {
+      let tagSpan = this.document.createElementNS(xmlns, "span")
+      tagSpan.innerText = tag.text
+      tagSpan.style = `
+          background-color: ${tag.color};
+          border-radius: 10px;
+          margin-right: 1em;
+          padding: 0 8px;
+          color: white;
+        `
+      tagDiv.appendChild(tagSpan)
+    }
+    
+
+    tipDiv.style.right = `${winRect.width - rect.left + 22}px`
+    tipDiv.style.top = oldStyle.offsetTop;
+    tipDiv.style.top = `${rect.top}px`
+
+    let boxRect = tipDiv.getBoundingClientRect()
+    if (boxRect.bottom >= winRect.height) {
+      tipDiv.style.top = ""
+      tipDiv.style.bottom = oldStyle.offsetBottom;
+      tipDiv.style.bottom = "0px"
+    }
+    tipDiv.style.height = "";
+    let height = this.window.getComputedStyle(tipDiv).offsetHeight
+    tipDiv.style.height = oldStyle.height;
+    tipDiv.style.height = height;
+    return tipDiv
+  }
+
+  public showTip(title, descriptions, content, tags, element) {
+    if (!element.classList.contains("active")) { return }
+    this.document.querySelectorAll(".zotero-reference-tip").forEach(e => {
+      e.style.opacity = "0"
+      this.window.setTimeout(() => {
+        e.remove()
+      }, 1000); 
+    })
     const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
     const rect = element.getBoundingClientRect()
     let xmlns = "http://www.w3.org/1999/xhtml"
@@ -627,6 +755,8 @@ class AddonViews extends AddonModule {
       line-height: 1.5em;
       opacity: .73;
       text-align: justify;
+      max-height: 300px;
+      overflow-y: auto;
     `
 
     let tagDiv = this.document.createElementNS(xmlns, "div")
@@ -665,13 +795,14 @@ class AddonViews extends AddonModule {
       padding: .5em;
       border: 2px solid #7a0000;
       -moz-user-select: text;
+      transition: opacity .1s linear;
+      opacity: 0;
     `
     this.document.querySelector('#main-window').appendChild(div)
 
     let boxRect = div.getBoundingClientRect()
     if (boxRect.bottom >= winRect.height) {
       div.style.top = ""
-      // div.style.bottom = `${winRect.height - rect.bottom}px`
       div.style.bottom = "0px"
     }
 
@@ -684,6 +815,7 @@ class AddonViews extends AddonModule {
         div.remove()
       }, 500)
     })
+    div.style.opacity = "1";
     return div
   }
 
@@ -695,9 +827,9 @@ class AddonViews extends AddonModule {
     maxLength: number = 100
   ) {
     console.log(arguments)
-    // if (this.progressWindow && ) {
-    //   this.progressWindow.close();
-    // }
+    if (this.progressWindow) {
+      this.progressWindow.close();
+    }
     let progressWindow = new this.Zotero.ProgressWindow({ closeOnClick: true });
     this.progressWindow = progressWindow
     progressWindow.changeHeadline(header);

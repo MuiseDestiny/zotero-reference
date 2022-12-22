@@ -1,5 +1,6 @@
 import AddonModule from "./module";
 import { Addon } from "./addon";
+import { replaceInFile } from "replace-in-file";
 
 class Utils extends AddonModule {
 
@@ -279,7 +280,8 @@ class Utils extends AddonModule {
       let unstructured = ref.text
       unstructured = unstructured
         .trim()
-        .replace(/^\[\d+\]/, "").replace(/^\d+[\.\s]?/, "").trim()
+        .replace(/^\[\d+\]/, "")
+        .replace(/^\d+[\.\s]?/, "").trim()
       ref["unstructured"] = unstructured
       this.unpackUnstructured(ref)
     }
@@ -304,57 +306,6 @@ class Utils extends AddonModule {
         ref[key] = value
       }
     }
-  }
-
-  public recordLayout(lines, middle) {
-    let leftLines = lines.filter(line => line.x < middle)
-    let rightLines
-    rightLines = lines.filter(line => line.x > middle)
-    if (leftLines) {
-      let values = leftLines.map(line => line.x + line.width).sort((a, b) => b - a)
-      let value = values.reduce((a, b) => a + b) / values.length;
-      console.log(values, value)
-      rightLines = rightLines.filter(line => line.x > value)
-      leftLines = lines.filter(line=>rightLines.indexOf(line) == -1)
-    }
-    console.log("left", leftLines, "right", rightLines)
-
-    // 找到左右分栏的最左端
-    let leftSortedX = leftLines.map(line => line.x).sort((a, b) => a - b)
-    let rightSortedX = rightLines.map(line => line.x).sort((a, b) => a - b)
-    console.log(leftSortedX, rightSortedX)
-    // 去除只出现几次的异常值
-    let minTotalNum = 3
-    let n = 1
-    if (leftSortedX.length > minTotalNum) {
-      leftSortedX = leftSortedX.filter(x => {
-        return leftLines.filter(line=>line.x == x).length > n
-      })
-    }
-    if (rightSortedX.length > minTotalNum) {
-      rightSortedX = rightSortedX.filter(x => {
-        return rightLines.filter(line=>line.x == x).length > n
-      })
-    }
-    console.log(leftSortedX, rightSortedX)
-
-    if (leftSortedX) {
-      leftLines.forEach(line => {
-        line["column"] = {
-          side: "left",
-          minX: leftSortedX[0]
-        }
-      })
-    }
-    if (rightSortedX) {
-      rightLines.forEach(line => {
-        line["column"] = {
-          side: "right",
-          minX: rightSortedX[0]
-        }
-      })
-    }
-    return [leftSortedX, rightSortedX]
   }
 
   public mergeSameTop(items) {
@@ -435,66 +386,55 @@ class Utils extends AddonModule {
 
   public mergeSameRef(refLines) {
     const _refLines = [...refLines]
-    try {
-      let firstLine = refLines[0]
-      // 已知新一行参考文献缩进
-      let firstX = firstLine.x
-      let secondLine = refLines.slice(1).find(line => {
-        return this.abs(line.x - firstX) < 10 * firstLine.height
-      })
-      let delta = firstX - secondLine.x
-      console.log("delta", delta)
-      let [_, refType] = this.isRefStart(firstLine.text)
-      console.log(firstLine.text, refType)
-      let ref
-      for (let i = 0; i < refLines.length; i++) {
-        let line = refLines[i]
-        let text = line.text 
-        let isRef = this.isRefStart(text)
-        if (
-          // this.abs(line.x - firstX) < line.height * 1.2 &&
-          isRef[0] &&
-          isRef[1] == refType &&
+    let firstLine = refLines[0]
+    // 已知新一行参考文献缩进
+    let firstX = firstLine.x
+    let secondLine = refLines.slice(1).find(line => {
+      return line.x != firstX && this.abs(line.x - firstX) < 10 * firstLine.height
+    })
+    console.log(secondLine)
+    let delta = secondLine ? firstX - secondLine.x : undefined
+    console.log("delta", delta)
+    let [_, refType] = this.isRefStart(firstLine.text)
+    console.log(firstLine.text, refType)
+    let ref
+    for (let i = 0; i < refLines.length; i++) {
+      let line = refLines[i]
+      let text = line.text as string
+      let isRef = this.isRefStart(text)
+      if (
+        // this.abs(line.x - firstX) < line.height * 1.2 &&
+        isRef[0] &&
+        isRef[1] == refType &&
+        this.abs(firstX - line.x) < (this.abs(delta) || line.height) * .5 &&
+        (
+          delta == undefined ||
           _refLines.find(_line => {
-             let flag = (
+            let flag = (
               line != _line &&
-              _line.column == line.column &&
-              _line.pageNum == line.pageNum &&
               (line.x - _line.x) * delta > 0 && 
               this.abs(this.abs(line.x - _line.x) - this.abs(delta)) <= line.height
             )
-            if (flag) {
-              console.log(
-                line != _line,
-              _line.column == line.column,
-              _line.pageNum == line.pageNum,
-              (line.x - _line.x) * delta > 0 ,
-              this.abs(this.abs(line.x - _line.x) - this.abs(delta)) <= line.height
-              )
-            }
             return flag
           }) !== undefined
-        ) {
-          console.log("->", line.text, isRef)
-          ref = line
-        } else {
-          if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(delta)) > 5 * line.height) {
-            refLines = refLines.slice(0, i)
-            console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
-            break
-          }
-          console.log("+", text)
-          ref.text += text
-          if (line.url) {
-            ref.url = line.url
-          }
-          refLines[i] = false
+        )
+      ) {
+        ref = line
+      } else {
+        if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(delta)) > 5 * line.height) {
+          refLines = refLines.slice(0, i)
+          console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
+          break
         }
+        console.log("+", text)
+        ref.text += text
+        if (line.url) {
+          ref.url = line.url
+        }
+        refLines[i] = false
       }
-      return refLines.filter(e => e)
-    } catch {
-      return this.mergeSameRef(_refLines.slice(1))
     }
+    return refLines.filter(e => e)
   }
 
   public updateItemsAnnotions(items, annotations) {
@@ -560,7 +500,7 @@ class Utils extends AddonModule {
     let pageLines = {};
     // read 2 page to remove head and tail
     let maxWidth, maxHeight
-    let preLoadPageNum = pages.length - 2
+    let preLoadPageNum = pages.length > 4 ? 4 : pages.length
 
     const progressWindow = this.Addon.views.showProgressWindow(
       "[Pending] Zotero Reference",
@@ -586,7 +526,7 @@ class Utils extends AddonModule {
     // 可能奇数页没有，偶数有
     let parts = []
     let part = []
-    let isBreak = false
+    let refPart = undefined
     for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
       let show = pageNum + 1 == 14
       show = true
@@ -599,6 +539,7 @@ class Utils extends AddonModule {
 
       // 移除PDF页面首尾关于期刊页码等信息
       // 正向匹配移除PDF顶部无效信息
+      let removeLines = new Set()
       let removeNumber = (text) => {
         return text.replace(/\s+/g, "").replace(/\d+/g, "")
       }
@@ -629,10 +570,10 @@ class Utils extends AddonModule {
               this.abs(line.y - _line.y) < line.height &&
               this.abs(line.width - _line.width) < line.height
             ) {
-              console.log(`remove - ${line.text}`)
               // 认为是相同的
               line[direction] = true
             } else {
+              removeLines.add(line)
               directions[direction].done = true
             }
           })
@@ -640,16 +581,20 @@ class Utils extends AddonModule {
       }
       lines = lines.filter(e => !(e.forward || e.backward));
       lines = lines.filter(e=>e)
-      if (show) { console.log("remove margin", this.copy(lines)) }
+      if (show) { console.log("remove", [...removeLines]) }
 
-      // 分析分栏
+      // 分栏
       let columns = [[lines[0]]]
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i]
         let column = columns.slice(-1)[0]
         if (
           column
-            .map(_line => Number(line.x > _line.x + _line.width || line.x < _line.x))
+            .map(_line => Number(line.x > _line.x + _line.width))
+            .reduce((a, b) => a + b) == column.length
+          ||
+          column
+            .map(_line => Number(line.x + line.width < _line.x))
             .reduce((a, b) => a + b) == column.length
         ) {
           columns.push([line])
@@ -657,22 +602,56 @@ class Utils extends AddonModule {
           column.push(line)
         }
       }
-      if (show) { console.log("columns", columns) }
+      if (show) { console.log("columns", this.copy(columns)) }
       columns.forEach((column, columnIndex) => {
-        // 去除缩进，所有栏左对齐
-        let indent = column.map(line => line.x).sort((a, b) => a - b)[0]
         column.forEach(line => {
-          line["_x"] = line.x
-          line.x -= indent
           line["column"] = columnIndex
           line["pageNum"] = pageNum
-          // line["YDistances"] = YDistances
         })
       })
       if (show) { console.log("remove indent", this.copy(lines)) }
 
       // part
       let isStart = false
+      let donePart = (part) => {
+        part.reverse()
+        // parts.push(part)
+        // return
+        // 去除缩进同一页同意栏的缩进
+        let columns = [[part[0]]]
+        for (let i = 1; i < part.length; i++) {
+          let line = part[i];
+          if (
+            line.column == columns.slice(-1)[0].slice(-1)[0].column &&
+            line.pageNum == columns.slice(-1)[0].slice(-1)[0].pageNum
+          ) {
+            columns.slice(-1)[0].push(line)
+          } else {
+            columns.push([line])
+          }
+        }
+        columns.forEach(column => {
+          let offset = column.map(line => line.x).sort((a, b) => a - b)[0]
+          if (offset < 4 && offset > 3) {
+            console.log("000000000000000", this.copy(column), offset)
+          }
+          column.forEach(line => {
+            line["_x"] =  line.x;
+            line["_offset"] = offset;
+            line.x -= offset;
+          })
+        })
+        parts.push(part)
+        return part
+      }
+      let isRefBreak = (text) => {
+        text = text.replace(/\s+/g, "")
+        return /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) && text.length < 20
+      }
+
+      // 分析最底部y
+      const pageYmin = lines.map(line => line.y).sort((a, b) => a - b)[0]
+      console.log("pageYmin", pageYmin)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
@@ -680,7 +659,7 @@ class Utils extends AddonModule {
           !isStart && pageNum < pages.length - 1 &&
           // 图表等
           (
-            (line._x + line.width) / maxWidth < 0.7 ||
+            ((line.x + line.width) / maxWidth < 0.7 && line.y > pageYmin) ||
             /(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
           )
         ) {
@@ -691,8 +670,7 @@ class Utils extends AddonModule {
         }
         // 前一页第一行与当前页最后一行
         if (part.length > 0 && part.slice(-1)[0].height != line.height) {
-          part.reverse()
-          parts.push(part)
+          donePart(part)
           part = [line]
           continue
         }
@@ -713,33 +691,43 @@ class Utils extends AddonModule {
             // /^(\[1\]|1\.)/.test(line.text)
           )
         ) {
-          if (lines[i - 1]) {
-            if (show) {
-              console.log("break", line.text, " - ", lines[i - 1].text)
-            }
+          if (show) {
+            console.log("break", line.text, " - ", lines[i - 1].text)
           }
-          part.reverse()
-          parts.push(part)
+          if (isRefBreak(lines[i - 1].text)) {
+          // if (/(参考文献|reference)/i.test(lines[i - 1].text)) {
+            refPart = donePart(part)
+            break
+          }
+          if (isRefBreak(lines[i].text)) {
+            // if (/(参考文献|reference)/i.test(lines[i - 1].text)) {
+            part.pop()
+            refPart = donePart(part)
+            break
+          }
+          donePart(part)
           part = []
         }
       }
-      if (isBreak) {
+      if (refPart) {
+        console.log("\n\n\nBreak by reference keyword\n\n\n")
         break
       }
-
     }
     console.log("parts", this.copy(parts)) 
-    let partRefNum = []
-    for (let i = 0; i < parts.length; i++) {
-      let isRefs = parts[i].map(line => Number(this.isRefStart(line.text)[0]))
-      partRefNum.push([i, isRefs.reduce((a, b) => a + b)])
+    if (!refPart) {
+      let partRefNum = []
+      for (let i = 0; i < parts.length; i++) {
+        let isRefs = parts[i].map(line => Number(this.isRefStart(line.text)[0]))
+        partRefNum.push([i, isRefs.reduce((a, b) => a + b)])
+      }
+      let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
+      refPart = parts[i]
     }
-    let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
-    part = parts[i]
-    console.log("part", this.copy(part))
+    console.log("refPart", this.copy(refPart))
     progressWindow.changeHeadline("[Done] Zotero Reference");
     progressWindow.startCloseTimer(5000)
-    return part
+    return refPart
   }
 
   public copy(obj) {
@@ -852,7 +840,6 @@ class Utils extends AddonModule {
       collections,
       saveAttachments: true
     }))[0]
-
   }
 
   async searchItem(condition, operator, value) {
