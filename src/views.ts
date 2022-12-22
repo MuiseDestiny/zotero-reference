@@ -350,6 +350,7 @@ class AddonViews extends AddonModule {
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = this.window.setTimeout(async () => {
         let toPlainText = (text) => {
+          if (!text) { return "" }
           return text.replace(/<\/?em>/g, "")
         }
         let toTimeInfo = (t) => {
@@ -384,7 +385,7 @@ class AddonViews extends AddonModule {
               author,
               publish
             ],
-            toPlainText(data.summary || ""),
+            toPlainText(data.summary),
             tags,
             box
           )
@@ -719,7 +720,7 @@ class AddonViews extends AddonModule {
       e.style.opacity = "0"
       this.window.setTimeout(() => {
         e.remove()
-      }, 1000); 
+      }, 100); 
     })
     const winRect = this.document.querySelector('#main-window').getBoundingClientRect()
     const rect = element.getBoundingClientRect()
@@ -805,17 +806,37 @@ class AddonViews extends AddonModule {
       div.style.top = ""
       div.style.bottom = "0px"
     }
+    div.style.opacity = "1";
 
+    div.addEventListener("DOMMouseScroll", (event) => {
+      if (!event.ctrlKey) { return }
+      let scale = div.style.transform.match(/scale\((.+)\)/)
+      scale = scale ? parseFloat(scale[1]) : 1
+      let minScale = 1, maxScale = 1.7, step = 0.05
+      if (div.style.bottom == "0px") {
+        div.style.transformOrigin = "center bottom"
+      } else {
+        div.style.transformOrigin = "center center"
+      }
+      if (event.detail > 0) {
+        // 缩小
+        scale = scale - step
+        div.style.transform = `scale(${scale < minScale ? 1 : scale})`;
+      } else {
+        // 放大
+        scale = scale + step
+        div.style.transform = `scale(${scale > maxScale ? maxScale : scale})`;
+      }
+    })
     div.addEventListener("mouseenter", (event) => {
       this.window.clearTimeout(this.tipTimer);
     })
-
     div.addEventListener("mouseleave", (event) => {
       this.tipTimer = this.window.setTimeout(() => {
         div.remove()
       }, 500)
     })
-    div.style.opacity = "1";
+    
     return div
   }
 

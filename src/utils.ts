@@ -88,7 +88,7 @@ class Utils extends AddonModule {
         // TODO: 评价匹配成功度，低不返回
         this.Addon.DOIData[key] = data
       } else {
-        data = []
+        data = undefined
       }
     }
     return data
