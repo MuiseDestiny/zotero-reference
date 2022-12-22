@@ -1,11 +1,9 @@
 import AddonModule from "./module";
-import { Addon } from "./addon";
-import { replaceInFile } from "replace-in-file";
+import Addon from "./addon";
 
 class Utils extends AddonModule {
 
   constructor(parent: Addon) {
-    console.log("Utils constructor")
     super(parent);
   }
 
@@ -39,7 +37,7 @@ class Utils extends AddonModule {
         }
       }
       for (let method in configs) {
-        let res = await this.Zotero.HTTP.request(
+        let res = await Zotero.HTTP.request(
           "GET",
           configs[method].url,
           {
@@ -48,7 +46,7 @@ class Utils extends AddonModule {
         )
         if (res.status == 200) {
           data = configs[method].parse(res.response)
-          this.debug(data)
+          this.Addon.toolkit.Tool.log(data)
           this.Addon.DOIData[DOI] = data
           break
         }
@@ -58,7 +56,7 @@ class Utils extends AddonModule {
   }
 
   async getTitleInfo(title: string, body: object = {}) {
-    console.log("getTitleInfo", title)
+    this.Addon.toolkit.Tool.log("getTitleInfo", title)
     let data
     const key = `readpaper - ${title}`
     if (key in this.Addon.DOIData) {
@@ -72,7 +70,7 @@ class Utils extends AddonModule {
         searchType: Number(Object.values(body).length > 0)
       }
       body = { ..._body, ...body}
-      let res = await this.Zotero.HTTP.request(
+      let res = await Zotero.HTTP.request(
         "POST",
         readpaperApi,
         {
@@ -99,7 +97,7 @@ class Utils extends AddonModule {
     try {
       this.Addon.views.showProgressWindow("通过crossref查询DOI", title)
       const crossref = `https://api.crossref.org/works?query=${title}`
-      res = await this.Zotero.HTTP.request(
+      res = await Zotero.HTTP.request(
         "GET",
         crossref,
         {
@@ -107,10 +105,10 @@ class Utils extends AddonModule {
         }
       )
       const DOI = res.response.message.items.filter(e=>e.type != "component")[0].DOI
-      this.debug(`getTitleDOIByCrossref(${title}) -> ${DOI}`)
+      this.Addon.toolkit.Tool.log(`getTitleDOIByCrossref(${title}) -> ${DOI}`)
       return DOI
     } catch {
-      this.debug("error, getTitleDOIByCrossref", res.response)
+      this.Addon.toolkit.Tool.log("error, getTitleDOIByCrossref", res.response)
       return false
     }
   }
@@ -120,7 +118,7 @@ class Utils extends AddonModule {
     try {
       this.Addon.views.showProgressWindow("通过unpaywall查询DOI", title)
       const unpaywall = `https://api.unpaywall.org/v2/search?query=${title}&email=zoterostyle@polygon.org`
-      res = await this.Zotero.HTTP.request(
+      res = await Zotero.HTTP.request(
         "GET",
         unpaywall,
         {
@@ -128,10 +126,10 @@ class Utils extends AddonModule {
         }
       )
       const DOI = res.response.results[0].response.doi
-      this.debug(`getTitleDOIByUnpaywall(${title}) -> ${DOI}`)
+      this.Addon.toolkit.Tool.log(`getTitleDOIByUnpaywall(${title}) -> ${DOI}`)
       return DOI
     } catch {
-      this.debug("error, getTitleDOIByUnpayWall", res.response)
+      this.Addon.toolkit.Tool.log("error, getTitleDOIByUnpayWall", res.response)
       return false
     }
   }
@@ -157,7 +155,7 @@ class Utils extends AddonModule {
     } else {
       try {
         const crossrefApi = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
-        let res = await this.Zotero.HTTP.request(
+        let res = await Zotero.HTTP.request(
           "GET",
           crossrefApi,
           {
@@ -194,12 +192,12 @@ class Utils extends AddonModule {
     if (URL in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[URL]
     } else {
-      this.debug("get by CNKI", URL)
+      this.Addon.toolkit.Tool.log("get by CNKI", URL)
       // URL - https://kns.cnki.net/kcms/detail/detail.aspx?dbcode=CJFD&dbname=CJFDLAST2022&filename=ZYJH202209006&uniplatform=NZKPT&v=4RWl_k1sYrO5ij1n5KXGDdusm5zXyjI12tpcPkSPI4OMnblizxXSTsDcSTbO-AqK
       //       https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=CJFD&filename=zyjh202209006&RefType=1&vl=
       let args = this.parseCnkiURL(URL)
       let htmltext
-      htmltext = (await this.Zotero.HTTP.request(
+      htmltext = (await Zotero.HTTP.request(
         "GET",
         URL,
         {
@@ -207,14 +205,14 @@ class Utils extends AddonModule {
         }
       )).response
       const vl = htmltext.match(/id="v".+?value="(.+?)"/)[1]
-      this.debug("vl", vl);
+      this.Addon.toolkit.Tool.log("vl", vl);
       let page = 0;
-      let parser = new this.window.DOMParser();
+      let parser = new window.DOMParser();
       while (true) {
         page++
-        this.debug("page", page)
+        this.Addon.toolkit.Tool.log("page", page)
         if (page >= 6) { break }
-        htmltext = (await this.Zotero.HTTP.request(
+        htmltext = (await Zotero.HTTP.request(
           "GET",
           `https://kns.cnki.net/kcms/detail/frame/list.aspx?dbcode=${args.DbCode}&filename=${args.FileName}&RefType=1&vl=${vl}&page=${page}`,
           {
@@ -256,7 +254,11 @@ class Utils extends AddonModule {
 
   async getRefDataFromPDF() {
     let tabContainer = this.Addon.views.getTabContainer()
-    if (!tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")) {
+    let skip = !tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")
+    if (!Zotero.Prefs.get(`${this.Addon.addonRef}.priorityPDF`)) {
+      skip = !skip
+    }
+    if (skip) {
       return []
     }
     // try {
@@ -274,7 +276,7 @@ class Utils extends AddonModule {
       this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
     }
 
-    this.debug(refData)
+    this.Addon.toolkit.Tool.log(refData)
     for (let i = 0; i < refData.length; i++) {
       let ref = refData[i]
       let unstructured = ref.text
@@ -392,11 +394,11 @@ class Utils extends AddonModule {
     let secondLine = refLines.slice(1).find(line => {
       return line.x != firstX && this.abs(line.x - firstX) < 10 * firstLine.height
     })
-    console.log(secondLine)
+    this.Addon.toolkit.Tool.log(secondLine)
     let delta = secondLine ? firstX - secondLine.x : undefined
-    console.log("delta", delta)
+    this.Addon.toolkit.Tool.log("delta", delta)
     let [_, refType] = this.isRefStart(firstLine.text)
-    console.log(firstLine.text, refType)
+    this.Addon.toolkit.Tool.log(firstLine.text, refType)
     let ref
     for (let i = 0; i < refLines.length; i++) {
       let line = refLines[i]
@@ -423,10 +425,10 @@ class Utils extends AddonModule {
       } else {
         if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(delta)) > 5 * line.height) {
           refLines = refLines.slice(0, i)
-          console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
+          this.Addon.toolkit.Tool.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
           break
         }
-        console.log("+", text)
+        this.Addon.toolkit.Tool.log("+", text)
         ref.text += text
         if (line.url) {
           ref.url = line.url
@@ -530,11 +532,11 @@ class Utils extends AddonModule {
     for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
       let show = pageNum + 1 == 14
       show = true
-      if (show) { this.debug("current page", pageNum + 1) }
+      if (show) { this.Addon.toolkit.Tool.log("current page", pageNum + 1) }
       let pdfPage = pages[pageNum].pdfPage
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
-      if (show) { console.log(maxWidth, maxHeight) }
+      if (show) { this.Addon.toolkit.Tool.log(maxWidth, maxHeight) }
       let lines = (pageNum in pageLines && [...pageLines[pageNum]]) || await this.readPdfPage(pdfPage);
 
       // 移除PDF页面首尾关于期刊页码等信息
@@ -581,7 +583,7 @@ class Utils extends AddonModule {
       }
       lines = lines.filter(e => !(e.forward || e.backward));
       lines = lines.filter(e=>e)
-      if (show) { console.log("remove", [...removeLines]) }
+      if (show) { this.Addon.toolkit.Tool.log("remove", [...removeLines]) }
 
       // 分栏
       let columns = [[lines[0]]]
@@ -602,14 +604,14 @@ class Utils extends AddonModule {
           column.push(line)
         }
       }
-      if (show) { console.log("columns", this.copy(columns)) }
+      if (show) { this.Addon.toolkit.Tool.log("columns", this.copy(columns)) }
       columns.forEach((column, columnIndex) => {
         column.forEach(line => {
           line["column"] = columnIndex
           line["pageNum"] = pageNum
         })
       })
-      if (show) { console.log("remove indent", this.copy(lines)) }
+      if (show) { this.Addon.toolkit.Tool.log("remove indent", this.copy(lines)) }
 
       // part
       let isStart = false
@@ -633,7 +635,7 @@ class Utils extends AddonModule {
         columns.forEach(column => {
           let offset = column.map(line => line.x).sort((a, b) => a - b)[0]
           if (offset < 4 && offset > 3) {
-            console.log("000000000000000", this.copy(column), offset)
+            this.Addon.toolkit.Tool.log("000000000000000", this.copy(column), offset)
           }
           column.forEach(line => {
             line["_x"] =  line.x;
@@ -651,7 +653,7 @@ class Utils extends AddonModule {
 
       // 分析最底部y
       const pageYmin = lines.map(line => line.y).sort((a, b) => a - b)[0]
-      console.log("pageYmin", pageYmin)
+      this.Addon.toolkit.Tool.log("pageYmin", pageYmin)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
@@ -663,7 +665,7 @@ class Utils extends AddonModule {
             /(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
           )
         ) {
-          console.log("skip", line.text)
+          this.Addon.toolkit.Tool.log("skip", line.text)
           continue
         } else {
           isStart = true
@@ -692,7 +694,7 @@ class Utils extends AddonModule {
           )
         ) {
           if (show) {
-            console.log("break", line.text, " - ", lines[i - 1].text)
+            this.Addon.toolkit.Tool.log("break", line.text, " - ", lines[i - 1].text)
           }
           if (isRefBreak(lines[i - 1].text)) {
           // if (/(参考文献|reference)/i.test(lines[i - 1].text)) {
@@ -710,11 +712,11 @@ class Utils extends AddonModule {
         }
       }
       if (refPart) {
-        console.log("\n\n\nBreak by reference keyword\n\n\n")
+        this.Addon.toolkit.Tool.log("\n\n\nBreak by reference keyword\n\n\n")
         break
       }
     }
-    console.log("parts", this.copy(parts)) 
+    this.Addon.toolkit.Tool.log("parts", this.copy(parts)) 
     if (!refPart) {
       let partRefNum = []
       for (let i = 0; i < parts.length; i++) {
@@ -724,7 +726,7 @@ class Utils extends AddonModule {
       let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
       refPart = parts[i]
     }
-    console.log("refPart", this.copy(refPart))
+    this.Addon.toolkit.Tool.log("refPart", this.copy(refPart))
     progressWindow.changeHeadline("[Done] Zotero Reference");
     progressWindow.startCloseTimer(5000)
     return refPart
@@ -745,7 +747,7 @@ class Utils extends AddonModule {
         .split(/(\.\s+|,|，)/)
         .map(e=>e.trim())
         .filter(e => e)
-      this.debug("parts", parts)
+      this.Addon.toolkit.Tool.log("parts", parts)
       let authors = []
       let titles = []
       for (let part of parts) {
@@ -757,7 +759,7 @@ class Utils extends AddonModule {
       }
       let title = titles.sort((a, b) => b.length-a.length)[0]
       let author = authors[0]
-      this.debug(content, "\n->\n", title, author)
+      this.Addon.toolkit.Tool.log(content, "\n->\n", title, author)
       return [title, author]
     } else {
       let authors = []
@@ -784,21 +786,21 @@ class Utils extends AddonModule {
   }
 
   async getCnkiURL(title, author) {
-    this.debug("getCnkiURL", title, author)
+    this.Addon.toolkit.Tool.log("getCnkiURL", title, author)
     let cnkiURL
-    let oldFunc = this.Zotero.Jasminum.Scrape.getItemFromSearch
-    this.Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
+    let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
+    Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
       try {        
         let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/i)
         if (res.length) {
             return res[1]
         }
       } catch {
-        console.log(htmlString)
+        this.Addon.toolkit.Tool.log(htmlString)
       }
-    }.bind(this.Zotero.Jasminum);
-    cnkiURL = await this.Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
-    this.Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(this.Zotero.Jasminum);
+    }.bind(Zotero.Jasminum);
+    cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
+    Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
     if (!cnkiURL && title) {
       return await this.getCnkiURL(title.slice(0, parseInt(String(title.length/2))), author)
     } else if (!title) {
@@ -807,18 +809,18 @@ class Utils extends AddonModule {
     }
     let args = this.parseCnkiURL(cnkiURL)
     cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
-    console.log(cnkiURL)
+    this.Addon.toolkit.Tool.log(cnkiURL)
     return cnkiURL
   }
 
   async createItemByJasminum(title, author) {
     let cnkiURL = await this.getCnkiURL(title, author)
     // Jasminum
-    let articleId = this.Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
-    let postData = this.Zotero.Jasminum.Scrape.createRefPostData([articleId])
-    let data = await this.Zotero.Jasminum.Scrape.getRefText(postData)
+    let articleId = Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
+    let postData = Zotero.Jasminum.Scrape.createRefPostData([articleId])
+    let data = await Zotero.Jasminum.Scrape.getRefText(postData)
 
-    let items = await this.Zotero.Jasminum.Utils.trans2Items(data, 1);
+    let items = await Zotero.Jasminum.Utils.trans2Items(data, 1);
     if (items) {
       let item = items[0]
       item.setField("url", cnkiURL)
@@ -828,12 +830,12 @@ class Utils extends AddonModule {
   }
   
   async createItemByZotero(DOI, collections) {
-    var translate = new this.Zotero.Translate.Search();
+    var translate = new Zotero.Translate.Search();
     translate.setIdentifier({ "DOI": DOI });
 
     let translators = await translate.getTranslators();
     translate.setTranslator(translators);
-    let libraryID = this.window.ZoteroPane.getSelectedLibraryID();
+    let libraryID = ZoteroPane.getSelectedLibraryID();
 
     return (await translate.translate({
       libraryID,
@@ -843,10 +845,10 @@ class Utils extends AddonModule {
   }
 
   async searchItem(condition, operator, value) {
-    let s = new this.Zotero.Search;
+    let s = new Zotero.Search;
     s.addCondition(condition, operator, value);
     var ids = await s.search();
-    let items = await this.Zotero.Items.getAsync(ids);
+    let items = await Zotero.Items.getAsync(ids);
     if (items) {
       return items[0]
     }
@@ -866,7 +868,7 @@ class Utils extends AddonModule {
   }
 
   public getReader() {
-    return this.Zotero.Reader.getByTabID(((this.window as any).Zotero_Tabs as typeof Zotero_Tabs).selectedID)
+    return Zotero.Reader.getByTabID(Zotero_Tabs.selectedID) 
   }
 
   public abs(v) {

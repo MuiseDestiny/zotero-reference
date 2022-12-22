@@ -1,4 +1,4 @@
-import { Addon, addonName } from "./addon";
+import Addon from "./addon";
 import AddonModule from "./module";
 
 class AddonEvents extends AddonModule {
@@ -17,12 +17,12 @@ class AddonEvents extends AddonModule {
           type == "tab" &&
           extraData[ids[0]].type == "reader"
         ) {
-          this.Zotero.debug("ZoteroReference: open attachment event detected.");
-          let reader = this.Zotero.Reader.getByTabID(ids[0]);
+          Zotero.debug("ZoteroReference: open attachment event detected.");
+          let reader = Zotero.Reader.getByTabID(ids[0]);
           let delayCount = 0;
           while (!reader && delayCount < 10) {
-            await this.Zotero.Promise.delay(100);
-            reader = this.Zotero.Reader.getByTabID(ids[0]);
+            await Zotero.Promise.delay(100);
+            reader = Zotero.Reader.getByTabID(ids[0]);
             delayCount++;
           }
           await reader._initPromise;
@@ -33,47 +33,70 @@ class AddonEvents extends AddonModule {
   }
 
   public async onInit() {
-    // This function is the setup code of the addon
-    this.debug(`${addonName}: init called`);
-    // alert(112233);
-
+    this.Addon.toolkit.Tool.log("Zotero Reference AddonEvents onInit") 
+    // @ts-ignore
+    this.Addon.rootURI = rootURI;
     // Reset prefs
-    this.resetState();
     this.Addon.views.initViews();
+    this.initPrefs();
 
     // Register the callback in Zotero as an item observer
-    let notifierID = this.Zotero.Notifier.registerObserver(this.notifierCallback, [
+    let notifierID = Zotero.Notifier.registerObserver(this.notifierCallback, [
       "tab",
       "item",
       "file",
     ]);
 
     // Unregister callback when the window closes (important to avoid a memory leak)
-    this.Zotero.getMainWindow().addEventListener(
+    Zotero.getMainWindow().addEventListener(
       "unload",
       (e) => {
-        this.Zotero.Notifier.unregisterObserver(notifierID);
+        Zotero.Notifier.unregisterObserver(notifierID);
       },
       false
     );
-
-    
   }
 
-  private resetState(): void {
+  public initPrefs() {
+    const defaultPrefs = {
+      priorityPDF: true,
+      autoRefresh: false,
+      notAutoRefreshItemTypes: "book, letter, note"
+    }
+    for (let key in defaultPrefs) {
+      if (Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`) == undefined) {
+        Zotero.Prefs.set(`${this.Addon.addonRef}.${key}`, defaultPrefs[key])
+      }
+    }
+    this.Addon.toolkit.Tool.log(this.Addon.rootURI);
+    const prefOptions = {
+      pluginID: this.Addon.addonID,
+      src: this.Addon.rootURI + "chrome/content/preferences.xhtml",
+      label: "Reference",
+      image: `chrome://${this.Addon.addonRef}/skin/favicon.png`,
+      extraDTD: [`chrome://${this.Addon.addonRef}/locale/overlay.dtd`],
+      defaultXUL: true,
+      onload: (_window: Window) => {
+        this.Addon.prefs.initPreferences(_window);
+      },
+    };
+    if (this.Addon.toolkit.Compat.isZotero7()) {
+      Zotero.PreferencePanes.register(prefOptions);
+    } else {
+      this.Addon.toolkit.Compat.registerPrefPane(prefOptions);
+    }
   }
 
   public async onReaderSelect(reader): Promise<void> {
-    this.debug(this.Addon)
+    this.Addon.toolkit.Tool.log(this.Addon)
     await this.Addon.views.updateReferencePanel(reader);
   }
 
   public onUnInit(): void {
-    this.debug(`${addonName}: uninit called`);
     //  Remove elements and do clean up
     this.Addon.views.unInitViews();
     // Remove addon object
-    this.Zotero.ZoteroReference = undefined;
+    Zotero.ZoteroReference = undefined;
   }
 }
 

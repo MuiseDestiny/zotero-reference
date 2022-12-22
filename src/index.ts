@@ -1,9 +1,17 @@
-import { Addon } from "./addon";
+import Addon from "./addon";
 
-var Zotero = Components.classes["@zotero.org/Zotero;1"].getService(
-  Components.interfaces.nsISupports
-).wrappedJSObject;
+/**
+ * Globals: bootstrap.js > ctx
+ * const ctx = {
+    Zotero,
+    rootURI,
+    window,
+    document: window.document,
+    ZoteroPane: Zotero.getActiveZoteroPane(),
+  };
+ */
 if (!Zotero.ZoteroReference) {
   Zotero.ZoteroReference = new Addon();
+  // @ts-ignore
   Zotero.ZoteroReference.events.onInit();
 }

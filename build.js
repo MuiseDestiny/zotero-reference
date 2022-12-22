@@ -113,6 +113,7 @@ async function main() {
       path.join(buildDir, "**/*.rdf"),
       path.join(buildDir, "**/*.dtd"),
       path.join(buildDir, "**/*.xul"),
+      path.join(buildDir, "**/*.xhtml"),
       path.join(buildDir, "**/*.manifest"),
       path.join(buildDir, "addon/defaults", "**/*.js"),
       path.join(buildDir, "addon/bootstrap.js"),

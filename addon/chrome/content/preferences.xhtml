@@ -1,0 +1,27 @@
+<vbox
+  id="zotero-prefpane-__addonRef__"
+  onload="Zotero.ZoteroReference.prefs.initPreferences(window)"
+>
+  <groupbox>
+    <caption label="自动刷新"/>
+    <checkbox
+      id="__addonRef__-auto-refresh"
+      label="自动抓取参考文献"
+      preference="extensions.zotero.__addonRef__.autoRefresh"
+    />
+    <vbox style="margin-top: 1em;">
+      <description>下述条目类型不自动刷新（多个用','隔开）</description>
+      <hbox>
+        <textbox flex="1" id="__addonRef__-not-auto-refresh-types" preference="extensions.zotero.__addonRef__.notAutoRefreshItemTypes"/>
+      </hbox>
+    </vbox>
+  </groupbox>
+  <groupbox>
+    <caption label="参考文献来源" />
+    <checkbox 
+      id="__addonRef__-priority-PDF"
+      label="优先从PDF获取参考文献，不勾选则优先从互联网"
+      preference="extensions.zotero.__addonRef__.priorityPDF" 
+    />
+  </groupbox>
+</vbox>
