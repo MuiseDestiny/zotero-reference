@@ -28,18 +28,18 @@ class AddonViews extends AddonModule {
   }
 
   public async updateReferencePanel(reader: _ZoteroReader) {
-    // reference Zotero-PDF-Translate
     this.Addon.toolkit.Tool.log("updateReferencePanel is called")
     await Zotero.uiReadyPromise;
     if (!Zotero.ZoteroReference) {
       return this.removeSideBarPanel()
     }
-    if (!reader) { return false }
 
-    const item = Zotero.Items.get(reader.itemID) as Zotero.Item;
+    if (!reader) { return false }
+    this.reader = reader
+    
+    const item = this.getItem()
     this.Addon.toolkit.Tool.log(item.getField("title"));
     await reader._waitForReader();
-    this.reader = reader
     await this.buildSideBarPanel();
   }
 
@@ -103,7 +103,7 @@ class AddonViews extends AddonModule {
     button.setAttribute("id", "refreshButton");
     button.setAttribute("label", "刷新");
     button.addEventListener("click", async () => {
-      await this.refreshReference(tabpanel, this.getItem())
+      await this.refreshReference(tabpanel)
     })
 
     hbox.append(label, button)
@@ -139,7 +139,7 @@ class AddonViews extends AddonModule {
         ) != -1
       if (!isExclude) {
         // ZoteroPane.getSelectedItems()[0].getField("itemTypeID")
-        this.refreshReference(tabpanel, this.getItem())
+        this.refreshReference(tabpanel)
       }
     }
   }
@@ -148,31 +148,34 @@ class AddonViews extends AddonModule {
     return (Zotero.Items.get(this.reader.itemID) as _ZoteroItem).parentItem as _ZoteroItem
   }
 
-  public async refreshReference(tabpanel, item) {
-    tabpanel.classList.toggle("PDF")
-
-    let itemDOI = item.getField("DOI")
-    const itemTitle = item.getField("title")
+  public async refreshReference(tabpanel) {
+    let source = tabpanel.getAttribute("source")
+    if (source) {
+      if (source == "PDF") {
+        tabpanel.setAttribute("source", "URL")
+      }
+      if (source == "URL") {
+        tabpanel.setAttribute("source", "PDF")
+      }
+      
+    } else {
+      if (Zotero.Prefs.get(`${this.Addon.addonRef}.priorityPDF`)) {
+        tabpanel.setAttribute("source", "PDF")
+      } else {
+        tabpanel.setAttribute("source", "URL")
+      }
+    }
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
+
     let refData
-    if (this.Addon.utils.isChinese(itemTitle) && !itemDOI) {
-      let cnkiURL = item.getField("url")
-      if (!cnkiURL) {
-        let creator = item._creators[0]
-        let itemAuthor = creator.lastName + creator.firstName
-        cnkiURL = await this.Addon.utils.getCnkiURL(itemTitle, itemAuthor)
-        item.setField("url", cnkiURL)
-        await item.saveTx()
-      }
-      refData = await this.Addon.utils.getRefDataFromCNKI(cnkiURL)
+    if (tabpanel.getAttribute("source") == "URL") {
+      refData = await this.Addon.utils.getRefDataFromURL() || await this.Addon.utils.getRefDataFromPDF()
     } else {
-      if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
-        itemDOI = await this.Addon.utils.getTitleDOI(itemTitle)
-      }
-      refData = await this.Addon.utils.getRefDataFromCrossref(itemDOI)
+      refData = await this.Addon.utils.getRefDataFromPDF() || await this.Addon.utils.getRefDataFromURL()
     }
+
     const referenceNum = refData.length
     tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} 条参考文献：`);
     this.Addon.toolkit.Tool.log(refData)

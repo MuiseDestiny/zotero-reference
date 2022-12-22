@@ -25,7 +25,7 @@ class AddonEvents extends AddonModule {
             reader = Zotero.Reader.getByTabID(ids[0]);
             delayCount++;
           }
-          await reader._initPromise;
+          await reader?._initPromise;
           await this.onReaderSelect(reader);
         }
       },

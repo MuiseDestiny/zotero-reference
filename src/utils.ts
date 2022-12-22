@@ -144,10 +144,7 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromCrossref(DOI: string) {
-    let refData = await this.getRefDataFromPDF()
-    if (refData.length > 0) {
-      return refData
-    }
+    let refData
     // request or read data
     this.Addon.views.showProgressWindow("Crossref", `从Crossref API获取参考文献`)
     if (DOI in this.Addon.DOIRefData) {
@@ -171,12 +168,12 @@ class Utils extends AddonModule {
           })
           this.Addon.DOIRefData[DOI] = refData
         } else {
-          return await this.getRefDataFromPDF()
+          return []
         }
         this.Addon.views.showProgressWindow("Crossref", `获取${refData.length}条参考文献`, "success")
       } catch (e) {
         this.Addon.views.showProgressWindow("Crossref", e, "fail")
-        return await this.getRefDataFromPDF()
+        return []
       }
     }
     // analysis refData
@@ -184,10 +181,7 @@ class Utils extends AddonModule {
   }
 
   async getRefDataFromCNKI(URL: string) {
-    let refData = await this.getRefDataFromPDF()
-    if (refData.length > 0) {
-      return refData
-    }
+    let refData
     this.Addon.views.showProgressWindow("CNKI", `从知网获取参考文献`, "success")
     if (URL in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[URL]
@@ -246,21 +240,38 @@ class Utils extends AddonModule {
       if (refData) {
         this.Addon.DOIRefData[URL] = refData
       } else {
-        return this.getRefDataFromPDF()
+        return []
       }
     }
     return refData;
   }
 
+  async getRefDataFromURL() {
+    let item = this.Addon.views.getItem()
+    let itemDOI = item.getField("DOI")
+    const itemTitle = item.getField("title")
+    
+    let refData
+    if (this.isChinese(itemTitle) && !itemDOI) {
+      let cnkiURL = item.getField("url")
+      if (!cnkiURL) {
+        let creator = item._creators[0]
+        let itemAuthor = creator.lastName + creator.firstName
+        cnkiURL = await this.getCnkiURL(itemTitle, itemAuthor)
+        item.setField("url", cnkiURL)
+        await item.saveTx()
+      }
+      refData = await this.getRefDataFromCNKI(cnkiURL) 
+    } else {
+      if (!itemDOI || !this.isDOI(itemDOI)) {
+        itemDOI = await this.getTitleDOI(itemTitle)
+      }
+      refData = await this.getRefDataFromCrossref(itemDOI)
+    }
+    return refData
+  }
+
   async getRefDataFromPDF() {
-    let tabContainer = this.Addon.views.getTabContainer()
-    let skip = !tabContainer.querySelector("#zotero-reference-tabpanel").classList.contains("PDF")
-    if (!Zotero.Prefs.get(`${this.Addon.addonRef}.priorityPDF`)) {
-      skip = !skip
-    }
-    if (skip) {
-      return []
-    }
     // try {
     let refLines = await this.getRefLines()
     if (refLines.length == 0) {
