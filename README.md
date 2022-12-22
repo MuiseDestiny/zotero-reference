@@ -59,6 +59,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 条目类型的输入为英文，且`,`隔开，现讲所有字段列出，通过翻译可找到对应中文：
 <details>
 <summary>所有类型中英对照</summary>
+  ```
   note=笔记
   annotation=注释
   attachment=附件
@@ -97,6 +98,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
   encyclopediaArticle=百科全书文章
   dictionaryEntry=词条
   preprint=预印本
+  ```
 </details>
 
 
