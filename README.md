@@ -145,3 +145,4 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 API：
 - [unpaywall](https://api.unpaywall.org/)
 - [crossref](https://github.com/CrossRef/rest-api-doc)
+- [readpaper](https://readpaper.com/)
