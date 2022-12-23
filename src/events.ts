@@ -61,7 +61,8 @@ class AddonEvents extends AddonModule {
     const defaultPrefs = {
       priorityPDF: true,
       autoRefresh: false,
-      notAutoRefreshItemTypes: "book, letter, note"
+      notAutoRefreshItemTypes: "book, letter, note",
+      ctrlClickTranslate: true
     }
     for (let key in defaultPrefs) {
       if (Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`) == undefined) {

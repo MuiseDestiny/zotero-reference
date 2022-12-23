@@ -822,6 +822,41 @@ class AddonViews extends AddonModule {
     }
     div.style.opacity = "1";
 
+    ;[titleSpan, contentSpan].forEach(node => {
+      node.addEventListener("click", async (event) => {
+        if (event.ctrlKey && Zotero.Prefs.get(`${this.Addon.addonRef}.ctrlClickTranslate`)) {
+          let sourceText = node.getAttribute("sourceText")
+          let translatedText = node.getAttribute("translatedText")
+          console.log(sourceText, translatedText)
+          if (!sourceText) {
+            sourceText = node.innerText;
+            node.setAttribute("sourceText", sourceText)
+          }
+          if (!translatedText) {
+            Zotero.ZoteroPDFTranslate._sourceText = sourceText
+            const success = await Zotero.ZoteroPDFTranslate.translate.getTranslation()
+            if (!success) {
+              Zotero.ZoteroPDFTranslate.view.showProgressWindow(
+                "Translate Failed",
+                success,
+                "fail"
+              );
+              return
+            }
+            translatedText = Zotero.ZoteroPDFTranslate._translatedText;
+            node.setAttribute("translatedText", translatedText)
+          }
+
+          if (node.innerText == sourceText) {
+            console.log("-> translatedText")
+            node.innerText = translatedText
+          } else if (node.innerText == translatedText) {
+            node.innerText = sourceText
+            console.log("-> sourceText")
+          }
+        }
+      })
+    })
     div.addEventListener("DOMMouseScroll", (event) => {
       if (!event.ctrlKey) { return }
       let scale = div.style.transform.match(/scale\((.+)\)/)
