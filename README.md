@@ -47,12 +47,16 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ![image](https://user-images.githubusercontent.com/51939531/209040199-91a73bf1-5c8d-4ab1-8d0b-5f6dc48daf4f.png)
 
+翻译
+![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
+
 设置界面：
 
 - `自动抓取参考文献` - 是否在文献被打开时自动抓取参考文献
 - `下述条目类型...` - 排除一些类型的文献，一般它们页数过多，若自动刷新往往会带来影响
 - `优先从...` - 勾选则第一次点击刷新从PDF解析，不勾选则从互联网
-
+- `ctrl点击...` - 勾选后悬浮的摘要标题可通过按住ctrl+点击以翻译（基于zotero-pdf-translate，贴心）
+- 
 **注意**：即便设置了不自动刷新，或者正在阅读的文献类型被你设置为不自动刷新，你仍然可以通过点击刷新来抓取参考文献。
 条目类型的输入为英文，且`,`隔开，现将所有字段列出，通过翻译可找到对应中文：
 <details>
@@ -129,6 +133,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 本插件部分功能基于插件:
 
 - [茉莉花/jasminum](https://github.com/l0o0/jasminum)
+- [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
 
 代码参考：
 
