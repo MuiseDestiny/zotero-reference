@@ -49,6 +49,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 **翻译**
 > 需要安装致谢里的`zotero-pdf-translate`插件
+
 ![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
 
 **设置界面**
