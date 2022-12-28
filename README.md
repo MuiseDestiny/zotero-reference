@@ -7,19 +7,19 @@
 
 > 一个插件的自述
 
-🎉 我，一个插件，开发者叫我zotero reference，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
+🎉 我，一个插件，大名叫`ZOTERO-REFERENCE`，小名叫`zotero-reference`，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
 
 🐇 虽然我的理解力有限，有时候会很慢🐌，但请你相信我，我总会，毫无保留地，告诉你我所知道的，关于参考文献的一切。
 
-👻 是的，我有一个小伙伴，叫`茉莉花`，她是一个女孩子。还有两个小帮手，一个叫`crossref`，另一个叫`cnki`，一旦我理解不了便会向它们位求助，当然，毕竟是求助，结果可能并不理想。另外，如果你知道其它帮手，欢迎加入我们。
+👻 是的，我有两个小伙伴，一个叫`茉莉花/jasminum`，一个叫`zotero-pdf-translate`。还有两个小帮手，一个叫`crossref`，另一个叫`cnki`，一旦我理解不了便会向它们位求助，当然，毕竟是求助，结果可能并不理想。另外，如果你知道其它帮手，欢迎加入我们。
 
-👋 如果你发现了我的知识盲点，你认为这是我这个年纪应该可以参悟的，你可以把它提交到我的[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了你和开发者的调教，相信我会无限进步！
+👋 如果你发现了我的知识盲点，你认为这是我这个年纪应该可以参悟的，你可以把它提交到我的[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了大家的奇思妙想，相信我会无限进步！
 
 --- 
 
-🎈 首次打开本地PDF解析参考文献，失败或点击`刷新`按钮会使用API解析。
+🎈 首次使用建议打开首选项，进行个性化配置，**插件不生产数据，只是数据的搬运工**
 
-绿色分区，蓝色被引用量
+绿色表示分区，蓝色被引用量 —— 来自readpaper
 ![image](https://user-images.githubusercontent.com/51939531/208918462-b51f0f32-5267-47cc-9fed-083e717e1a04.png)
 
 ![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
@@ -39,24 +39,26 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
-红框内文字可选择复制：
+**红框内文字可选择复制**
 
 ![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
 
-放大/缩小：
+**放大/缩小**
 
 ![image](https://user-images.githubusercontent.com/51939531/209040199-91a73bf1-5c8d-4ab1-8d0b-5f6dc48daf4f.png)
 
-翻译
+**翻译**
+> 需要安装[zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)插件
+
 ![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
 
-设置界面：
+**设置界面**
 
 - `自动抓取参考文献` - 是否在文献被打开时自动抓取参考文献
 - `下述条目类型...` - 排除一些类型的文献，一般它们页数过多，若自动刷新往往会带来影响
-- `优先从...` - 勾选则第一次点击刷新从PDF解析，不勾选则从互联网
-- `ctrl点击...` - 勾选后悬浮的摘要标题可通过按住ctrl+点击以翻译（基于zotero-pdf-translate，贴心）
-- 
+- `优先从...` - 第一次点击刷新从PDF/URL解析
+- `ctrl点击...` - 勾选后悬浮的摘要标题可通过按住ctrl+点击以翻译（基于zotero-pdf-translate，冬日限定，贴心功能）
+
 **注意**：即便设置了不自动刷新，或者正在阅读的文献类型被你设置为不自动刷新，你仍然可以通过点击刷新来抓取参考文献。
 条目类型的输入为英文，且`,`隔开，现将所有字段列出，通过翻译可找到对应中文：
 <details>
@@ -122,8 +124,6 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 1. 本插件的自动关联功能与`scihub`插件不兼容
 
-![未命名文件-导出 (3)](https://user-images.githubusercontent.com/51939531/208129588-e26ff970-7412-4c3f-9c1c-405514b10509.png)
-
 ## 🍭 致谢
 
 本插件基于模板：
@@ -143,3 +143,4 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 API：
 - [unpaywall](https://api.unpaywall.org/)
 - [crossref](https://github.com/CrossRef/rest-api-doc)
+- [readpaper](https://readpaper.com/)
