@@ -25,15 +25,6 @@
         id="__addonRef__-not-auto-refresh-item-types"
         preference="extensions.zotero.__addonRef__.notAutoRefreshItemTypes">
       </html:input>
-      <!-- <html:div style="
-        background: url(chrome://__addonRef__/skin/information.png) no-repeat;
-        width: 1.5em;
-        height: 1.5em;
-        background-size:100% 100%;
-        margin: auto 0;
-      "
-      title="啦啦啦啦啦" >
-      </html:div> -->
   </html:div>
   </groupbox>
   <groupbox>
@@ -64,7 +55,10 @@
         type="text" id="__addonRef__-min-pre-load-page-num"
         preference="extensions.zotero.__addonRef__.minPreLoadPageNum">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">页，以去除页码等无效信息</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;">页，以去页眉页脚等信息</html:span>
+      <image 
+        src="chrome://__addonRef__/skin/information.png" 
+        tooltiptext="1.建议设置偶数，奇偶页页眉页脚一般不同；2.一般预读取4页即可，部分文献喜欢在最后加摘要甚至目录，而这些页面又没有页眉页脚，就需要6页甚至8页；3.数值越大解析时间越长。" />
     </html:div>
   </groupbox>
   <groupbox>

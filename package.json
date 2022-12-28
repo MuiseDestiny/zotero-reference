@@ -31,7 +31,7 @@
     "compressing": "^1.6.3",
     "esbuild": "^0.14.54",
     "replace-in-file": "^6.3.5",
-    "zotero-plugin-toolkit": "^0.0.1"
+    "zotero-plugin-toolkit": "^0.0.6"
   },
   "devDependencies": {
     "dotenv-cli": "^6.0.0",
