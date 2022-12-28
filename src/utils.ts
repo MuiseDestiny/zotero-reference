@@ -182,7 +182,7 @@ class Utils extends AddonModule {
 
   async getRefDataFromCNKI(URL: string) {
     let refData
-    this.Addon.views.showProgressWindow("CNKI", `从知网获取参考文献`, "success")
+    this.Addon.views.showProgressWindow("CNKI", `从知网获取参考文献`)
     if (URL in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[URL]
     } else {
@@ -202,6 +202,7 @@ class Utils extends AddonModule {
       this.Addon.toolkit.Tool.log("vl", vl);
       let page = 0;
       let parser = new window.DOMParser();
+      refData = []
       while (true) {
         page++
         this.Addon.toolkit.Tool.log("page", page)
@@ -252,12 +253,15 @@ class Utils extends AddonModule {
     const itemTitle = item.getField("title")
     
     let refData
-    if (this.isChinese(itemTitle) && !itemDOI) {
+    if (!this.isDOI(itemDOI)) {
       let cnkiURL = item.getField("url")
       if (!cnkiURL) {
-        let creator = item._creators[0]
+        const creators = item._creators
+        let creator = (creators.length > 0 && creators[0]) || ""
         let itemAuthor = creator.lastName + creator.firstName
+        this.Addon.views.showProgressWindow("CNKI", (itemAuthor.length > 0 ? itemAuthor + " " : "") + itemTitle)
         cnkiURL = await this.getCnkiURL(itemTitle, itemAuthor)
+        if (!cnkiURL) { return []}
         item.setField("url", cnkiURL)
         await item.saveTx()
       }
@@ -291,10 +295,13 @@ class Utils extends AddonModule {
     for (let i = 0; i < refData.length; i++) {
       let ref = refData[i]
       let unstructured = ref.text
+      console.log(unstructured)
       unstructured = unstructured
         .trim()
-        .replace(/^\[\d+\]/, "")
-        .replace(/^\d+[\.\s]?/, "").trim()
+        .replace(/^[^0-9a-zA-Z]\s*\d+\s*[^0-9a-zA-Z]/, "")
+        .replace(/^\d+[\.\s]?/, "")
+        .trim()
+      console.log(unstructured)
       ref["unstructured"] = unstructured
       this.unpackUnstructured(ref)
     }
@@ -309,7 +316,7 @@ class Utils extends AddonModule {
   public unpackUnstructured(ref) {
     const regex = {
       "DOI": this.Addon.DOIRegex,
-      "URL": /https?:\/\/[^\s]+/
+      "URL": /https?:\/\/[^\s]+[^\.]/
     }
     for (let key in regex) {
       if (key in ref) { continue }
@@ -321,46 +328,23 @@ class Utils extends AddonModule {
     }
   }
 
-  public mergeSameTop(items) {
-    let toLine = (item) => {
-      return {
-        x: parseFloat(item.transform[4].toFixed(1)),
-        y: parseFloat(item.transform[5].toFixed(1)),
-        text: item.str || "",
-        height: item.height,
-        width: item.width,
-        url: item?.url,
-      }
-    }
-    let j = 0
-    let lines = [toLine(items[j])]
-    for (j = 1; j < items.length; j++) {
-      let line = toLine(items[j])
-      let lastLine = lines.slice(-1)[0]
-      let error = line.y - lastLine.y
-      error = error > 0 ? error : -error
-      if (error < line.height * .5 && lastLine.y - line.y < 2 * line.height) {
-        lastLine.text += " " + line.text
-        lastLine.width += line.width
-        lastLine.url = lastLine.url || line.url
-      } else {
-        lines.push(line)
-      }
-    }
-    return lines
-  }
-
   public mergeSameLine(items) {
 
     let toLine = (item) => {
-      return {
+      let line = {
         x: parseFloat(item.transform[4].toFixed(1)),
         y: parseFloat(item.transform[5].toFixed(1)),
         text: item.str || "",
         height: item.height,
         width: item.width,
         url: item?.url,
+        _height: [item.height]
       }
+      if (line.width < 0) {
+        line.x += line.width
+        line.width = -line.width
+      }
+      return line
     }
 
     let j = 0
@@ -368,14 +352,22 @@ class Utils extends AddonModule {
     for (j = 1; j < items.length; j++) {
       let line = toLine(items[j])
       let lastLine = lines.slice(-1)[0]
-      let error = line.y - lastLine.y
-      error = error > 0 ? error : -error
-      if (error < line.height) {
-        lastLine.text += " " + line.text
+      // 考虑上标下标
+      if (
+        line.y == lastLine.y ||
+        (line.y >= lastLine.y && line.y < lastLine.y + lastLine.height) ||
+        (line.y + line.height > lastLine.y && line.y + line.height <= lastLine.y + lastLine.height)
+      ) {
+        lastLine.text += (" " + line.text)
         lastLine.width += line.width
         lastLine.url = lastLine.url || line.url
-        lastLine.height = line.height
+        // 记录所有高度
+        lastLine._height.push(line.height)
       } else {
+        // 处理已完成的行，用众数赋值高度
+        let hh = lastLine._height
+        lastLine.height = hh.sort((a, b) => a - b)[parseInt(String(hh.length/2))]
+        // 新的一行
         lines.push(line)
       }
     }
@@ -385,6 +377,7 @@ class Utils extends AddonModule {
   public isRefStart(text) {
     let regexArray = [
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
+      [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/],
       [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],
     ]
@@ -399,6 +392,7 @@ class Utils extends AddonModule {
 
   public mergeSameRef(refLines) {
     const _refLines = [...refLines]
+    console.log(this.copy(_refLines))
     let firstLine = refLines[0]
     // 已知新一行参考文献缩进
     let firstX = firstLine.x
@@ -406,8 +400,8 @@ class Utils extends AddonModule {
       return line.x != firstX && this.abs(line.x - firstX) < 10 * firstLine.height
     })
     this.Addon.toolkit.Tool.log(secondLine)
-    let delta = secondLine ? firstX - secondLine.x : undefined
-    this.Addon.toolkit.Tool.log("delta", delta)
+    let indent = secondLine ? firstX - secondLine.x : 0
+    this.Addon.toolkit.Tool.log("indent", indent)
     let [_, refType] = this.isRefStart(firstLine.text)
     this.Addon.toolkit.Tool.log(firstLine.text, refType)
     let ref
@@ -415,28 +409,53 @@ class Utils extends AddonModule {
       let line = refLines[i]
       let text = line.text as string
       let isRef = this.isRefStart(text)
+      // 如果有indent
+      // if (
+      //   // this.abs(line.x - firstX) < line.height * 1.2 &&
+      //   isRef[0] &&
+      //   isRef[1] == refType &&
+      //   this.abs(firstX - line.x) < (this.abs(indent) || line.height) * .5 &&
+      //   (
+      //     indent == undefined ||
+      //     _refLines.find(_line => {
+      //       let flag = (
+      //         line != _line &&
+      //         (line.x - _line.x) * indent > 0 && 
+      //         this.abs(this.abs(line.x - _line.x) - this.abs(indent)) <= line.height
+      //       )
+      //       return flag
+      //     }) !== undefined
+      //   )
+      // )
       if (
         // this.abs(line.x - firstX) < line.height * 1.2 &&
-        isRef[0] &&
-        isRef[1] == refType &&
-        this.abs(firstX - line.x) < (this.abs(delta) || line.height) * .5 &&
         (
-          delta == undefined ||
+          indent == 0 &&
+          isRef[0] &&
+          isRef[1] == refType &&
+          this.abs(firstX - line.x) < (this.abs(indent) || line.height) * .5
+        ) ||
+        (
+          indent != 0 &&
           _refLines.find(_line => {
             let flag = (
               line != _line &&
-              (line.x - _line.x) * delta > 0 && 
-              this.abs(this.abs(line.x - _line.x) - this.abs(delta)) <= line.height
+              (line.x - _line.x) * indent > 0 &&
+              this.abs(this.abs(line.x - _line.x) >= this.abs(indent)) &&
+              this.abs(this.abs(line.x - _line.x) - this.abs(indent)) < 2 * line.height
+              // this.abs(this.abs(line.x - _line.x) - this.abs(indent)) <= line.height
             )
             return flag
           }) !== undefined
         )
-      ) {
+      )
+      {
         ref = line
+        console.log("->", line.text)
       } else {
-        if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(delta)) > 5 * line.height) {
+        if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(indent)) > 5 * line.height) {
           refLines = refLines.slice(0, i)
-          this.Addon.toolkit.Tool.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(delta)), 5 * line.height)
+          this.Addon.toolkit.Tool.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
           break
         }
         this.Addon.toolkit.Tool.log("+", text)
@@ -450,6 +469,19 @@ class Utils extends AddonModule {
     return refLines.filter(e => e)
   }
 
+  public isIntersect(A, B) {
+    if (
+      B.right < A.left ||
+      B.left > A.right ||
+      B.bottom > A.top ||
+      B.top < A.bottom
+    ) {
+      return false
+    } else {
+      return true
+    }
+  }
+
   public updateItemsAnnotions(items, annotations) {
     // annotations {rect: [416, 722, 454, 733]}
     // items {transform: [...x, y], width: 82}
@@ -457,26 +489,12 @@ class Utils extends AddonModule {
       let [left, bottom, right, top] = rect;
       return {left, bottom, right, top}
     }
-
-    let isIntersect = (A, B) => {
-      if (
-        B.right < A.left || 
-        B.left > A.right || 
-        B.bottom > A.top ||
-        B.top < A.bottom
-      ) {
-        return false
-      } else {
-        return true
-      }
-    }
-
     annotations.forEach(annotation => {
       let annoBox = toBox(annotation.rect)
       items.forEach(item => {
         let [x, y] = item.transform.slice(4)
         let itemBox = toBox([x, y, x + item.width, y + item.height])
-        if (isIntersect(annoBox, itemBox)) {
+        if (this.isIntersect(annoBox, itemBox)) {
           item["url"] = annotation?.url || annotation?.unsafeUrl
         }
       })
@@ -488,19 +506,12 @@ class Utils extends AddonModule {
     let items = textContent.items.filter(item=>item.str.trim().length)
     let annotations = (await pdfPage.getAnnotations())
 
+    console.log("items", this.copy(items))
     // add URL to item with annotation
     this.updateItemsAnnotions(items, annotations)
 
     // merge items with the same y to lines
     let lines = this.mergeSameLine(items);
-    `{
-      x: parseFloat(item.transform[4].toFixed(1)),
-      y: parseFloat(item.transform[5].toFixed(1)),
-      text: item.str || "",
-      height: item.height,
-      width: item.width,
-      url: item?.url,
-    }`
     return lines
   }
 
@@ -513,7 +524,8 @@ class Utils extends AddonModule {
     let pageLines = {};
     // read 2 page to remove head and tail
     let maxWidth, maxHeight
-    let preLoadPageNum = pages.length > 4 ? 4 : pages.length
+    const minPreLoadPageNum = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.minPreLoadPageNum`) as string)
+    let preLoadPageNum = pages.length > minPreLoadPageNum ? minPreLoadPageNum : pages.length
 
     const progressWindow = this.Addon.views.showProgressWindow(
       "[Pending] Zotero Reference",
@@ -532,7 +544,7 @@ class Utils extends AddonModule {
       let lines = await this.readPdfPage(pdfPage)
       pageLines[pageNum] = lines;
       progressWindow.progress.setProgress(((pages.length - pageNum) / preLoadPageNum) * 100)
-      progressWindow.progress._itemText.innerHTML = `[${pages.length - pageNum }/${preLoadPageNum}] Read PDF`;
+      progressWindow.progress._itemText.innerHTML = `[${pages.length - pageNum}/${preLoadPageNum}] Read PDF`;
     }
     progressWindow.progress.setProgress(100);
     // analysis maxPct
@@ -543,12 +555,13 @@ class Utils extends AddonModule {
     for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
       let show = pageNum + 1 == 14
       show = true
-      if (show) { this.Addon.toolkit.Tool.log("current page", pageNum + 1) }
+      if (show) { this.Addon.toolkit.Tool.log("\n\n---------------------", "current page", pageNum + 1) }
       let pdfPage = pages[pageNum].pdfPage
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
       if (show) { this.Addon.toolkit.Tool.log(maxWidth, maxHeight) }
       let lines = (pageNum in pageLines && [...pageLines[pageNum]]) || await this.readPdfPage(pdfPage);
+      console.log("lines", lines)
 
       // 移除PDF页面首尾关于期刊页码等信息
       // 正向匹配移除PDF顶部无效信息
@@ -556,6 +569,30 @@ class Utils extends AddonModule {
       let removeNumber = (text) => {
         return text.replace(/\s+/g, "").replace(/\d+/g, "")
       }
+      let isIntersectLines = (lineA, lineB) => {
+        let rectA = {
+          left: lineA.x / maxWidth,
+          right: (lineA.x + lineA.width) / maxWidth,
+          bottom: lineA.y / maxHeight,
+          top: (lineA.y + lineA.height) / maxHeight
+        }
+        let rectB = {
+          left: lineB.x / maxWidth,
+          right: (lineB.x + lineB.width) / maxWidth,
+          bottom: lineB.y / maxHeight,
+          top: (lineB.y + lineB.height) / maxHeight
+        }
+        return this.isIntersect(rectA, rectB)
+      }
+      let isRepeat = (line, _line) => {
+        let text = removeNumber(line.text)
+        let _text = removeNumber(_line.text)
+        return text == _text && isIntersectLines(line, _line)
+          // this.abs(line.x - _line.x) < line.height &&
+          // this.abs(line.y - _line.y) < line.height &&
+          // this.abs(line.width - _line.width) < line.height
+      }
+      // 存在于数据起始结尾的无效行
       for (let i of Object.keys(pageLines)) {
         if (Number(i) == pageNum) { continue }
         // 两个不同页，开始对比
@@ -577,26 +614,45 @@ class Utils extends AddonModule {
             let index = factor * offset + (factor > 0 ? 0 : -1)
             let line = lines.slice(index)[0]
             let _line = _lines.slice(index)[0]
-            if (
-              removeNumber(line.text) == removeNumber(_line.text) &&
-              this.abs(line.x - _line.x) < line.height &&
-              this.abs(line.y - _line.y) < line.height &&
-              this.abs(line.width - _line.width) < line.height
-            ) {
+            if (isRepeat(line, _line)) {
               // 认为是相同的
               line[direction] = true
-            } else {
               removeLines.add(line)
+            } else {
               directions[direction].done = true
             }
           })
         }
+        // 内部的
+        // 设定一个百分百正文区域防止误杀
+        const content = { x: 0.2 * maxWidth, width: .6 * maxWidth, y: .2 * maxHeight, height: .6 * maxHeight }
+        for (let j = 0; j < lines.length; j++) {
+          let line = lines[j]
+          if (isIntersectLines(content, line)) { continue }
+          for (let k = 0; k < _lines.length; k++) {
+            let _line = _lines[k]
+            if (isRepeat(line, _line)) {
+              line.repeat = line.repeat == undefined ? 1 : (line.repeat + 1)
+              line.repateWith = _line
+              removeLines.add(line)
+            }
+          }
+        }
       }
-      lines = lines.filter(e => !(e.forward || e.backward));
-      lines = lines.filter(e=>e)
+      lines = lines.filter(e => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
       if (show) { this.Addon.toolkit.Tool.log("remove", [...removeLines]) }
 
       // 分栏
+      // 跳过图表影响正常分栏
+      let isFigureOrTable = (text) => {
+        text = text.replace(/\s+/g, "")
+        const flag = /^(Table|Tab|Fig|Figure).*\d/i.test(text)
+        if (flag) {
+          console.log("Skip", text)
+        }
+        return flag
+      }
+      lines = lines.filter(e => !isFigureOrTable(e.text))
       let columns = [[lines[0]]]
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i]
@@ -628,6 +684,7 @@ class Utils extends AddonModule {
       let isStart = false
       let donePart = (part) => {
         part.reverse()
+        console.log("donePart", this.copy(part))
         // parts.push(part)
         // return
         // 去除缩进同一页同意栏的缩进
@@ -645,13 +702,10 @@ class Utils extends AddonModule {
         }
         columns.forEach(column => {
           let offset = column.map(line => line.x).sort((a, b) => a - b)[0]
-          if (offset < 4 && offset > 3) {
-            this.Addon.toolkit.Tool.log("000000000000000", this.copy(column), offset)
-          }
           column.forEach(line => {
             line["_x"] =  line.x;
             line["_offset"] = offset;
-            line.x -= offset;
+            line.x = parseInt((line.x - offset).toFixed(1));
           })
         })
         parts.push(part)
@@ -662,9 +716,16 @@ class Utils extends AddonModule {
         return /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) && text.length < 20
       }
 
-      // 分析最底部y
-      const pageYmin = lines.map(line => line.y).sort((a, b) => a - b)[0]
-      this.Addon.toolkit.Tool.log("pageYmin", pageYmin)
+      // 分析最右下角元素
+      let endLines = lines.filter(line => {
+        return lines.every(_line => {
+          if (_line == line) { return true }
+          // 其它所有行都在它左上方
+          return (_line.x + _line.width < line.x + line.width || _line.y > line.y)
+        })
+      })
+      const endLine = endLines.slice(-1)[0]
+      console.log("endLine", endLines, endLine)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
@@ -672,11 +733,13 @@ class Utils extends AddonModule {
           !isStart && pageNum < pages.length - 1 &&
           // 图表等
           (
-            ((line.x + line.width) / maxWidth < 0.7 && line.y > pageYmin) ||
+            // 我们认为上一页的正文（非图表）应从页面最低端开始
+            line != endLine ||
+            // ((line.x + line.width) / maxWidth < 0.7 && line.y > pageYmin) ||
             /(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
           )
         ) {
-          this.Addon.toolkit.Tool.log("skip", line.text)
+          this.Addon.toolkit.Tool.log("Not start, skip", line.text, line.y)
           continue
         } else {
           isStart = true
@@ -686,6 +749,11 @@ class Utils extends AddonModule {
           donePart(part)
           part = [line]
           continue
+        }
+        // push之前判断
+        if (isRefBreak(line.text)) {
+          refPart = donePart(part)
+          break
         }
         part.push(line)
         if (
@@ -704,22 +772,15 @@ class Utils extends AddonModule {
             // /^(\[1\]|1\.)/.test(line.text)
           )
         ) {
-          if (show) {
-            this.Addon.toolkit.Tool.log("break", line.text, " - ", lines[i - 1].text)
-          }
-          if (isRefBreak(lines[i - 1].text)) {
-          // if (/(参考文献|reference)/i.test(lines[i - 1].text)) {
-            refPart = donePart(part)
-            break
-          }
-          if (isRefBreak(lines[i].text)) {
-            // if (/(参考文献|reference)/i.test(lines[i - 1].text)) {
-            part.pop()
+          if (isRefBreak(lines[i-1].text)) {
             refPart = donePart(part)
             break
           }
           donePart(part)
           part = []
+          if (show) {
+            this.Addon.toolkit.Tool.log("break", line.text, " - ", lines[i - 1].text)
+          }
         }
       }
       if (refPart) {
@@ -744,7 +805,11 @@ class Utils extends AddonModule {
   }
 
   public copy(obj) {
-    return JSON.parse(JSON.stringify(obj))
+    try {
+      return JSON.parse(JSON.stringify(obj))
+    } catch {
+      console.log(obj)
+    }
   }
   
   public parseContent(content) {
@@ -807,16 +872,21 @@ class Utils extends AddonModule {
             return res[1]
         }
       } catch {
-        this.Addon.toolkit.Tool.log(htmlString)
+        console.log(htmlString)
+        return undefined
       }
     }.bind(Zotero.Jasminum);
     cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
-    if (!cnkiURL && title) {
-      return await this.getCnkiURL(title.slice(0, parseInt(String(title.length/2))), author)
-    } else if (!title) {
-      this.Addon.views.showProgressWindow("CNKI", "知网检索失败", "fail")
-      return false
+    console.log("cnkiURL", cnkiURL)
+    if (!cnkiURL) {
+      this.Addon.views.showProgressWindow("CNKI", title, "fail")
+      if (title.length > 5) {
+        return await this.getCnkiURL(title.slice(0, parseInt(String(title.length/2))), author)
+      } else {
+        this.Addon.views.showProgressWindow("CNKI", "知网检索失败", "fail")
+        return false
+      }
     }
     let args = this.parseCnkiURL(cnkiURL)
     cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
@@ -872,7 +942,7 @@ class Utils extends AddonModule {
   public isDOI(text) {
     let res = text.match(this.Addon.DOIRegex)
     if (res) {
-      return res[0] == text
+      return res[0] == text && !/(cnki|issn)/i.test(text)
     } else {
       return false
     }

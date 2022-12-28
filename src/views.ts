@@ -41,6 +41,43 @@ class AddonViews extends AddonModule {
     this.Addon.toolkit.Tool.log(item.getField("title"));
     await reader._waitForReader();
     await this.buildSideBarPanel();
+    this.modifyLink(reader)
+    
+  }
+
+  public modifyLink(reader) {
+    let id = window.setInterval(() => {
+      try {
+        String(reader._iframeWindow.wrappedJSObject.document)
+      } catch {
+        window.clearInterval(id)
+        return
+      }
+      reader._iframeWindow.wrappedJSObject.document
+        .querySelectorAll("a[href^='#']:not([modify])").forEach(a => {
+          let _a = a.cloneNode(true)
+          _a.setAttribute("modify", "")
+          a.parentNode.appendChild(_a)
+          a.remove()
+          _a.addEventListener("click", async (event) => {
+            event.preventDefault()
+            let href = _a.getAttribute("href")
+            if (reader._iframeWindow.wrappedJSObject.secondViewIframeWindow == null) {
+              await reader.menuCmd("splitHorizontally")
+              while (
+                !(
+                  reader._iframeWindow.wrappedJSObject?.secondViewIframeWindow?.PDFViewerApplication?.pdfDocument
+                )
+              ) {
+                await Zotero.Promise.delay(100)
+              }
+              await Zotero.Promise.delay(500)
+            }
+            reader._iframeWindow.wrappedJSObject.secondViewIframeWindow.PDFViewerApplication
+              .pdfViewer.linkService.goToDestination(unescape(href.slice(1)))
+          })
+        })
+    }, 100)
   }
 
   public removeSideBarPanel() {
@@ -159,21 +196,18 @@ class AddonViews extends AddonModule {
       }
       
     } else {
-      if (Zotero.Prefs.get(`${this.Addon.addonRef}.priorityPDF`)) {
-        tabpanel.setAttribute("source", "PDF")
-      } else {
-        tabpanel.setAttribute("source", "URL")
-      }
+      tabpanel.setAttribute("source", Zotero.Prefs.get(`${this.Addon.addonRef}.prioritySource`))
     }
 
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
-
+    tabpanel.querySelectorAll("#zotero-reference-search").forEach(e => e.remove());
+    
     let refData
-    if (tabpanel.getAttribute("source") == "URL") {
-      refData = await this.Addon.utils.getRefDataFromURL() || await this.Addon.utils.getRefDataFromPDF()
+    if (tabpanel.getAttribute("source") == "PDF") {
+      refData = await this.Addon.utils.getRefDataFromPDF()
     } else {
-      refData = await this.Addon.utils.getRefDataFromPDF() || await this.Addon.utils.getRefDataFromURL()
+      refData = await this.Addon.utils.getRefDataFromURL()
     }
 
     const referenceNum = refData.length
@@ -351,7 +385,7 @@ class AddonViews extends AddonModule {
           Zotero.launchURL(URL);
         }
       } else {
-        this.showProgressWindow("Reference", content, "success", 2500, -1)
+        this.showProgressWindow("Reference", content, "default", 2500, -1)
         this.Addon.toolkit.Tool.getCopyHelper()
           .addText(content + (content == DOI ? "" : "\n" + DOI), "text/unicode")
           .copy();
@@ -360,6 +394,7 @@ class AddonViews extends AddonModule {
 
     let timer = null, tipNode
     box.addEventListener("mouseenter", () => {
+      if (!Zotero.Prefs.get(`${this.Addon.addonRef}.isShowTip`)) { return }
       box.classList.add("active")
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = window.setTimeout(async () => {
@@ -404,7 +439,9 @@ class AddonViews extends AddonModule {
             box
           )
         }
-      }, 233);
+      },
+      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.showTipAfterMillisecond`) as string)
+      );
     })
 
     box.addEventListener("mouseleave", () => {
@@ -412,7 +449,9 @@ class AddonViews extends AddonModule {
       window.clearTimeout(timer);
       this.tipTimer = window.setTimeout(() => {
         tipNode && tipNode.remove()
-      }, 233)
+      },
+      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
+      )
     })
 
     let setState = (state: string = "") => {
@@ -883,7 +922,9 @@ class AddonViews extends AddonModule {
     div.addEventListener("mouseleave", (event) => {
       this.tipTimer = window.setTimeout(() => {
         div.remove()
-      }, 500)
+      },
+      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
+      )
     })
     
     return div

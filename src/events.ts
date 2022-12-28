@@ -60,9 +60,14 @@ class AddonEvents extends AddonModule {
   public initPrefs() {
     const defaultPrefs = {
       priorityPDF: true,
+      prioritySource: "PDF",
+      minPreLoadPageNum: 4,
       autoRefresh: false,
       notAutoRefreshItemTypes: "book, letter, note",
-      ctrlClickTranslate: true
+      isShowTip: true,
+      ctrlClickTranslate: true,
+      showTipAfterMillisecond: "233",
+      removeTipAfterMillisecond: "500"
     }
     for (let key in defaultPrefs) {
       if (Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`) == undefined) {

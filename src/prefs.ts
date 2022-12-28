@@ -18,23 +18,7 @@ class AddonPrefs extends AddonModule {
   }
 
   private bindPrefEvents() {
-    this._window.document
-      .querySelector(`#zotero-prefpane-${this.Addon.addonRef}-enable`)
-      ?.addEventListener("command", (e) => {
-        this.Addon.toolkit.Tool.log(e);
-        window.alert(
-          `Successfully changed to ${(e.target as XUL.Checkbox).checked}!`
-        );
-      });
     
-    this._window.document
-      .querySelector(`#zotero-prefpane-${this.Addon.addonRef}-input`)
-      ?.addEventListener("change", (e) => {
-        this.Addon.toolkit.Tool.log(e);
-        window.alert(
-          `Successfully changed to ${(e.target as HTMLInputElement).value}!`
-        );
-      });
   }
 }
 

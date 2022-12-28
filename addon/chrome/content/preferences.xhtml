@@ -3,30 +3,98 @@
   onload="Zotero.ZoteroReference.prefs.initPreferences(window)"
 >
   <groupbox>
-    <caption label="自动刷新"/>
+    <caption label="刷新"/>
     <checkbox
       id="__addonRef__-auto-refresh"
-      label="自动抓取参考文献"
+      label="自动抓取参考文献，但下述条目类型不自动刷新"
       preference="extensions.zotero.__addonRef__.autoRefresh"
     />
-    <vbox style="margin-top: 1em;">
-      <description>下述条目类型不自动刷新（多个用','隔开）</description>
-      <hbox>
-        <textbox flex="1" id="__addonRef__-not-auto-refresh-types" preference="extensions.zotero.__addonRef__.notAutoRefreshItemTypes"/>
-      </hbox>
-    </vbox>
+    <html:div style="
+      display: flex;
+      margin-top: .5em;
+      flex-direction: row;
+      align-items: left;
+      width: 80%;
+    ">
+      <html:input
+        style="
+          width: 100%;
+          margin: auto .5em;
+        "
+        type="text" 
+        id="__addonRef__-not-auto-refresh-item-types"
+        preference="extensions.zotero.__addonRef__.notAutoRefreshItemTypes">
+      </html:input>
+      <!-- <html:div style="
+        background: url(chrome://__addonRef__/skin/information.png) no-repeat;
+        width: 1.5em;
+        height: 1.5em;
+        background-size:100% 100%;
+        margin: auto 0;
+      "
+      title="啦啦啦啦啦" >
+      </html:div> -->
+  </html:div>
   </groupbox>
   <groupbox>
-    <caption label="参考文献来源" />
-    <checkbox 
-      id="__addonRef__-priority-PDF"
-      label="优先从PDF获取参考文献，不勾选则优先从互联网"
-      preference="extensions.zotero.__addonRef__.priorityPDF" 
-    />
+    <caption label="来源" />
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+      margin-left: .5em;
+    ">
+      <html:span style="margin: auto 0;">优先从</html:span>
+      <html:select
+        style="width: 4em; height: 1.5em; margin: auto .5em;"
+        id="__addonRef__-priority-source" 
+        preference="extensions.zotero.__addonRef__.prioritySource" >
+          <html:option value="PDF">PDF</html:option>
+          <html:option value="URL">URL</html:option>
+      </html:select>
+      <html:span style="margin: auto 0;">获取参考文献</html:span>
+    </html:div>
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+      margin-left: .5em;
+    ">
+      <html:span style="margin: auto 0; margin-right: .5em;">当从PDF获取参考文献时，预读取页面最后</html:span>
+      <html:input 
+        style="width: 2em; margin: auto 0; height: 1em;" 
+        type="text" id="__addonRef__-min-pre-load-page-num"
+        preference="extensions.zotero.__addonRef__.minPreLoadPageNum">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;">页，以去除页码等无效信息</html:span>
+    </html:div>
   </groupbox>
   <groupbox>
-    <caption label="悬浮弹窗" />
-    <checkbox id="__addonRef__-ctrl-click-translate" label="ctrl点击翻译，调用translate插件"
+    <caption label="浮窗" />
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+    ">
+      <checkbox id="__addonRef__-is-show-tip" label="鼠标在参考文献上停留"
+        preference="extensions.zotero.__addonRef__.isShowTip" />
+      <html:input 
+        style="width: 4em; margin: auto 0; height: 1em;"
+        type="text" 
+        id="__addonRef__-remove-tip-after-millisecond"
+        preference="extensions.zotero.__addonRef__.showTipAfterMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;">毫秒后显示悬浮窗</html:span>
+    </html:div>
+    <checkbox id="__addonRef__-ctrl-click-translate" label="浮窗内，ctrl点击文字翻译"
       preference="extensions.zotero.__addonRef__.ctrlClickTranslate" />
+    <hbox>
+      <description>最后，在</description>
+      <html:input 
+        style="width: 4em; margin: auto 0; height: 1em;"
+        type="text" 
+        id="__addonRef__-remove-tip-after-millisecond" 
+        preference="extensions.zotero.__addonRef__.removeTipAfterMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;">毫秒后自动消失</html:span>
+    </hbox>
   </groupbox>
+
 </vbox>
