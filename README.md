@@ -52,6 +52,11 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
 
+**分栏快速跳转**
+> 主阅读界面若有跳转链接如`Fig 3`，点击后会在分割界面（横向/竖向）跳转，主阅读界面无跳转，避免点击前进后退
+![image](https://user-images.githubusercontent.com/51939531/209768272-ee91fbec-20c3-4a7b-a4be-a66a06616475.png)
+
+
 **设置界面**
 
 - `自动抓取参考文献` - 是否在文献被打开时自动抓取参考文献
