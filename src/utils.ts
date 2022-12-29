@@ -1,5 +1,6 @@
 import AddonModule from "./module";
 import Addon from "./addon";
+var xml2js = require('xml2js')
 
 class Utils extends AddonModule {
 
@@ -55,14 +56,38 @@ class Utils extends AddonModule {
     return data
   }
 
-  async getTitleInfo(title: string, body: object = {}) {
-    this.Addon.toolkit.Tool.log("getTitleInfo", title)
+  async getDOIRelated(DOI: string) {
+    this.Addon.toolkit.Tool.log("getDOIRelated", DOI)
     let data
-    const key = `readpaper - ${title}`
+    const key = `readcube - related- ${DOI}`
     if (key in this.Addon.DOIData) {
       data = this.Addon.DOIData[key]
     } else {
-      const readpaperApi = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
+      const api = `https://services.readcube.com/reader/related?doi=${DOI}`
+      let res = await Zotero.HTTP.request(
+        "GET",
+        api,
+        {
+          responseType: "json"
+        }
+      )
+      let _data = res.response
+      if (_data.length > 0) {
+        this.Addon.DOIData[key] = _data
+        data = _data
+      }
+    }
+    return data
+  }
+
+  async getTitleInfo(title: string, body: object = {}) {
+    this.Addon.toolkit.Tool.log("getTitleInfo", title)
+    let data
+    const key = `readpaper - info - ${title}`
+    if (key in this.Addon.DOIData) {
+      data = this.Addon.DOIData[key]
+    } else {
+      const api = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
       let _body = {
         keywords: title,
         page: 1,
@@ -72,7 +97,7 @@ class Utils extends AddonModule {
       body = { ..._body, ...body}
       let res = await Zotero.HTTP.request(
         "POST",
-        readpaperApi,
+        api,
         {
           responseType: "json",
           headers: {
@@ -81,15 +106,57 @@ class Utils extends AddonModule {
           body: JSON.stringify(body)
         }
       )
-      data = res.response?.data?.list[0]
-      if (data) {
+      let _data = res.response?.data?.list[0]
+      if (_data) {
+        // _data["source"] = "readpaper"
         // TODO: 评价匹配成功度，低不返回
-        this.Addon.DOIData[key] = data
-      } else {
-        data = undefined
+        this.Addon.DOIData[key] = _data
+        data = _data
       }
     }
     return data
+  }
+
+  async getArXivInfo(arXivId: string) {
+    let data
+    const key = `arXiv - info - ${arXivId}`
+    if (key in this.Addon.DOIData) {
+      return this.Addon.DOIData[key]
+    } else {
+      const api = `https://export.arxiv.org/api/query?id_list=${arXivId}`
+      console.log(api)
+      let res = await Zotero.HTTP.request(
+        "GET",
+        api,
+        {
+          responseType: "application/xhtml+xml"
+        }
+      )
+      let _data = (await xml2js.parseStringPromise(res.response))?.feed?.entry[0]
+      console.log(_data)
+      if (_data) {
+        // 数据转换 -> readpaper格式
+        _data.title = _data.title[0]
+        _data.author.forEach(e=>e.name=e.name[0])
+        _data["authorList"] = _data.author
+        _data.summary = _data.summary[0].replace(/\n/g, "")
+        _data["source"] = "arXiv"
+        let primaryVenue = _data["arxiv:comment"] && _data["arxiv:comment"][0]["_"].replace(/\n/g, "")
+        if (primaryVenue) {
+          _data["primaryVenue"] = primaryVenue
+        }
+        let publishDate = _data["published"] && _data["published"][0]
+        if (publishDate) {
+          _data["publishDate"] = publishDate
+        }
+        _data["venueTags"] = _data.category.map(e=>e["$"].term)
+        data = _data
+        this.Addon.DOIData[key] = _data
+      }
+    }
+    console.log(data)
+    return data
+
   }
 
   async getTitleDOIByCrossref(title: string) {
@@ -326,6 +393,15 @@ class Utils extends AddonModule {
         ref[key] = value
       }
     }
+    if (!ref.URL) {
+      if (ref.DOI) {
+        ref.URL = `https://doi.org/${ref.DOI}`
+      }
+      let arXivId = this.matchArXivId(ref.unstructured)
+      if (arXivId) {
+        ref.URL = `https://arxiv.org/abs/${arXivId}`
+      }
+    }
   }
 
   public mergeSameLine(items) {
@@ -378,6 +454,7 @@ class Utils extends AddonModule {
     let regexArray = [
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
+      [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
       [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/],
       [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],
     ]
@@ -560,7 +637,13 @@ class Utils extends AddonModule {
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
       if (show) { this.Addon.toolkit.Tool.log(maxWidth, maxHeight) }
-      let lines = (pageNum in pageLines && [...pageLines[pageNum]]) || await this.readPdfPage(pdfPage);
+      let lines
+      if (pageNum in pageLines) {
+        lines = [...pageLines[pageNum]]
+      } else {
+        lines = await this.readPdfPage(pdfPage);
+        pageLines[pageNum] = [...lines]
+      }
       console.log("lines", lines)
 
       // 移除PDF页面首尾关于期刊页码等信息
@@ -640,6 +723,7 @@ class Utils extends AddonModule {
         }
       }
       lines = lines.filter(e => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
+      if (lines.length == 0) { continue }
       if (show) { this.Addon.toolkit.Tool.log("remove", [...removeLines]) }
 
       // 分栏
@@ -943,6 +1027,15 @@ class Utils extends AddonModule {
     let res = text.match(this.Addon.DOIRegex)
     if (res) {
       return res[0] == text && !/(cnki|issn)/i.test(text)
+    } else {
+      return false
+    }
+  }
+
+  public matchArXivId(text) {
+    let res = text.match(this.Addon.arXivRegex)
+    if (res != null && res.length >= 2) {
+      return res[1]
     } else {
       return false
     }

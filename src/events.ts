@@ -67,7 +67,8 @@ class AddonEvents extends AddonModule {
       isShowTip: true,
       ctrlClickTranslate: true,
       showTipAfterMillisecond: "233",
-      removeTipAfterMillisecond: "500"
+      removeTipAfterMillisecond: "500",
+      openRelatedRecommaend: true
     }
     for (let key in defaultPrefs) {
       if (Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`) == undefined) {

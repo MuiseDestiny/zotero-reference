@@ -41,6 +41,10 @@ class AddonViews extends AddonModule {
     this.Addon.toolkit.Tool.log(item.getField("title"));
     await reader._waitForReader();
     await this.buildSideBarPanel();
+    if (Zotero.Prefs.get(`${this.Addon.addonRef}.openRelatedRecommaend`)) {
+      await this.insertRelated();
+    }
+    
     this.modifyLink(reader)
     
   }
@@ -96,7 +100,7 @@ class AddonViews extends AddonModule {
   async buildSideBarPanel() {
     this.Addon.toolkit.Tool.log("buildSideBarPanel");
     let tabContainer = this.getTabContainer()
-    if (tabContainer.querySelector("#zotero-reference-tab")) {
+    if (tabContainer && tabContainer.querySelector("#zotero-reference-tab")) {
       return
     }
 
@@ -181,8 +185,50 @@ class AddonViews extends AddonModule {
     }
   }
 
-  public getItem(): _ZoteroItem {
-    return (Zotero.Items.get(this.reader.itemID) as _ZoteroItem).parentItem as _ZoteroItem
+  async insertRelated() {
+    this.Addon.toolkit.Tool.log("insertRelated");
+    let item = this.getItem()
+    let itemDOI = item.getField("DOI")
+    if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
+      this.Addon.toolkit.Tool.log("Not DOI", itemDOI);
+      return
+    }
+    let tabContainer = this.getTabContainer()
+    let relatedbox = tabContainer.querySelector("tabpanel:nth-child(3) relatedbox")
+    do {
+      await Zotero.Promise.delay(50);
+    }
+    while (!relatedbox.querySelector('#relatedRows'));
+
+    let node = relatedbox.querySelector('#relatedRows').parentNode
+    console.log("node", node)
+    let data = await this.Addon.utils.getDOIRelated(itemDOI)
+    let func = relatedbox.refresh
+    relatedbox.refresh = () => {
+      func.call(relatedbox)
+      this.refreshRelated(data, node)
+    }
+    relatedbox.refresh()
+  }
+
+  public refreshRelated(data, node) {
+    let totalNum = 0
+    data.forEach(article => {
+      console.log(article)
+      let DOI = article.doi
+      let title = article.title
+      // TODO: 对于在文献库中的予以特殊显示
+      let row = this.addRow(node, title, DOI, article, false, true)
+      if (!row) { return }
+      totalNum += 1
+      window.setTimeout(async () => {
+        let item = await this.Addon.utils.searchItem("DOI", "is", DOI);
+        if (!item) {
+          row.querySelector("box").style.opacity = ".5"
+        }
+      }, 0)
+    })
+    return totalNum
   }
 
   public async refreshReference(tabpanel) {
@@ -194,7 +240,6 @@ class AddonViews extends AddonModule {
       if (source == "URL") {
         tabpanel.setAttribute("source", "PDF")
       }
-      
     } else {
       tabpanel.setAttribute("source", Zotero.Prefs.get(`${this.Addon.addonRef}.prioritySource`))
     }
@@ -202,7 +247,7 @@ class AddonViews extends AddonModule {
     // clear 
     tabpanel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
     tabpanel.querySelectorAll("#zotero-reference-search").forEach(e => e.remove());
-    
+
     let refData
     if (tabpanel.getAttribute("source") == "PDF") {
       refData = await this.Addon.utils.getRefDataFromPDF()
@@ -307,7 +352,7 @@ class AddonViews extends AddonModule {
     tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} 条参考文献：`);
   }
 
-  public addSearch(tabpanel) {
+  public addSearch(node) {
     this.Addon.toolkit.Tool.log("addSearch")
     let textbox = document.createElement("textbox");
     textbox.setAttribute("id", "zotero-reference-search");
@@ -322,10 +367,10 @@ class AddonViews extends AddonModule {
 
       let keywords = text.split(/[ ,，]/).filter(e => e)
       if (keywords.length == 0) {
-        tabpanel.querySelectorAll("row").forEach((row: XUL.Element) => row.style.display = "")
+        node.querySelectorAll("row").forEach((row: XUL.Element) => row.style.display = "")
         return
       }
-      tabpanel.querySelectorAll("row").forEach((row: XUL.Element) => {
+      node.querySelectorAll("row").forEach((row: XUL.Element) => {
         let content = (row.querySelector("label") as XUL.Element).value as String
         let isAllMatched = true;
         for (let i = 0; i < keywords.length; i++) {
@@ -341,16 +386,16 @@ class AddonViews extends AddonModule {
     });
     textbox._clearSearch = () => {
       textbox.value = "";
-      tabpanel.querySelectorAll("row").forEach((row: XUL.Element) => row.style.display = "")
+      node.querySelectorAll("row").forEach((row: XUL.Element) => row.style.display = "")
     }
-    tabpanel.querySelector("vbox").insertBefore(
+    node.querySelector("vbox").insertBefore(
       textbox,
-      tabpanel.querySelector("vbox grid")
+      node.querySelector("vbox grid")
     )
   }
 
-  public addRow(tabpanel, content, DOI, ref) {
-    if ([...tabpanel.querySelectorAll("row label")]
+  public addRow(node, content, DOI, ref, addSearch: boolean = true, skipRelated: boolean = false) {
+    if ([...node.querySelectorAll("row label")]
       .filter(e => e.value == content)
       .length > 0) { return }
     let row = document.createElement("row");
@@ -368,6 +413,8 @@ class AddonViews extends AddonModule {
     label.setAttribute("flex", "1");
     box.append(image, label);
     box.addEventListener("click", async (event) => {
+      event.preventDefault()
+      event.stopPropagation()
       if (event.ctrlKey) {
         let URL = ref.URL || (ref.DOI && `https://doi.org/${ref.DOI}`)
         if (!URL) {
@@ -415,19 +462,32 @@ class AddonViews extends AddonModule {
           [],
           box
         )
-        // 匹配年份
-        let years = unstructured.match(/[^\d](\d{4})[^\d]/)
-        let body = {}
-        if (years && Number(years[1]) <= (new Date()).getFullYear()) {
-          body["startYear"] = years[1];
-          body["endYear"] = years[1];
+        let data
+        let arXivId = this.Addon.utils.matchArXivId(unstructured)
+        if (arXivId) {
+          // 如果标注arXiv，优先在arXiv上搜索信息
+          data = await this.Addon.utils.getArXivInfo(arXivId)
+        } else {
+          // 没有则在readpaper匹配信息
+          // 匹配年份
+          let years = unstructured.match(/[^\d](\d{4})[^\d]/)
+          let body = {}
+          if (years && Number(years[1]) <= (new Date()).getFullYear()) {
+            body["startYear"] = years[1];
+            body["endYear"] = years[1];
+          }
+          data = await this.Addon.utils.getTitleInfo(unstructured, body)
         }
-        let data = await this.Addon.utils.getTitleInfo(unstructured, body)
+        const sourceColor = {
+          arXiv: "#b31b1b",
+          readpaper: "#1f71e0"
+        }
         if (data) {
           let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
           let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate)].filter(e => e).join(" \u00b7 ")
           let tags = (data.venueTags || []).map(text => { return { color: "#59C1BD", text } })
-          if (data.citationCount) {tags.push({color: "#1f71e0", text: data.citationCount})}
+          if (data.citationCount) { tags.push({ color: "#1f71e0", text: data.citationCount }) }
+          if (data.source) { tags.push({ color: sourceColor[data.source], text: data.source }) }
           tipNode = this.showTip(
             toPlainText(data.title),
             [
@@ -482,7 +542,7 @@ class AddonViews extends AddonModule {
       relatedItems = relatedItems.filter(item => item.getField("DOI") == DOI || DOI.includes(item.getField("title")))
       if (relatedItems.length == 0) {
         this.showProgressWindow("已经移除", DOI)
-        tabpanel.querySelector("#refreshButton").click()
+        node.querySelector("#refreshButton").click()
         return
       }
       for (let relatedItem of relatedItems) {
@@ -535,7 +595,7 @@ class AddonViews extends AddonModule {
         let reltaedDOIs = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key).getField("DOI"))
         if (reltaedDOIs.indexOf(DOI) != -1) {
           this.showProgressWindow("已经关联", DOI, "success");
-          tabpanel.querySelector("#refreshButton").click()
+          node.querySelector("#refreshButton").click()
           return
         }
         this.showProgressWindow("正在关联", DOI)
@@ -583,6 +643,7 @@ class AddonViews extends AddonModule {
       relatedTitles.filter(title=>DOI.includes(title)).length > 0
     ) {
       setState("-")
+      if (skipRelated) { return }
     } else {
       setState("+")
     }
@@ -603,7 +664,8 @@ class AddonViews extends AddonModule {
     }
 
     label.addEventListener("click", async (event) => {
-      console.log(event)
+      event.preventDefault()
+      event.stopPropagation()
       if (label.value == "+") {
         if (event.ctrlKey) {
           let collection = ZoteroPane.getSelectedCollection();
@@ -622,11 +684,12 @@ class AddonViews extends AddonModule {
       }
     })
     row.append(box, label);
-    const rows = tabpanel.querySelector("#referenceRows")
+    // const rows = node.querySelector("#referenceRows")
+    const rows = node.querySelector("[id$=Rows]")
     rows.appendChild(row);
     let referenceNum = rows.childNodes.length
-    if (referenceNum && !tabpanel.querySelector("#zotero-reference-search")) { this.addSearch(tabpanel) }
-
+    if (addSearch && referenceNum && !node.querySelector("#zotero-reference-search")) { this.addSearch(node) }
+    return row
   }
 
   public insertAfter(node, _node) {
@@ -637,6 +700,10 @@ class AddonViews extends AddonModule {
     } else {
       _node.parentNode.appendChild(node);
     }
+  }
+
+  public getItem(): _ZoteroItem {
+    return (Zotero.Items.get(this.reader.itemID) as _ZoteroItem).parentItem as _ZoteroItem
   }
 
   public unInitViews() {

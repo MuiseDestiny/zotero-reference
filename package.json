@@ -3,7 +3,7 @@
   "addonName": "Zotero Reference",
   "addonID": "zoteroreference@polygon.org",
   "addonRef": "zoteroreference",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "侧边栏展示正在阅读文献的所有参考文献，双向关联，悬浮显示参考文献标题摘要分区等信息...",
   "main": "src/index.js",
   "scripts": {
@@ -30,7 +30,10 @@
   "dependencies": {
     "compressing": "^1.6.3",
     "esbuild": "^0.14.54",
+    "events": "^3.3.0",
     "replace-in-file": "^6.3.5",
+    "timers": "^0.1.1",
+    "xml2js": "^0.4.23",
     "zotero-plugin-toolkit": "^0.0.6"
   },
   "devDependencies": {

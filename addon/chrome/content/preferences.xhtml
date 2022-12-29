@@ -9,13 +9,15 @@
       label="自动抓取参考文献，但下述条目类型不自动刷新"
       preference="extensions.zotero.__addonRef__.autoRefresh"
     />
-    <html:div style="
-      display: flex;
-      margin-top: .5em;
-      flex-direction: row;
-      align-items: left;
-      width: 80%;
-    ">
+    <html:div
+      style="
+        display: flex;
+        margin-top: .5em;
+        flex-direction: row;
+        align-items: left;
+        width: 80%;
+      "
+    >
       <html:input
         style="
           width: 100%;
@@ -90,5 +92,11 @@
       <html:span style="margin: auto 0; margin-left: .5em;">毫秒后自动消失</html:span>
     </hbox>
   </groupbox>
-
+  <groupbox>
+    <caption label="推荐关联" />
+    <checkbox 
+      id="__addonRef__-open-related-recommend" 
+      label="关联文献显示推荐关联"
+      preference="extensions.zotero.__addonRef__.openRelatedRecommaend" />
+  </groupbox>
 </vbox>
