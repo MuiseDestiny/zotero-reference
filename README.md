@@ -42,7 +42,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 **浮窗**
 > 浮窗文献信息默认从`readpaper API`获取，如有`arXiv`的id则从`arXiv`获取，并标注`arXiv`
 
-![image](https://user-images.githubusercontent.com/51939531/209900351-315bd9c2-148f-480d-82cd-b0d26fa52a6b.png)
+![image](https://user-images.githubusercontent.com/51939531/209902209-33cb1167-e275-4820-b777-96a908b6d0d6.png)
 
 **浮窗内文字可选择复制**
 
