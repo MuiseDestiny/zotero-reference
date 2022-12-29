@@ -3,10 +3,10 @@
   onload="Zotero.ZoteroReference.prefs.initPreferences(window)"
 >
   <groupbox>
-    <caption label="刷新"/>
+    <caption label="&zotero.__addonRef__.caption.refresh;"/>
     <checkbox
       id="__addonRef__-auto-refresh"
-      label="自动抓取参考文献，但下述条目类型不自动刷新"
+      label="&zotero.__addonRef__.autoRefresh;"
       preference="extensions.zotero.__addonRef__.autoRefresh"
     />
     <html:div
@@ -30,13 +30,13 @@
   </html:div>
   </groupbox>
   <groupbox>
-    <caption label="来源" />
+    <caption label="&zotero.__addonRef__.caption.source;" />
     <html:div style="
       display: flex;
       flex-direction: row;
       margin-left: .5em;
     ">
-      <html:span style="margin: auto 0;">优先从</html:span>
+      <html:span style="margin: auto 0;">&zotero.__addonRef__.prioritySource.start;</html:span>
       <html:select
         style="width: 4em; height: 1.5em; margin: auto .5em;"
         id="__addonRef__-priority-source" 
@@ -44,32 +44,32 @@
           <html:option value="PDF">PDF</html:option>
           <html:option value="URL">URL</html:option>
       </html:select>
-      <html:span style="margin: auto 0;">获取参考文献</html:span>
+      <html:span style="margin: auto 0;">&zotero.__addonRef__.prioritySource.end;</html:span>
     </html:div>
     <html:div style="
       display: flex;
       flex-direction: row;
       margin-left: .5em;
     ">
-      <html:span style="margin: auto 0; margin-right: .5em;">当从PDF获取参考文献时，预读取页面最后</html:span>
+      <html:span style="margin: auto 0; margin-right: .5em;">&zotero.__addonRef__.minPreLoadPageNum.start;</html:span>
       <html:input 
         style="width: 2em; margin: auto 0; height: 1em;" 
         type="text" id="__addonRef__-min-pre-load-page-num"
         preference="extensions.zotero.__addonRef__.minPreLoadPageNum">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">页，以去页眉页脚等信息</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.minPreLoadPageNum.end;</html:span>
       <image 
         src="chrome://__addonRef__/skin/information.png" 
-        tooltiptext="1.建议设置偶数，奇偶页页眉页脚一般不同；2.一般预读取4页即可，部分文献喜欢在最后加摘要甚至目录，而这些页面又没有页眉页脚，就需要6页甚至8页；3.数值越大解析时间越长。" />
+        tooltiptext="&zotero.__addonRef__.minPreLoadPageNum.tooltiptext;" />
     </html:div>
   </groupbox>
   <groupbox>
-    <caption label="浮窗" />
+    <caption label="&zotero.__addonRef__.caption.tip;" />
     <html:div style="
       display: flex;
       flex-direction: row;
     ">
-      <checkbox id="__addonRef__-is-show-tip" label="鼠标在参考文献上停留"
+      <checkbox id="__addonRef__-is-show-tip" label="&zotero.__addonRef__.isShowTip.start;"
         preference="extensions.zotero.__addonRef__.isShowTip" />
       <html:input 
         style="width: 4em; margin: auto 0; height: 1em;"
@@ -77,26 +77,26 @@
         id="__addonRef__-remove-tip-after-millisecond"
         preference="extensions.zotero.__addonRef__.showTipAfterMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">毫秒后显示悬浮窗</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.isShowTip.end;</html:span>
     </html:div>
-    <checkbox id="__addonRef__-ctrl-click-translate" label="浮窗内，ctrl点击文字翻译"
+    <checkbox id="__addonRef__-ctrl-click-translate" label="&zotero.__addonRef__.ctrlClickTranslate;"
       preference="extensions.zotero.__addonRef__.ctrlClickTranslate" />
     <hbox>
-      <description>最后，在</description>
+      <description>&zotero.__addonRef__.removeTipAfterMillisecond.start;</description>
       <html:input 
         style="width: 4em; margin: auto 0; height: 1em;"
         type="text" 
         id="__addonRef__-remove-tip-after-millisecond" 
         preference="extensions.zotero.__addonRef__.removeTipAfterMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">毫秒后自动消失</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.removeTipAfterMillisecond.end;</html:span>
     </hbox>
   </groupbox>
   <groupbox>
-    <caption label="推荐关联" />
+    <caption label="&zotero.__addonRef__.caption.recommend;" />
     <checkbox 
       id="__addonRef__-open-related-recommend" 
-      label="关联文献显示推荐关联"
+      label="&zotero.__addonRef__.caption.openRelatedRecommaend;"
       preference="extensions.zotero.__addonRef__.openRelatedRecommaend" />
   </groupbox>
 </vbox>

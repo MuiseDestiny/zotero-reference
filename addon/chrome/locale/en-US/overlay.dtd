@@ -1,5 +1,27 @@
-<!ENTITY zotero.__addonRef__.itemmenu.test.label "addon template">
-<!ENTITY zotero.__addonRef__.pref.enable.label "Enable">
+<!ENTITY zotero.__addonRef__.caption.refresh "refresh">
+<!ENTITY zotero.__addonRef__.autoRefresh "References are refreshed automatically, but the following item types are not">
 
-<!ENTITY zotero.__addonRef__.help.version.label "__addonName__ VERSION __buildVersion__">
-<!ENTITY zotero.__addonRef__.help.releasetime.label "Build __buildTime__">
+
+<!ENTITY zotero.__addonRef__.caption.source "Source">
+<!ENTITY zotero.__addonRef__.prioritySource.start "Priority is">
+<!ENTITY zotero.__addonRef__.prioritySource.end "used to access references">
+
+<!ENTITY zotero.__addonRef__.minPreLoadPageNum.start "When select PDF, Pre-read the last">
+<!ENTITY zotero.__addonRef__.minPreLoadPageNum.end "pages to remove invalid information">
+
+<!ENTITY zotero.__addonRef__.minPreLoadPageNum.tooltiptext "1. It is recommended to set an even number, and the header and footer of odd and even pages are generally different; 2. Generally, 4 pages can be pre-read, and some documents like to add abstracts or even table of contents at the end, and these pages do not have a header and footer, which requires 6 pages or even 8 pages; 3. The larger the value, the longer the analysis time.">
+
+
+<!ENTITY zotero.__addonRef__.caption.tip "Tip">
+<!ENTITY zotero.__addonRef__.isShowTip.start "The floating window is displayed after the mouse stays on the reference for">
+<!ENTITY zotero.__addonRef__.isShowTip.end "ms">
+
+<!ENTITY zotero.__addonRef__.ctrlClickTranslate "Inside the floating window, hold down CTRL and click Text Translate">
+
+<!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.start "Finally disappears automatically after">
+<!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.end "ms">
+
+
+
+<!ENTITY zotero.__addonRef__.caption.recommend "Recommend">
+<!ENTITY zotero.__addonRef__.caption.openRelatedRecommaend "Related panel shows recommended related items">

@@ -136,7 +136,7 @@ class Utils extends AddonModule {
       console.log(_data)
       if (_data) {
         // 数据转换 -> readpaper格式
-        _data.title = _data.title[0]
+        _data.title = _data.title[0].replace(/\n/g, "")
         _data.author.forEach(e=>e.name=e.name[0])
         _data["authorList"] = _data.author
         _data.summary = _data.summary[0].replace(/\n/g, "")
@@ -162,7 +162,7 @@ class Utils extends AddonModule {
   async getTitleDOIByCrossref(title: string) {
     let res
     try {
-      this.Addon.views.showProgressWindow("通过crossref查询DOI", title)
+      this.Addon.views.showProgressWindow("Get DOI by crossref API", title)
       const crossref = `https://api.crossref.org/works?query=${title}`
       res = await Zotero.HTTP.request(
         "GET",
@@ -174,8 +174,8 @@ class Utils extends AddonModule {
       const DOI = res.response.message.items.filter(e=>e.type != "component")[0].DOI
       this.Addon.toolkit.Tool.log(`getTitleDOIByCrossref(${title}) -> ${DOI}`)
       return DOI
-    } catch {
-      this.Addon.toolkit.Tool.log("error, getTitleDOIByCrossref", res.response)
+    } catch (e) {
+      this.Addon.toolkit.Tool.log("error, getTitleDOIByCrossref", e)
       return false
     }
   }
@@ -183,7 +183,7 @@ class Utils extends AddonModule {
   async getTitleDOIByUnpaywall(title: string) {
     let res
     try {
-      this.Addon.views.showProgressWindow("通过unpaywall查询DOI", title)
+      this.Addon.views.showProgressWindow("Get DOI by unpaywall API", title)
       const unpaywall = `https://api.unpaywall.org/v2/search?query=${title}&email=zoterostyle@polygon.org`
       res = await Zotero.HTTP.request(
         "GET",
@@ -213,7 +213,7 @@ class Utils extends AddonModule {
   async getRefDataFromCrossref(DOI: string) {
     let refData
     // request or read data
-    this.Addon.views.showProgressWindow("Crossref", `从Crossref API获取参考文献`)
+    this.Addon.views.showProgressWindow("Crossref", `Get references from crossref API`)
     if (DOI in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[DOI]
     } else {
@@ -237,7 +237,7 @@ class Utils extends AddonModule {
         } else {
           return []
         }
-        this.Addon.views.showProgressWindow("Crossref", `获取${refData.length}条参考文献`, "success")
+        this.Addon.views.showProgressWindow("Crossref", `Get ${refData.length} references`, "success")
       } catch (e) {
         this.Addon.views.showProgressWindow("Crossref", e, "fail")
         return []
@@ -249,7 +249,7 @@ class Utils extends AddonModule {
 
   async getRefDataFromCNKI(URL: string) {
     let refData
-    this.Addon.views.showProgressWindow("CNKI", `从知网获取参考文献`)
+    this.Addon.views.showProgressWindow("CNKI", `Get references from CNKI`)
     if (URL in this.Addon.DOIRefData) {
       refData = this.Addon.DOIRefData[URL]
     } else {
@@ -287,7 +287,7 @@ class Utils extends AddonModule {
         const HTML = parser.parseFromString(htmltext, "text/html").body as HTMLElement
         let liNodes = [...HTML.querySelectorAll("ul li")]
         if (liNodes.length == 0) { break }
-        this.Addon.views.showProgressWindow("CNKI", `获取第${page}页参考文献`, "success")
+        this.Addon.views.showProgressWindow("CNKI", `Read page ${page}`, "success")
         liNodes.forEach((li: HTMLLIElement) => {
             let data = {}
             let a = li.querySelector("a[href]")
@@ -346,16 +346,16 @@ class Utils extends AddonModule {
     // try {
     let refLines = await this.getRefLines()
     if (refLines.length == 0) {
-      this.Addon.views.showProgressWindow("PDF", "解析失败", "fail")
+      this.Addon.views.showProgressWindow("PDF", "Parsing failed", "fail")
       return []
     }
 
     let refData = this.mergeSameRef(refLines)
     
     if (refData.length > 0) {
-      this.Addon.views.showProgressWindow("PDF", `${refData.length}条参考文献`, "success")
+      this.Addon.views.showProgressWindow("PDF", `${refData.length} references`, "success")
     } else {
-      this.Addon.views.showProgressWindow("PDF", `解析失败`, "fail")
+      this.Addon.views.showProgressWindow("PDF", `Parsing failed`, "fail")
     }
 
     this.Addon.toolkit.Tool.log(refData)
@@ -968,7 +968,7 @@ class Utils extends AddonModule {
       if (title.length > 5) {
         return await this.getCnkiURL(title.slice(0, parseInt(String(title.length/2))), author)
       } else {
-        this.Addon.views.showProgressWindow("CNKI", "知网检索失败", "fail")
+        this.Addon.views.showProgressWindow("CNKI", "CNKI search is empty", "fail")
         return false
       }
     }

@@ -1,5 +1,7 @@
 import Addon from "./addon";
 import AddonModule from "./module";
+import Locale from "./locale";
+const lang = Services.locale.getRequestedLocale().split("-")[0];
 
 class AddonViews extends AddonModule {
   private progressWindowIcon: object;
@@ -7,6 +9,7 @@ class AddonViews extends AddonModule {
   public tabpanel: XUL.Element;
   public reader: _ZoteroReader;
   public tipTimer: number | null;
+  
 
   constructor(parent: Addon) {
     console.log("AddonViews constructor")
@@ -107,7 +110,7 @@ class AddonViews extends AddonModule {
     // for tab
     let tab = document.createElement("tab");
     tab.setAttribute("id", "zotero-reference-tab");
-    tab.setAttribute("label", "参考文献");
+    tab.setAttribute("label", Locale[lang].tabLabel);
 
     
     let tabbox = tabContainer.querySelector("tabbox")
@@ -138,11 +141,11 @@ class AddonViews extends AddonModule {
 
     let label = document.createElement("label");
     label.setAttribute("id", "referenceNum");
-    label.setAttribute("value", "0 条参考文献：");
+    label.setAttribute("value", `0 ${Locale[lang].referenceNumLabel}`);
 
     let button = document.createElement("button");
     button.setAttribute("id", "refreshButton");
-    button.setAttribute("label", "刷新");
+    button.setAttribute("label", Locale[lang].refreshButtonlabel);
     button.addEventListener("click", async () => {
       await this.refreshReference(tabpanel)
     })
@@ -216,6 +219,8 @@ class AddonViews extends AddonModule {
     data.forEach(article => {
       console.log(article)
       let DOI = article.doi
+      article.DOI = DOI
+      article.URL = `http://doi.org/${DOI}`
       let title = article.title
       // TODO: 对于在文献库中的予以特殊显示
       let row = this.addRow(node, title, DOI, article, false, true)
@@ -256,7 +261,7 @@ class AddonViews extends AddonModule {
     }
 
     const referenceNum = refData.length
-    tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} 条参考文献：`);
+    tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} ${Locale[lang].referenceNumLabel}`);
     this.Addon.toolkit.Tool.log(refData)
     const readerDocument = this.reader._iframeWindow.wrappedJSObject.document
     const aNodes = readerDocument.querySelectorAll("a[href*='doi.org']")
@@ -336,7 +341,7 @@ class AddonViews extends AddonModule {
       }
       DOI = DOI || content;
       reference[i] = [content, DOI];
-      tabpanel.querySelector("#referenceNum").setAttribute("value", `${Object.keys(reference).length}/${referenceNum} 条参考文献：`);
+      tabpanel.querySelector("#referenceNum").setAttribute("value", `${Object.keys(reference).length}/${referenceNum} ${Locale[lang].referenceNumLabel}`);
     })
     for (let i = 0; i < referenceNum; i++) {
       while (true) {
@@ -349,7 +354,7 @@ class AddonViews extends AddonModule {
         }
       }
     }
-    tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} 条参考文献：`);
+    tabpanel.querySelector("#referenceNum").setAttribute("value", `${referenceNum} ${Locale[lang].referenceNumLabel}`);
   }
 
   public addSearch(node) {
@@ -357,7 +362,7 @@ class AddonViews extends AddonModule {
     let textbox = document.createElement("textbox");
     textbox.setAttribute("id", "zotero-reference-search");
     textbox.setAttribute("type", "search");
-    textbox.setAttribute("placeholder", "在此输入关键词查询")
+    textbox.setAttribute("placeholder", Locale[lang].searchBoxTip)
     textbox.style.marginBottom = ".5em";
     textbox.addEventListener("input", (event: XUL.XULEvent) => {
       let text = event.target.value
@@ -416,6 +421,7 @@ class AddonViews extends AddonModule {
       event.preventDefault()
       event.stopPropagation()
       if (event.ctrlKey) {
+        console.log(ref.DOI)
         let URL = ref.URL || (ref.DOI && `https://doi.org/${ref.DOI}`)
         if (!URL) {
           let [title, author] = this.Addon.utils.parseContent(content)
@@ -535,13 +541,13 @@ class AddonViews extends AddonModule {
 
     let remove = async () => {
       this.Addon.toolkit.Tool.log("removeRelatedItem")
-      this.showProgressWindow("移除关联", DOI)
+      this.showProgressWindow("Removing", DOI)
       setState()
 
       let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key))
       relatedItems = relatedItems.filter(item => item.getField("DOI") == DOI || DOI.includes(item.getField("title")))
       if (relatedItems.length == 0) {
-        this.showProgressWindow("已经移除", DOI)
+        this.showProgressWindow("Removed", DOI)
         node.querySelector("#refreshButton").click()
         return
       }
@@ -553,7 +559,7 @@ class AddonViews extends AddonModule {
       }
 
       setState("+")
-      this.showProgressWindow("移除成功", DOI, "success")
+      this.showProgressWindow("Removed", DOI, "success")
     }
     
     let add = async (collections: undefined | number[] = undefined) => {
@@ -594,27 +600,27 @@ class AddonViews extends AddonModule {
         // done
         let reltaedDOIs = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key).getField("DOI"))
         if (reltaedDOIs.indexOf(DOI) != -1) {
-          this.showProgressWindow("已经关联", DOI, "success");
+          this.showProgressWindow("Added", DOI, "success");
           node.querySelector("#refreshButton").click()
           return
         }
-        this.showProgressWindow("正在关联", DOI)
+        this.showProgressWindow("Adding", DOI)
         setState()
         // search DOI in local
         refItem = await this.Addon.utils.searchItem("DOI", "is", DOI);
         
         if (refItem) {
-          source = "已有条目"
+          source = "Local Item"
           for (let collectionID of (collections || item.getCollections())) {
             refItem.addToCollection(collectionID)
             await refItem.saveTx()
           }
         } else {
-          source = "新建条目"
+          source = "Created Item"
           try {
             refItem = await this.Addon.utils.createItemByZotero(DOI, (collections || item.getCollections()))
           } catch (e) {
-            this.showProgressWindow(`与${source}关联失败`, DOI + "\n" + e.toString(), "fail")
+            this.showProgressWindow(`Add ${source}`, DOI + "\n" + e.toString(), "fail")
             setState("+")
             this.Addon.toolkit.Tool.log(e)
             return
@@ -629,7 +635,7 @@ class AddonViews extends AddonModule {
       await refItem.saveTx()
       // button
       setState("-")
-      this.showProgressWindow(`与${source}关联成功`, DOI, "success")
+      this.showProgressWindow(`Added with ${source}`, DOI, "success")
     }
 
     label = document.createElement("label");
@@ -671,10 +677,10 @@ class AddonViews extends AddonModule {
           let collection = ZoteroPane.getSelectedCollection();
           console.log(collection)
           if (collection) {
-            this.showProgressWindow("关联至", `${await getCollectionPath(collection.id)}`)
+            this.showProgressWindow("Adding to collection", `${await getCollectionPath(collection.id)}`)
             await add([collection.id])
           } else {
-            this.showProgressWindow("失败", "请在主界面选择文件夹后重试")
+            this.showProgressWindow("Tip", "Please select your coolection and retry")
           }
         } else {
           await add()
