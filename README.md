@@ -40,7 +40,8 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
 **浮窗**
-> 浮窗文献信息默认从`readpaper`获取，如有`arXiv`的id则从`arXiv`获取
+> 浮窗文献信息默认从`readpaper`获取，如有`arXiv`的id则从`arXiv`获取，并标注`arXiv`
+
 ![image](https://user-images.githubusercontent.com/51939531/209899443-ef7487b7-794e-445c-bc32-077a7ec8f3e2.png)
 
 **浮窗内文字可选择复制**
