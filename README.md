@@ -39,7 +39,12 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
-**红框内文字可选择复制**
+**浮窗**
+> 浮窗文献信息默认从`readpaper API`获取，如有`arXiv`的id则从`arXiv`获取，并标注`arXiv`
+
+![image](https://user-images.githubusercontent.com/51939531/209902209-33cb1167-e275-4820-b777-96a908b6d0d6.png)
+
+**浮窗内文字可选择复制**
 
 ![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
 
@@ -51,6 +56,16 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 > 需要安装[zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)插件
 
 ![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
+
+**分栏快速跳转**
+> 主阅读界面若有跳转链接如`Fig 4`，点击后会在分割界面（横向/竖向）跳转，主阅读界面无跳转，避免点击前进后退。可满足看图，公式，表格的需求。但只针对有跳转链接的PDF。
+
+![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
+
+**推荐关联**
+> `readcube API`
+
+![图片1](https://user-images.githubusercontent.com/51939531/209890021-14b421a6-f5d8-476f-801f-294a8104f95f.png)
 
 **设置界面**
 
@@ -144,3 +159,4 @@ API：
 - [unpaywall](https://api.unpaywall.org/)
 - [crossref](https://github.com/CrossRef/rest-api-doc)
 - [readpaper](https://readpaper.com/)
+- [readcube](https://www.readcube.com/)
