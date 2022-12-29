@@ -39,7 +39,8 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
-**红框内文字可选择复制**
+**浮窗内文字可选择复制**
+> readpaper API
 
 ![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
 
@@ -58,9 +59,9 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 ![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
 
 **推荐关联**
-> 来自readcube API
-> 
-![图片1](https://user-images.githubusercontent.com/51939531/209889775-4b9ee00d-1749-4af9-b52f-0fd6788c94ba.png)
+> readcube
+
+![图片1](https://user-images.githubusercontent.com/51939531/209890021-14b421a6-f5d8-476f-801f-294a8104f95f.png)
 
 **设置界面**
 
@@ -154,3 +155,4 @@ API：
 - [unpaywall](https://api.unpaywall.org/)
 - [crossref](https://github.com/CrossRef/rest-api-doc)
 - [readpaper](https://readpaper.com/)
+- [readcube](https://www.readcube.com/)
