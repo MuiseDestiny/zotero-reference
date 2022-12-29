@@ -59,6 +59,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 **推荐关联**
 > 来自readcube API
+> 
 ![图片1](https://user-images.githubusercontent.com/51939531/209889775-4b9ee00d-1749-4af9-b52f-0fd6788c94ba.png)
 
 **设置界面**
