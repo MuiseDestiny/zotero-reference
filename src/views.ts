@@ -47,12 +47,13 @@ class AddonViews extends AddonModule {
     if (Zotero.Prefs.get(`${this.Addon.addonRef}.openRelatedRecommaend`)) {
       await this.insertRelated();
     }
-    
-    this.modifyLink(reader)
+    if (Zotero.Prefs.get(`${this.Addon.addonRef}.modifyLinks`)) {
+      this.modifyLinks(reader)
+    }
     
   }
 
-  public modifyLink(reader) {
+  public modifyLinks(reader) {
     let id = window.setInterval(() => {
       try {
         String(reader._iframeWindow.wrappedJSObject.document)
@@ -61,7 +62,7 @@ class AddonViews extends AddonModule {
         return
       }
       reader._iframeWindow.wrappedJSObject.document
-        .querySelectorAll("a[href^='#']:not([modify])").forEach(a => {
+        .querySelectorAll(".annotationLayer a[href^='#']:not([modify])").forEach(a => {
           let _a = a.cloneNode(true)
           _a.setAttribute("modify", "")
           a.parentNode.appendChild(_a)
@@ -221,10 +222,11 @@ class AddonViews extends AddonModule {
       let DOI = article.doi
       article.DOI = DOI
       article.URL = `http://doi.org/${DOI}`
-      let title = article.title
+      let title = this.Addon.utils.Html2Text(article.title)
       // TODO: 对于在文献库中的予以特殊显示
       let row = this.addRow(node, title, DOI, article, false, true)
       if (!row) { return }
+      row.classList.add("only-title")
       totalNum += 1
       window.setTimeout(async () => {
         let item = await this.Addon.utils.searchItem("DOI", "is", DOI);
@@ -326,7 +328,7 @@ class AddonViews extends AddonModule {
         if (DOI) {
           // update DOIInfo by unpaywall
           try {
-            let _data = await this.Addon.utils.getDOIInfo(DOI);
+            let _data = await this.Addon.utils.getDOIBaseInfo(DOI);
             author = _data.author
             year = _data.year
             title = _data.title
@@ -451,10 +453,6 @@ class AddonViews extends AddonModule {
       box.classList.add("active")
       const unstructured = content.replace(/^\[\d+\]/, "")
       timer = window.setTimeout(async () => {
-        let toPlainText = (text) => {
-          if (!text) { return "" }
-          return text.replace(/<\/?em>/g, "")
-        }
         let toTimeInfo = (t) => {
           if (!t) { return undefined }
           let info = (new Date(t)).toString().split(" ")
@@ -473,34 +471,39 @@ class AddonViews extends AddonModule {
         if (arXivId) {
           // 如果标注arXiv，优先在arXiv上搜索信息
           data = await this.Addon.utils.getArXivInfo(arXivId)
+        } else if (this.Addon.utils.isDOI(ref.DOI) || this.Addon.utils.isDOI(DOI)) {
+          data = await this.Addon.utils.getDOIInfo(ref.DOI || DOI)
         } else {
           // 没有则在readpaper匹配信息
           // 匹配年份
-          let years = unstructured.match(/[^\d](\d{4})[^\d]/)
           let body = {}
-          if (years && Number(years[1]) <= (new Date()).getFullYear()) {
-            body["startYear"] = years[1];
-            body["endYear"] = years[1];
+          if (!row.classList.contains("only-title")) {
+            let years = unstructured.match(/[^\d](\d{4})[^\d]/)
+            if (years && Number(years[1]) <= (new Date()).getFullYear() && Number(years[1]) > 1900) {
+              body["startYear"] = years[1];
+              body["endYear"] = years[1];
+            }
           }
           data = await this.Addon.utils.getTitleInfo(unstructured, body)
         }
         const sourceColor = {
           arXiv: "#b31b1b",
-          readpaper: "#1f71e0"
+          readpaper: "#1f71e0",
+          semanticscholar: "#1857b6"
         }
         if (data) {
-          let author = (data.authorList || []).slice(0, 3).map(e => toPlainText(e.name)).join(" / ")
-          let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate)].filter(e => e).join(" \u00b7 ")
+          let author = (data.authorList || []).slice(0, 3).map(e => this.Addon.utils.Html2Text(e.name)).join(" / ")
+          let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate) || data.year].filter(e => e).join(" \u00b7 ")
           let tags = (data.venueTags || []).map(text => { return { color: "#59C1BD", text } })
           if (data.citationCount) { tags.push({ color: "#1f71e0", text: data.citationCount }) }
           if (data.source) { tags.push({ color: sourceColor[data.source], text: data.source }) }
           tipNode = this.showTip(
-            toPlainText(data.title),
+            this.Addon.utils.Html2Text(data.title),
             [
               author,
               publish
             ],
-            toPlainText(data.summary),
+            this.Addon.utils.Html2Text(data.summary),
             tags,
             box
           )

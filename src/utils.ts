@@ -8,7 +8,7 @@ class Utils extends AddonModule {
     super(parent);
   }
 
-  async getDOIInfo(DOI: string) {
+  async getDOIBaseInfo(DOI: string) {
     let data
     if (DOI in this.Addon.DOIData) {
       data = this.Addon.DOIData[DOI]
@@ -112,6 +112,37 @@ class Utils extends AddonModule {
         // TODO: 评价匹配成功度，低不返回
         this.Addon.DOIData[key] = _data
         data = _data
+      }
+    }
+    return data
+  }
+
+  async getDOIInfo(DOI: string) {
+    this.Addon.toolkit.Tool.log("getDOIInfo", DOI)
+    let data
+    const key = `semanticscholar - info - ${DOI}`
+    if (key in this.Addon.DOIData) {
+      data = this.Addon.DOIData[key]
+    } else {
+      const api = `https://api.semanticscholar.org/graph/v1/paper/${DOI}?fields=title,authors,abstract,year,journal,fieldsOfStudy,publicationVenue,publicationDate`
+      let res = await Zotero.HTTP.request(
+        "GET",
+        api,
+        {
+          responseType: "json"
+        }
+      )
+      let _data = res.response
+      console.log(_data)
+      if (_data) {
+        _data.authorList = _data.authors
+        _data.primaryVenue = _data.journal.name
+        _data.venueTags = _data.fieldsOfStudy
+        _data.summary = _data.abstract
+        _data.publishDate = _data.publicationDate
+        _data.source = "semanticscholar"
+        data = _data
+        this.Addon.DOIData[key] = _data
       }
     }
     return data
@@ -742,14 +773,15 @@ class Utils extends AddonModule {
         let line = lines[i]
         let column = columns.slice(-1)[0]
         if (
+          (line.y > column.slice(-1)[0].y) ||
           column
             .map(_line => Number(line.x > _line.x + _line.width))
-            .reduce((a, b) => a + b) == column.length
-          ||
+            .reduce((a, b) => a + b) == column.length ||
           column
             .map(_line => Number(line.x + line.width < _line.x))
             .reduce((a, b) => a + b) == column.length
-        ) {
+        )
+        {
           columns.push([line])
         } else {
           column.push(line)
@@ -1024,6 +1056,7 @@ class Utils extends AddonModule {
   }
 
   public isDOI(text) {
+    if (!text) { return false }
     let res = text.match(this.Addon.DOIRegex)
     if (res) {
       return res[0] == text && !/(cnki|issn)/i.test(text)
@@ -1038,6 +1071,20 @@ class Utils extends AddonModule {
       return res[1]
     } else {
       return false
+    }
+  }
+
+  public Html2Text(html) {
+    if (!html) { return "" }
+    try {
+      let span = document.createElement("span")
+      span.innerHTML = html
+      let text = span.innerText || span.textContent
+      span = null
+      return text
+    } catch {
+      console.log(html)
+      return html
     }
   }
 

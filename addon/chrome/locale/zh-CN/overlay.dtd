@@ -23,4 +23,8 @@
 
 
 <!ENTITY zotero.__addonRef__.caption.recommend "推荐">
-<!ENTITY zotero.__addonRef__.caption.openRelatedRecommaend "关联文献面板显示推荐关联文献">
+<!ENTITY zotero.__addonRef__.openRelatedRecommaend "关联文献面板显示推荐关联文献">
+
+
+<!ENTITY zotero.__addonRef__.caption.link "链接">
+<!ENTITY zotero.__addonRef__.modifyLinks "PDF内链接在分割窗口跳转">

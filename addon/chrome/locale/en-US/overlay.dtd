@@ -24,4 +24,8 @@
 
 
 <!ENTITY zotero.__addonRef__.caption.recommend "Recommend">
-<!ENTITY zotero.__addonRef__.caption.openRelatedRecommaend "Related panel shows recommended related items">
+<!ENTITY zotero.__addonRef__.openRelatedRecommaend "Related panel shows recommended related items">
+
+
+<!ENTITY zotero.__addonRef__.caption.link "Link">
+<!ENTITY zotero.__addonRef__.modifyLinks "Links within the PDF jump in the split window">
