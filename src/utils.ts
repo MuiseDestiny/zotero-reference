@@ -108,7 +108,7 @@ class Utils extends AddonModule {
       )
       let _data = res.response?.data?.list[0]
       if (_data) {
-        // _data["source"] = "readpaper"
+        _data["source"] = "readpaper"
         // TODO: 评价匹配成功度，低不返回
         this.Addon.DOIData[key] = _data
         data = _data
@@ -404,11 +404,6 @@ class Utils extends AddonModule {
       this.unpackUnstructured(ref)
     }
     return refData
-    // } catch (e) {
-    //   console.error(e)
-    //   this.Addon.views.showProgressWindow("PDF", e, "fail")
-    //   return []
-    // }
   }
 
   public unpackUnstructured(ref) {
@@ -418,7 +413,7 @@ class Utils extends AddonModule {
     }
     for (let key in regex) {
       if (key in ref) { continue }
-      let matchedRes = (ref?.url || "").match(regex[key]) || ref.unstructured.match(regex[key])
+      let matchedRes = (ref?.url || "").replace(/\s/g, "").match(regex[key]) || ref.unstructured.replace(/\s/g, "").match(regex[key])
       if (matchedRes) {
         let value = matchedRes[0] as string
         ref[key] = value
@@ -483,6 +478,7 @@ class Utils extends AddonModule {
 
   public isRefStart(text) {
     let regexArray = [
+      [/^[A-Z]\w.+?\(\d+[a-z]?\)/], // 
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/],
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
@@ -567,7 +563,7 @@ class Utils extends AddonModule {
           break
         }
         this.Addon.toolkit.Tool.log("+", text)
-        ref.text += text
+        ref.text += (" " + text)
         if (line.url) {
           ref.url = line.url
         }
@@ -612,8 +608,8 @@ class Utils extends AddonModule {
   async readPdfPage(pdfPage) {
     let textContent = await pdfPage.getTextContent()
     let items = textContent.items.filter(item=>item.str.trim().length)
+    if (items.length == 0) { return [] }
     let annotations = (await pdfPage.getAnnotations())
-
     console.log("items", this.copy(items))
     // add URL to item with annotation
     this.updateItemsAnnotions(items, annotations)
@@ -650,6 +646,7 @@ class Utils extends AddonModule {
       maxHeight = pdfPage._pageInfo.view[3];
 
       let lines = await this.readPdfPage(pdfPage)
+      if (lines.length == 0) { continue }
       pageLines[pageNum] = lines;
       progressWindow.progress.setProgress(((pages.length - pageNum) / preLoadPageNum) * 100)
       progressWindow.progress._itemText.innerHTML = `[${pages.length - pageNum}/${preLoadPageNum}] Read PDF`;
@@ -675,6 +672,7 @@ class Utils extends AddonModule {
         lines = await this.readPdfPage(pdfPage);
         pageLines[pageNum] = [...lines]
       }
+      if (lines.length == 0) { continue }
       console.log("lines", lines)
 
       // 移除PDF页面首尾关于期刊页码等信息
@@ -1076,16 +1074,17 @@ class Utils extends AddonModule {
 
   public Html2Text(html) {
     if (!html) { return "" }
+    let text
     try {
       let span = document.createElement("span")
       span.innerHTML = html
-      let text = span.innerText || span.textContent
+      text = span.innerText || span.textContent
       span = null
-      return text
-    } catch {
+    } catch (e) {
       console.log(html)
-      return html
+      text = html
     }
+    return text.replace(/<(\w+?)>(.+?)<\/\1>/g, (match, p1, p2) => p2)
   }
 
   public getReader() {

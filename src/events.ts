@@ -55,6 +55,8 @@ class AddonEvents extends AddonModule {
       },
       false
     );
+
+    await this.Addon.toolkit.Prompt.registerExample()
   }
 
   public initPrefs() {
@@ -67,6 +69,7 @@ class AddonEvents extends AddonModule {
       isShowTip: true,
       ctrlClickTranslate: true,
       showTipAfterMillisecond: "233",
+      shadeMillisecond: 233,
       removeTipAfterMillisecond: "500",
       openRelatedRecommaend: true,
       modifyLinks: true
@@ -95,6 +98,12 @@ class AddonEvents extends AddonModule {
     }
   }
 
+  private unInitPrefs() {
+    if (!this.Addon.toolkit.Compat.isZotero7()) {
+      this.Addon.toolkit.Compat.unregisterPrefPane();
+    }
+  }
+
   public async onReaderSelect(reader): Promise<void> {
     this.Addon.toolkit.Tool.log(this.Addon)
     await this.Addon.views.updateReferencePanel(reader);
@@ -103,6 +112,8 @@ class AddonEvents extends AddonModule {
   public onUnInit(): void {
     //  Remove elements and do clean up
     this.Addon.views.unInitViews();
+    // remove Prefs
+    this.unInitPrefs()
     // Remove addon object
     Zotero.ZoteroReference = undefined;
   }

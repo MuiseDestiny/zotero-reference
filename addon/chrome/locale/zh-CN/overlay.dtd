@@ -18,12 +18,15 @@
 
 <!ENTITY zotero.__addonRef__.ctrlClickTranslate "浮窗内，ctrl点击文字翻译">
 
+<!ENTITY zotero.__addonRef__.shadeMillisecond.start "浮窗显示/消失透明度渐变">
+<!ENTITY zotero.__addonRef__.shadeMillisecond.end "毫秒">
+
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.start "最后，在">
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.end "毫秒后自动消失">
 
 
-<!ENTITY zotero.__addonRef__.caption.recommend "推荐">
-<!ENTITY zotero.__addonRef__.openRelatedRecommaend "关联文献面板显示推荐关联文献">
+<!ENTITY zotero.__addonRef__.caption.related "关联">
+<!ENTITY zotero.__addonRef__.loadingRelated "关联文献面板显示推荐关联文献">
 
 
 <!ENTITY zotero.__addonRef__.caption.link "链接">

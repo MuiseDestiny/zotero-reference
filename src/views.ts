@@ -7,10 +7,8 @@ class AddonViews extends AddonModule {
   private progressWindowIcon: object;
   private progressWindow: any;
   public tabpanel: XUL.Element;
-  public reader: _ZoteroReader;
+  public reader: _ZoteroReaderInstance;
   public tipTimer: number | null;
-  
-
   constructor(parent: Addon) {
     console.log("AddonViews constructor")
     super(parent);
@@ -19,38 +17,219 @@ class AddonViews extends AddonModule {
       fail: "chrome://zotero/skin/cross.png",
       default: `chrome://${this.Addon.addonRef}/skin/favicon.png`,
     };
-  }
+  } 
 
   public initViews() {
-    this.Addon.toolkit.Tool.log("Initializing UI");
     let reader = this.Addon.utils.getReader()
-    if (reader) {
-      this.reader = reader 
-      this.buildSideBarPanel()
-    }
+    if (!reader) { return }
+    this.buildTabPanel()
   }
 
-  public async updateReferencePanel(reader: _ZoteroReader) {
+  public async updateReferencePanel(reader: _ZoteroReaderInstance) {
     this.Addon.toolkit.Tool.log("updateReferencePanel is called")
     await Zotero.uiReadyPromise;
     if (!Zotero.ZoteroReference) {
-      return this.removeSideBarPanel()
+      return this.removeTabPanel()
     }
 
     if (!reader) { return false }
     this.reader = reader
-    
+
     const item = this.getItem()
     this.Addon.toolkit.Tool.log(item.getField("title"));
     await reader._waitForReader();
-    await this.buildSideBarPanel();
-    if (Zotero.Prefs.get(`${this.Addon.addonRef}.openRelatedRecommaend`)) {
-      await this.insertRelated();
+
+    const tabpanel = await this.buildTabPanel();
+
+    // after building UI
+    if (Zotero.Prefs.get(`${this.Addon.addonRef}.autoRefresh`) === true) {
+      this.autoRefresh(tabpanel)
+    }
+    if (Zotero.Prefs.get(`${this.Addon.addonRef}.loadingRelated`)) {
+      await this.loadingRelated();
     }
     if (Zotero.Prefs.get(`${this.Addon.addonRef}.modifyLinks`)) {
       this.modifyLinks(reader)
     }
-    
+  }
+
+  // using tookit
+  // public initViews() {
+  //   this.Addon.toolkit.Tool.log("Initializing UI");
+  //   const readerTabId = "zotero-reference"
+  //   this.Addon.toolkit.UI.registerReaderTabPanel(
+  //     Locale[lang].tabLabel,
+  //     async (panel: any, deck: XUL.Deck, window: Window, reader: _ZoteroReaderInstance) => {
+  //       if (!panel) {
+  //         this.Addon.toolkit.Tool.log(
+  //           "This reader do not have right-side bar. Adding reader tab skipped."
+  //         );
+  //         return;
+  //       }
+  //       const relatedbox = this.Addon.toolkit.UI.creatElementsFromJSON(
+  //         window.document,
+  //         {
+  //           tag: "relatedbox",
+  //           id: `${this.Addon.addonRef}-${reader._instanceID}-extra-reader-tab-div`,
+  //           classList: ["zotero-editpane-related"],
+  //           namespace: "xul",
+  //           removeIfExists: true,
+  //           ignoreIfExists: true,
+  //           attributes: {
+  //             flex: "1",
+  //           },
+  //           subElementOptions: [
+  //             {
+  //               tag: "vbox",
+  //               namespace: "xul",
+  //               classList: ["zotero-box"],
+  //               attributes: {
+  //                 flex: "1",
+  //               },
+  //               styles: {
+  //                 paddingLeft: "0px",
+  //                 paddingRight: "0px"
+  //               },
+  //               subElementOptions: [
+  //                 {
+  //                   tag: "hbox",
+  //                   namespace: "xul",
+  //                   attributes: {
+  //                     align: "center"
+  //                   },
+  //                   subElementOptions: [
+  //                     {
+  //                       tag: "label",
+  //                       namespace: "xul",
+  //                       id: "referenceNum",
+  //                       attributes: {
+  //                         value: `0 ${Locale[lang].referenceNumLabel}`
+  //                       },
+  //                       listeners: [
+  //                         {
+  //                           type: "dblclick",
+  //                           listener: () => {
+  //                             console.log("Copy all references")
+  //                             let textArray = []
+  //                             let labels = relatedbox.querySelectorAll("rows row box label")
+  //                             labels.forEach((e: XUL.Label) => {
+  //                               textArray.push(e.value)
+  //                             })
+  //                             this.showProgressWindow("Reference", "Copy all references", "success")
+  //                             this.Addon.toolkit.Tool.getCopyHelper()
+  //                               .addText(textArray.join("\n"), "text/unicode")
+  //                               .copy();
+  //                           }
+  //                         }
+  //                       ]
+  //                     },
+  //                     {
+  //                       tag: "button",
+  //                       namespace: "xul",
+  //                       id: "refreshButton",
+  //                       attributes: {
+  //                         label: Locale[lang].refreshButtonLabel
+  //                       },
+  //                       listeners: [
+  //                         {
+  //                           type: "click",
+  //                           listener: async () => {
+  //                             await this.refreshReference(panel)
+  //                           }
+  //                         }
+  //                       ]
+  //                     }
+  //                   ]
+  //                 },
+  //                 {
+  //                   tag: "grid",
+  //                   namespace: "xul",
+  //                   attributes: {
+  //                     flex: "1"
+  //                   },
+  //                   subElementOptions: [
+  //                     {
+  //                       tag: "columns",
+  //                       namespace: "xul",
+  //                       subElementOptions: [
+  //                         {
+  //                           tag: "column",
+  //                           namespace: "xul",
+  //                           attributes: {
+  //                             flex: "1"
+  //                           }
+  //                         },
+  //                         {
+  //                           tag: "column",
+  //                           namespace: "xul",
+  //                         },
+  //                       ]
+  //                     },
+  //                     {
+  //                       tag: "rows",
+  //                       namespace: "xul",
+  //                       id: "referenceRows"
+  //                     }
+  //                   ]
+  //                 }
+  //               ]
+  //             }
+  //           ]
+  //         }
+  //       );
+  //       panel.append(relatedbox);
+  //       // after build UI
+  //       if (Zotero.Prefs.get(`${this.Addon.addonRef}.autoRefresh`) === true) {
+  //         let _notAutoRefreshItemTypes = Zotero.Prefs.get(`${this.Addon.addonRef}.notAutoRefreshItemTypes`) as string
+  //         let notAutoRefreshItemTypes = _notAutoRefreshItemTypes.split(/,\s*/g)
+  //         console.log(_notAutoRefreshItemTypes, notAutoRefreshItemTypes)
+  //         const isExclude = notAutoRefreshItemTypes
+  //           .indexOf(
+  //             Zotero.ItemTypes.getName(
+  //               this.getItem().getField("itemTypeID")
+  //             )
+  //           ) != -1
+  //         if (!isExclude) {
+  //           this.refreshReference(panel)
+  //         }
+  //       }
+  //     },
+  //     {
+  //       targetIndex: 3,
+  //       tabId: readerTabId,
+  //     }
+  //   )
+  // }
+
+  // public async updateReferencePanel(reader: _ZoteroReaderInstance) {
+  //   console.log("updateReferencePanel")
+  //   await Zotero.uiReadyPromise;
+  //   if (!Zotero.ZoteroReference) {
+  //     return this.removeTabPanel()
+  //   }
+  //   if (!reader) { return false }
+  //   this.reader = reader
+  //   if (Zotero.Prefs.get(`${this.Addon.addonRef}.openRelatedRecommaend`)) {
+  //     await this.loadingRelated();
+  //   }
+  //   if (Zotero.Prefs.get(`${this.Addon.addonRef}.modifyLinks`)) {
+  //     this.modifyLinks(reader)
+  //   }
+  // }
+
+  public autoRefresh(tabpanel) {
+    let _notAutoRefreshItemTypes = Zotero.Prefs.get(`${this.Addon.addonRef}.notAutoRefreshItemTypes`) as string
+    let notAutoRefreshItemTypes = _notAutoRefreshItemTypes.split(/,\s*/g)
+    console.log(_notAutoRefreshItemTypes, notAutoRefreshItemTypes)
+    const isExclude = notAutoRefreshItemTypes
+      .indexOf(
+        Zotero.ItemTypes.getName(
+          this.getItem().getField("itemTypeID")
+        )
+      ) != -1
+    if (!isExclude) {
+      this.refreshReference(tabpanel)
+    }
   }
 
   public modifyLinks(reader) {
@@ -88,12 +267,12 @@ class AddonViews extends AddonModule {
     }, 100)
   }
 
-  public removeSideBarPanel() {
+  public removeTabPanel() {
     try {
       const tabContainer = document.querySelector(`#${Zotero_Tabs.selectedID}-context`);
       tabContainer.querySelector("#zotero-reference-tab").remove()
       tabContainer.querySelector("#zotero-reference-tabpanel").remove()
-    } catch (e) {}
+    } catch (e) { }
   }
 
   public getTabContainer() {
@@ -101,8 +280,8 @@ class AddonViews extends AddonModule {
     return document.querySelector(`#${tabId}-context`)
   }
 
-  async buildSideBarPanel() {
-    this.Addon.toolkit.Tool.log("buildSideBarPanel");
+  public buildTabPanel() {
+    this.Addon.toolkit.Tool.log("buildTabPanel");
     let tabContainer = this.getTabContainer()
     if (tabContainer && tabContainer.querySelector("#zotero-reference-tab")) {
       return
@@ -113,84 +292,136 @@ class AddonViews extends AddonModule {
     tab.setAttribute("id", "zotero-reference-tab");
     tab.setAttribute("label", Locale[lang].tabLabel);
 
-    
     let tabbox = tabContainer.querySelector("tabbox")
 
     const tabs = tabbox.querySelector("tabs") as HTMLElement;
-    // tabs.appendChild(tab)
-    this.Addon.toolkit.Tool.log(tabs.childNodes[2], tab, tabs.childNodes[2].parentNode)
+
     this.insertAfter(tab, tabs.childNodes[2]);
 
     // for panel
     let tabpanel = document.createElement("tabpanel");
     tabpanel.setAttribute("id", "zotero-reference-tabpanel");
+    const relatedbox = this.Addon.toolkit.UI.creatElementsFromJSON(
+      window.document,
+      {
+        tag: "relatedbox",
+        classList: ["zotero-editpane-related"],
+        namespace: "xul",
+        removeIfExists: true,
+        ignoreIfExists: true,
+        attributes: {
+          flex: "1",
+        },
+        subElementOptions: [
+          {
+            tag: "vbox",
+            namespace: "xul",
+            classList: ["zotero-box"],
+            attributes: {
+              flex: "1",
+            },
+            styles: {
+              paddingLeft: "0px",
+              paddingRight: "0px"
+            },
+            subElementOptions: [
+              {
+                tag: "hbox",
+                namespace: "xul",
+                attributes: {
+                  align: "center"
+                },
+                subElementOptions: [
+                  {
+                    tag: "label",
+                    namespace: "xul",
+                    id: "referenceNum",
+                    attributes: {
+                      value: `0 ${Locale[lang].referenceNumLabel}`
+                    },
+                    listeners: [
+                      {
+                        type: "dblclick",
+                        listener: () => {
+                          console.log("Copy all references")
+                          let textArray = []
+                          let labels = relatedbox.querySelectorAll("rows row box label")
+                          labels.forEach((e: XUL.Label) => {
+                            textArray.push(e.value)
+                          })
+                          this.showProgressWindow("Reference", "Copy all references", "success")
+                          this.Addon.toolkit.Tool.getCopyHelper()
+                            .addText(textArray.join("\n"), "text/unicode")
+                            .copy();
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    tag: "button",
+                    namespace: "xul",
+                    id: "refreshButton",
+                    attributes: {
+                      label: Locale[lang].refreshButtonLabel
+                    },
+                    listeners: [
+                      {
+                        type: "click",
+                        listener: async () => {
+                          await this.refreshReference(tabpanel)
+                        }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                tag: "grid",
+                namespace: "xul",
+                attributes: {
+                  flex: "1"
+                },
+                subElementOptions: [
+                  {
+                    tag: "columns",
+                    namespace: "xul",
+                    subElementOptions: [
+                      {
+                        tag: "column",
+                        namespace: "xul",
+                        attributes: {
+                          flex: "1"
+                        }
+                      },
+                      {
+                        tag: "column",
+                        namespace: "xul",
+                      },
+                    ]
+                  },
+                  {
+                    tag: "rows",
+                    namespace: "xul",
+                    id: "referenceRows"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    );
 
-    let relatedbox = document.createElement("relatedbox");
-    relatedbox.setAttribute("flex", "1");
-    relatedbox.setAttribute("class", "zotero-editpane-related");
-
-
-    let vbox = document.createElement("vbox");
-    vbox.setAttribute("class", "zotero-box");
-    vbox.setAttribute("flex", "1");
-    vbox.style.paddingLeft = "0px";
-    vbox.style.paddingRight = "0px";
-    
-
-    let hbox = document.createElement("hbox");
-    hbox.setAttribute("align", "center");
-
-    let label = document.createElement("label");
-    label.setAttribute("id", "referenceNum");
-    label.setAttribute("value", `0 ${Locale[lang].referenceNumLabel}`);
-
-    let button = document.createElement("button");
-    button.setAttribute("id", "refreshButton");
-    button.setAttribute("label", Locale[lang].refreshButtonlabel);
-    button.addEventListener("click", async () => {
-      await this.refreshReference(tabpanel)
-    })
-
-    hbox.append(label, button)
-    vbox.appendChild(hbox)
-
-    let grid = document.createElement("grid");
-    grid.setAttribute("flex", "1");
-    let columns = document.createElement("columns");
-    let column1 = document.createElement("column");
-    column1.setAttribute("flex", "1");
-    let column2 = document.createElement("column");
-    columns.append(column1, column2);
-    let rows = document.createElement("rows");
-    rows.setAttribute("id", "referenceRows");
-    grid.append(columns, rows)
-
-    vbox.appendChild(grid)
-
-    relatedbox.appendChild(vbox);
     tabpanel.appendChild(relatedbox);
 
     const tabpanels = tabbox.querySelector("tabpanels") as HTMLElement;
     this.insertAfter(tabpanel, tabpanels.childNodes[2]);
-    if (Zotero.Prefs.get(`${this.Addon.addonRef}.autoRefresh`) === true) {
-      let _notAutoRefreshItemTypes = Zotero.Prefs.get(`${this.Addon.addonRef}.notAutoRefreshItemTypes`) as string
-      let notAutoRefreshItemTypes = _notAutoRefreshItemTypes.split(/,\s*/g)
-      console.log(_notAutoRefreshItemTypes, notAutoRefreshItemTypes)
-      const isExclude = notAutoRefreshItemTypes
-        .indexOf(
-          Zotero.ItemTypes.getName(
-            this.getItem().getField("itemTypeID")
-          )
-        ) != -1
-      if (!isExclude) {
-        // ZoteroPane.getSelectedItems()[0].getField("itemTypeID")
-        this.refreshReference(tabpanel)
-      }
-    }
+
+    return tabpanel
   }
 
-  async insertRelated() {
-    this.Addon.toolkit.Tool.log("insertRelated");
+  async loadingRelated() {
+    this.Addon.toolkit.Tool.log("loadingRelated");
     let item = this.getItem()
     let itemDOI = item.getField("DOI")
     if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
@@ -402,6 +633,7 @@ class AddonViews extends AddonModule {
   }
 
   public addRow(node, content, DOI, ref, addSearch: boolean = true, skipRelated: boolean = false) {
+    // 避免重复添加
     if ([...node.querySelectorAll("row label")]
       .filter(e => e.value == content)
       .length > 0) { return }
@@ -447,82 +679,6 @@ class AddonViews extends AddonModule {
       }
     })
 
-    let timer = null, tipNode
-    box.addEventListener("mouseenter", () => {
-      if (!Zotero.Prefs.get(`${this.Addon.addonRef}.isShowTip`)) { return }
-      box.classList.add("active")
-      const unstructured = content.replace(/^\[\d+\]/, "")
-      timer = window.setTimeout(async () => {
-        let toTimeInfo = (t) => {
-          if (!t) { return undefined }
-          let info = (new Date(t)).toString().split(" ")
-          return `${info[1]} ${info[3]}`
-        }
-
-        tipNode = this.showTip(
-          (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference",
-          "",
-          unstructured,
-          [],
-          box
-        )
-        let data
-        let arXivId = this.Addon.utils.matchArXivId(unstructured)
-        if (arXivId) {
-          // 如果标注arXiv，优先在arXiv上搜索信息
-          data = await this.Addon.utils.getArXivInfo(arXivId)
-        } else if (this.Addon.utils.isDOI(ref.DOI) || this.Addon.utils.isDOI(DOI)) {
-          data = await this.Addon.utils.getDOIInfo(ref.DOI || DOI)
-        } else {
-          // 没有则在readpaper匹配信息
-          // 匹配年份
-          let body = {}
-          if (!row.classList.contains("only-title")) {
-            let years = unstructured.match(/[^\d](\d{4})[^\d]/)
-            if (years && Number(years[1]) <= (new Date()).getFullYear() && Number(years[1]) > 1900) {
-              body["startYear"] = years[1];
-              body["endYear"] = years[1];
-            }
-          }
-          data = await this.Addon.utils.getTitleInfo(unstructured, body)
-        }
-        const sourceColor = {
-          arXiv: "#b31b1b",
-          readpaper: "#1f71e0",
-          semanticscholar: "#1857b6"
-        }
-        if (data) {
-          let author = (data.authorList || []).slice(0, 3).map(e => this.Addon.utils.Html2Text(e.name)).join(" / ")
-          let publish = [data?.primaryVenue, toTimeInfo(data?.publishDate) || data.year].filter(e => e).join(" \u00b7 ")
-          let tags = (data.venueTags || []).map(text => { return { color: "#59C1BD", text } })
-          if (data.citationCount) { tags.push({ color: "#1f71e0", text: data.citationCount }) }
-          if (data.source) { tags.push({ color: sourceColor[data.source], text: data.source }) }
-          tipNode = this.showTip(
-            this.Addon.utils.Html2Text(data.title),
-            [
-              author,
-              publish
-            ],
-            this.Addon.utils.Html2Text(data.summary),
-            tags,
-            box
-          )
-        }
-      },
-      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.showTipAfterMillisecond`) as string)
-      );
-    })
-
-    box.addEventListener("mouseleave", () => {
-      box.classList.remove("active")
-      window.clearTimeout(timer);
-      this.tipTimer = window.setTimeout(() => {
-        tipNode && tipNode.remove()
-      },
-      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
-      )
-    })
-
     let setState = (state: string = "") => {
       switch (state) {
         case "+":
@@ -564,7 +720,7 @@ class AddonViews extends AddonModule {
       setState("+")
       this.showProgressWindow("Removed", DOI, "success")
     }
-    
+
     let add = async (collections: undefined | number[] = undefined) => {
       this.Addon.toolkit.Tool.log("addRelatedItem", content, DOI)
       // check DOI
@@ -577,7 +733,7 @@ class AddonViews extends AddonModule {
 
         // search DOI in local
         refItem = await this.Addon.utils.searchItem("title", "contains", title)
-        
+
         if (refItem) {
           source = "已有条目"
         } else {
@@ -611,7 +767,7 @@ class AddonViews extends AddonModule {
         setState()
         // search DOI in local
         refItem = await this.Addon.utils.searchItem("DOI", "is", DOI);
-        
+
         if (refItem) {
           source = "Local Item"
           for (let collectionID of (collections || item.getCollections())) {
@@ -628,7 +784,7 @@ class AddonViews extends AddonModule {
             this.Addon.toolkit.Tool.log(e)
             return
           }
-        }        
+        }
       }
       // addRelatedItem
       this.Addon.toolkit.Tool.log("addRelatedItem")
@@ -649,7 +805,7 @@ class AddonViews extends AddonModule {
     let relatedTitles = relatedItems.map(item => item.getField("title"))
     if (
       [...relatedDOIs, ...relatedTitles].indexOf(DOI) != -1 ||
-      relatedTitles.filter(title=>DOI.includes(title)).length > 0
+      relatedTitles.filter(title => DOI.includes(title)).length > 0
     ) {
       setState("-")
       if (skipRelated) { return }
@@ -672,6 +828,88 @@ class AddonViews extends AddonModule {
       return path.reverse().join("/")
     }
 
+    let timer = null, tipNode
+    box.addEventListener("mouseenter", () => {
+      if (!Zotero.Prefs.get(`${this.Addon.addonRef}.isShowTip`)) { return }
+      box.classList.add("active")
+      const unstructured = content.replace(/^\[\d+\]/, "")
+      let timeout = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.showTipAfterMillisecond`) as string)
+      timer = window.setTimeout(async () => {
+        let toTimeInfo = (t) => {
+          if (!t) { return undefined }
+          let info = (new Date(t)).toString().split(" ")
+          return `${info[1]} ${info[3]}`
+        }
+
+        tipNode = this.showTip(
+          (this.Addon.utils.isDOI(DOI) && DOI) || ref.URL || "Reference",
+          [],
+          [],
+          unstructured,
+          box
+        )
+        let data
+        let arXivId = this.Addon.utils.matchArXivId(unstructured)
+        if (arXivId) {
+          // 如果标注arXiv，优先在arXiv上搜索信息
+          data = await this.Addon.utils.getArXivInfo(arXivId)
+        } else if (this.Addon.utils.isDOI(ref.DOI) || this.Addon.utils.isDOI(DOI)) {
+          data = await this.Addon.utils.getDOIInfo(ref.DOI || DOI)
+        } else {
+          // 没有则在readpaper匹配信息
+          // 匹配年份
+          let body = {}
+          if (!row.classList.contains("only-title")) {
+            let years = unstructured.match(/[^\d](\d{4})[^\d]/)
+            if (years && Number(years[1]) <= (new Date()).getFullYear() && Number(years[1]) > 1900) {
+              body["startYear"] = years[1];
+              body["endYear"] = years[1];
+            }
+          }
+          data = await this.Addon.utils.getTitleInfo(unstructured, body)
+        }
+        const sourceConfig = {
+          arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv."},
+          readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
+          semanticscholar: { color: "#1857b6", tip: "Semantic Scholar is an artificial intelligence–powered research tool for scientific literature developed at the Allen Institute for AI and publicly released in November 2015. It uses advances in natural language processing to provide summaries for scholarly papers. The Semantic Scholar team is actively researching the use of artificial-intelligence in natural language processing, machine learning, Human-Computer interaction, and information retrieval."}
+        }
+        if (data) {
+          let author = (data.authorList || []).slice(0, 3).map(e => this.Addon.utils.Html2Text(e.name)).join(" / ")
+          let publish = [this.Addon.utils.Html2Text(data?.primaryVenue), toTimeInfo(data?.publishDate) || data.year].filter(e => e).join(" \u00b7 ")
+          let tags = (data.venueTags || []).map(text => { return { color: "#59C1BD", text } })
+          if (data.citationCount) { tags.push({ color: "#1f71e0", text: data.citationCount }) }
+          if (data.source) { tags.push({ text: data.source, ...sourceConfig[data.source] }) }
+          if (this.Addon.utils.isDOI(ref.DOI)) {
+            tags.push({ text: "DOI", color: "#fcb426", tip: ref.DOI, link: `http://doi.org/${ref.DOI}` })
+          }
+          tipNode = this.showTip(
+            this.Addon.utils.Html2Text(data.title),
+            tags,
+            [
+              author,
+              publish
+            ],
+            this.Addon.utils.Html2Text(data.summary),
+            box
+          )
+        }
+      }, timeout);
+    })
+
+    box.addEventListener("mouseleave", () => {
+      box.classList.remove("active")
+      window.clearTimeout(timer);
+      let timeout = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
+      this.tipTimer = window.setTimeout(async () => {
+        // 监测是否连续一段时间内无active
+        for (let i = 0; i < timeout / 2; i++) {
+          if (rows.querySelector(".active")) { return }
+          await Zotero.Promise.delay(1/1000)
+        }
+        tipNode && tipNode.remove()
+      }, timeout / 2)
+    })
+
     label.addEventListener("click", async (event) => {
       event.preventDefault()
       event.stopPropagation()
@@ -692,6 +930,7 @@ class AddonViews extends AddonModule {
         await remove()
       }
     })
+
     row.append(box, label);
     // const rows = node.querySelector("#referenceRows")
     const rows = node.querySelector("[id$=Rows]")
@@ -716,294 +955,266 @@ class AddonViews extends AddonModule {
   }
 
   public unInitViews() {
-    this.removeSideBarPanel()
+    this.removeTabPanel()
+
   }
 
-  public _showTip(title, descriptions, content, tags, element) {
-    window.clearTimeout(this.tipTimer)
-    let tipDiv = document.querySelector(".zotero-reference-tip")
-    const winRect = document.querySelector('#main-window').getBoundingClientRect()
-    const rect = element.getBoundingClientRect()
-    let xmlns = "http://www.w3.org/1999/xhtml"
-    let titleSpan, despDiv, contentSpan, tagDiv, oldStyle
-    if (!tipDiv) {
-      tipDiv = document.createElementNS(xmlns, "div")
-      tipDiv.setAttribute("class", "zotero-reference-tip")
-      titleSpan = document.createElementNS(xmlns, "span")
-      titleSpan.setAttribute("class", "title")
-      titleSpan.innerText = title
-      titleSpan.style = `
-        display: block;
-        font-weight: bold;
-      `
-      despDiv = document.createElementNS(xmlns, "div")
-      despDiv.setAttribute("class", "description")
-      despDiv.style = `
-        margin-bottom: .25em;
-      `
-      contentSpan = document.createElementNS(xmlns, "span")
-      contentSpan.setAttribute("class", "content")
-      contentSpan.style = `
-        display: block;
-        line-height: 1.5em;
-        opacity: .73;
-        text-align: justify;
-      `
-  
-      tagDiv = document.createElementNS(xmlns, "div")
-      tagDiv.setAttribute("class", "tag")
-      tagDiv.style = `
-        width: 100%;
-        margin: .5em 0;
-      `
-  
-      tipDiv.append(
-        titleSpan,
-        tagDiv,
-        despDiv,
-        contentSpan
-      )
-  
-      tipDiv.style = `
-        position: fixed;
-        width: 800px;
-        z-index: 999;
-        background-color: #f0f0f0;
-        padding: .5em;
-        border: 2px solid #7a0000;
-        -moz-user-select: text;
-        transition: top .5s linear, height .5s linear, bottom .5s linear;
-      `
-
-      document.querySelector('#main-window').appendChild(tipDiv)
-      oldStyle = window.getComputedStyle(tipDiv)
-      // tipDiv.addEventListener("mouseenter", (event) => {
-      //   window.clearTimeout(this.tipTimer);
-      // })
-
-      // tipDiv.addEventListener("mouseleave", (event) => {
-      //   this.tipTimer = window.setTimeout(() => {
-      //     tipDiv.remove()
-      //   }, 500)
-      // })
-
-    } else {
-      oldStyle = window.getComputedStyle(tipDiv)
-      titleSpan = tipDiv.querySelector("span.title")
-      despDiv = tipDiv.querySelector("div.description")
-      contentSpan = tipDiv.querySelector("span.content")
-      tagDiv = tipDiv.querySelector("div.tag")
-    }
-
-    // change content
-    titleSpan.innerText = title
-    contentSpan.innerText = content
-
-    despDiv.childNodes.forEach(e=>e.remove())
-    for (let description of descriptions) {
-      let despSpan = document.createElementNS(xmlns, "span")
-      despSpan.innerText = description
-      despSpan.style = `
-          display: block;
-          line-height: 1.5em;
-          opacity: .5;
-        `
-      despDiv.appendChild(despSpan)
-    }
-
-    tagDiv.childNodes.forEach(e=>e.remove())
-    for (let tag of tags) {
-      let tagSpan = document.createElementNS(xmlns, "span")
-      tagSpan.innerText = tag.text
-      tagSpan.style = `
-          background-color: ${tag.color};
-          border-radius: 10px;
-          margin-right: 1em;
-          padding: 0 8px;
-          color: white;
-        `
-      tagDiv.appendChild(tagSpan)
-    }
-    
-
-    tipDiv.style.right = `${winRect.width - rect.left + 22}px`
-    tipDiv.style.top = oldStyle.offsetTop;
-    tipDiv.style.top = `${rect.top}px`
-
-    let boxRect = tipDiv.getBoundingClientRect()
-    if (boxRect.bottom >= winRect.height) {
-      tipDiv.style.top = ""
-      tipDiv.style.bottom = oldStyle.offsetBottom;
-      tipDiv.style.bottom = "0px"
-    }
-    tipDiv.style.height = "";
-    let height = window.getComputedStyle(tipDiv).offsetHeight
-    tipDiv.style.height = oldStyle.height;
-    tipDiv.style.height = height;
-    return tipDiv
-  }
-
-  public showTip(title, descriptions, content, tags, element) {
+  public showTip(title, tags: { text: string, color: string, tip?: string, link?: string}[], descriptions: string[], content: string, element: HTMLElement) {
     if (!element.classList.contains("active")) { return }
+    let shadeMillisecond = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.shadeMillisecond`) as string)
     document.querySelectorAll(".zotero-reference-tip").forEach(e => {
       e.style.opacity = "0"
       window.setTimeout(() => {
         e.remove()
-      }, 100); 
+      }, shadeMillisecond);
     })
     const winRect = document.querySelector('#main-window').getBoundingClientRect()
     const rect = element.getBoundingClientRect()
-    let xmlns = "http://www.w3.org/1999/xhtml"
-    let div = document.createElementNS(xmlns, "div")
-    div.setAttribute("class", "zotero-reference-tip")
-    let titleSpan = document.createElementNS(xmlns, "span")
-    titleSpan.innerText = title
-    titleSpan.style = `
-      display: block;
-      font-weight: bold;
-    `
 
-    let despDiv = document.createElementNS(xmlns, "div")
-    despDiv.style = `
-      margin-bottom: .25em;
-    `
-    for (let description of descriptions) {      
-      let despSpan = document.createElementNS(xmlns, "span")
-      despSpan.innerText = description
-      despSpan.style = `
-        display: block;
-        line-height: 1.5em;
-        opacity: .5;
-      `
-      despDiv.appendChild(despSpan)
-    }
-
-    let contentSpan = document.createElementNS(xmlns, "span")
-    contentSpan.innerText = content
-    contentSpan.style = `
-      display: block;
-      line-height: 1.5em;
-      opacity: .73;
-      text-align: justify;
-      max-height: 300px;
-      overflow-y: auto;
-    `
-
-    let tagDiv = document.createElementNS(xmlns, "div")
-    tagDiv.style = `
-      width: 100%;
-      margin: .5em 0;
-    `
-    for (let tag of tags) {
-      let tagSpan = document.createElementNS(xmlns, "span")
-      tagSpan.innerText = tag.text
-      tagSpan.style = `
-        background-color: ${tag.color};
-        border-radius: 10px;
-        margin-right: 1em;
-        padding: 0 8px;
-        color: white;
-      `
-      tagDiv.appendChild(tagSpan)
-    }
-
-    div.append(
-      titleSpan,
-      tagDiv,
-      despDiv,
-      contentSpan
-    )
-    // bottom: ${winRect.height - rect.bottom}px;
-
-    div.style = `
-      position: fixed;
-      right: ${winRect.width - rect.left + 22}px;
-      top: ${rect.top}px;
-      width: 800px;
-      z-index: 999;
-      background-color: #f0f0f0;
-      padding: .5em;
-      border: 2px solid #7a0000;
-      -moz-user-select: text;
-      transition: opacity .1s linear;
-      opacity: 0;
-    `
-    document.querySelector('#main-window').appendChild(div)
-
-    let boxRect = div.getBoundingClientRect()
-    if (boxRect.bottom >= winRect.height) {
-      div.style.top = ""
-      div.style.bottom = "0px"
-    }
-    div.style.opacity = "1";
-
-    ;[titleSpan, contentSpan].forEach(node => {
-      node.addEventListener("click", async (event) => {
-        if (event.ctrlKey && Zotero.Prefs.get(`${this.Addon.addonRef}.ctrlClickTranslate`)) {
-          let sourceText = node.getAttribute("sourceText")
-          let translatedText = node.getAttribute("translatedText")
-          console.log(sourceText, translatedText)
-          if (!sourceText) {
-            sourceText = node.innerText;
-            node.setAttribute("sourceText", sourceText)
-          }
-          if (!translatedText) {
-            Zotero.ZoteroPDFTranslate._sourceText = sourceText
-            const success = await Zotero.ZoteroPDFTranslate.translate.getTranslation()
-            if (!success) {
-              Zotero.ZoteroPDFTranslate.view.showProgressWindow(
-                "Translate Failed",
-                success,
-                "fail"
-              );
-              return
-            }
-            translatedText = Zotero.ZoteroPDFTranslate._translatedText;
-            node.setAttribute("translatedText", translatedText)
-          }
-
-          if (node.innerText == sourceText) {
-            console.log("-> translatedText")
-            node.innerText = translatedText
-          } else if (node.innerText == translatedText) {
-            node.innerText = sourceText
-            console.log("-> sourceText")
-          }
+    const ZoteroPDFTranslate = Zotero.ZoteroPDFTranslate
+    const addonRef = this.Addon.addonRef
+    let translateNode = async function(event) {
+      if (event.ctrlKey && Zotero.Prefs.get(`${addonRef}.ctrlClickTranslate`)) {
+        let sourceText = this.getAttribute("sourceText")
+        let translatedText = this.getAttribute("translatedText")
+        console.log(sourceText, translatedText)
+        if (!sourceText) {
+          sourceText = this.innerText;
+          this.setAttribute("sourceText", sourceText)
         }
-      })
-    })
-    div.addEventListener("DOMMouseScroll", (event) => {
+        if (!translatedText) {
+          ZoteroPDFTranslate._sourceText = sourceText
+          const success = await ZoteroPDFTranslate.translate.getTranslation()
+          if (!success) {
+            ZoteroPDFTranslate.view.showProgressWindow(
+              "Translate Failed",
+              success,
+              "fail"
+            );
+            return
+          }
+          translatedText = ZoteroPDFTranslate._translatedText;
+          this.setAttribute("translatedText", translatedText)
+        }
+
+        if (this.innerText == sourceText) {
+          console.log("-> translatedText")
+          this.innerText = translatedText
+        } else if (this.innerText == translatedText) {
+          this.innerText = sourceText
+          console.log("-> sourceText")
+        }
+      }
+    }
+
+    let copyNodeText = function () {
+      Zotero.ZoteroReference.toolkit.Tool.getCopyHelper().addText(this.innerText, "text/unicode").copy();
+      Zotero.ZoteroReference.views.showProgressWindow("Copy", this.innerText, "success")
+    }
+
+    let transformNode = function(event) {
       if (!event.ctrlKey) { return }
-      let scale = div.style.transform.match(/scale\((.+)\)/)
-      scale = scale ? parseFloat(scale[1]) : 1
+      let _scale = tipNode.style.transform.match(/scale\((.+)\)/)
+      let scale = _scale ? parseFloat(_scale[1]) : 1
       let minScale = 1, maxScale = 1.7, step = 0.05
-      if (div.style.bottom == "0px") {
-        div.style.transformOrigin = "center bottom"
+      if (tipNode.style.bottom == "0px") {
+        tipNode.style.transformOrigin = "center bottom"
       } else {
-        div.style.transformOrigin = "center center"
+        tipNode.style.transformOrigin = "center center"
       }
       if (event.detail > 0) {
         // 缩小
         scale = scale - step
-        div.style.transform = `scale(${scale < minScale ? 1 : scale})`;
+        tipNode.style.transform = `scale(${scale < minScale ? 1 : scale})`;
       } else {
         // 放大
         scale = scale + step
-        div.style.transform = `scale(${scale > maxScale ? maxScale : scale})`;
+        tipNode.style.transform = `scale(${scale > maxScale ? maxScale : scale})`;
       }
-    })
-    div.addEventListener("mouseenter", (event) => {
-      window.clearTimeout(this.tipTimer);
-    })
-    div.addEventListener("mouseleave", (event) => {
-      this.tipTimer = window.setTimeout(() => {
-        div.remove()
-      },
-      parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
-      )
-    })
-    
-    return div
+    }
+
+    const tipNode = this.Addon.toolkit.UI.creatElementsFromJSON(
+      document,
+      {
+        tag: "div",
+        classList: ["zotero-reference-tip"],
+        styles: {
+          position: "fixed",
+          width: "800px",
+          right: `${winRect.width - rect.left + 22}px`,
+          top: `${rect.top}px`,
+          zIndex: "999",
+          "-moz-user-select": "text",
+          border: "2px solid #7a0000",
+          padding: ".5em",
+          backgroundColor: "#f0f0f0",
+          transition: `opacity ${shadeMillisecond / 1000}s linear`,
+        },
+        listeners: [
+          {
+            type: "DOMMouseScroll",
+            listener: transformNode
+          },
+          {
+            type: "mouseenter",
+            listener: () => {
+              window.clearTimeout(this.tipTimer);
+            }
+          },
+          {
+            type: "mouseleave",
+            listener: () => {
+              let timeout = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
+              this.tipTimer = window.setTimeout(() => {
+                tipNode.remove()
+              }, timeout)
+            }
+          }
+        ],
+        subElementOptions: [
+          {
+            tag: "span",
+            classList: ["title"],
+            styles: {
+              display: "block",
+              fontWeight: "bold",
+            },
+            directAttributes: {
+              innerText: title
+            },
+            listeners: [
+              {
+                type: "click",
+                listener: translateNode
+              }
+            ]
+          },
+          ...(tags && tags.length > 0 ? [{
+            tag: "div",
+            id: "tags",
+            styles: {
+              width: "100%",
+              margin: "0.5em 0px",
+            },
+            subElementOptions: (function (tags) {
+              if (!tags) { return []}
+              let arr = []
+              for (let tag of tags) {
+                console.log(tag)
+                arr.push({
+                  tag: "span",
+                  directAttributes: {
+                    innerText: tag.text
+                  },
+                  styles: {
+                    backgroundColor: tag.color,
+                    borderRadius: "10px",
+                    marginRight: "1em",
+                    padding: "0 8px",
+                    color: "white",
+                    cursor: "pointer",
+                    userSelect: "none"
+                  },
+                  listeners: [
+                    {
+                      type: "click",
+                      listener: function(){
+                        if (tag.link) {
+                          Zotero.launchURL(tag.link);
+                        } else {
+                          copyNodeText.bind(this)()
+                        }
+                      }
+                    },
+                    {
+                      type: "mouseenter",
+                      listener: () => {
+                        if (!tag.tip) { return }
+                        Zotero.ZoteroReference.views.showProgressWindow("Reference", tag.tip, "default", -1, -1)
+                      }
+                    },
+                    {
+                      type: "mouseleave",
+                      listener: () => {
+                        if (!tag.tip) { return }
+                        Zotero.ZoteroReference.views.progressWindow.close();
+                      }
+                    }
+                  ]
+                })
+              }
+              return arr
+            })(tags) as any
+          }] : []),
+          ...(descriptions && descriptions.length > 0 ? [{
+            tag: "div",
+            id: "descriptions",
+            styles: {
+              marginBottom: "0.25em"
+            },
+            subElementOptions: (function (descriptions) {
+              if (!descriptions) { return [] }
+              let arr = [];
+              for (let text of descriptions) {
+                console.log(text)
+                arr.push({
+                  tag: "span",
+                  id: "content",
+                  styles: {
+                    display: "block",
+                    lineHeight: "1.5em",
+                    opacity: "0.5",
+                    cursor: "pointer",
+                    userSelect: "none"
+                  },
+                  directAttributes: {
+                    innerText: text
+                  },
+                  listeners: [
+                    {
+                      type: "click",
+                      listener: copyNodeText
+                    }
+                  ]
+                })
+              }
+              return arr
+            })(descriptions) as any
+          }] : []),
+          {
+            tag: "span",
+            id: "content",
+            directAttributes: {
+              innerText: content
+            },
+            styles: {
+              display: "block",
+              lineHeight: "1.5em",
+              textAlign: "justify",
+              opacity: "0.8",
+              maxHeight: "300px",
+              overflowY: "auto"
+            },
+            listeners: [
+              {
+                type: "click",
+                listener: translateNode
+              }
+            ]
+          }
+        ]
+      }
+    ) as HTMLDivElement
+
+    document.querySelector('#main-window').appendChild(tipNode)
+
+    let boxRect = tipNode.getBoundingClientRect()
+    if (boxRect.bottom >= winRect.height) {
+      tipNode.style.top = ""
+      tipNode.style.bottom = "0px"
+    }
+    tipNode.style.opacity = "1";
+    return tipNode
   }
 
   public showProgressWindow(

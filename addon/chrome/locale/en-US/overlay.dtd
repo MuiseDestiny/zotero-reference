@@ -18,13 +18,16 @@
 
 <!ENTITY zotero.__addonRef__.ctrlClickTranslate "Inside the floating window, hold down CTRL and click Text Translate">
 
+<!ENTITY zotero.__addonRef__.shadeMillisecond.start "Floating window display/disappearing transparency shades">
+<!ENTITY zotero.__addonRef__.shadeMillisecond.end "ms">
+
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.start "Finally disappears automatically after">
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.end "ms">
 
 
 
-<!ENTITY zotero.__addonRef__.caption.recommend "Recommend">
-<!ENTITY zotero.__addonRef__.openRelatedRecommaend "Related panel shows recommended related items">
+<!ENTITY zotero.__addonRef__.caption.related "Related">
+<!ENTITY zotero.__addonRef__.loadingRelated "Related panel loads recommended related items">
 
 
 <!ENTITY zotero.__addonRef__.caption.link "Link">

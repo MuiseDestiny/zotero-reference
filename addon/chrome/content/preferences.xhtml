@@ -82,6 +82,16 @@
     <checkbox id="__addonRef__-ctrl-click-translate" label="&zotero.__addonRef__.ctrlClickTranslate;"
       preference="extensions.zotero.__addonRef__.ctrlClickTranslate" />
     <hbox>
+      <description>&zotero.__addonRef__.shadeMillisecond.start;</description>
+      <html:input 
+        style="width: 4em; margin: auto 0; height: 1em;" 
+        type="text" 
+        id="__addonRef__-shade-millisecond"
+        preference="extensions.zotero.__addonRef__.shadeMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.shadeMillisecond.end;</html:span>
+    </hbox>
+    <hbox>
       <description>&zotero.__addonRef__.removeTipAfterMillisecond.start;</description>
       <html:input 
         style="width: 4em; margin: auto 0; height: 1em;"
@@ -93,11 +103,11 @@
     </hbox>
   </groupbox>
   <groupbox>
-    <caption label="&zotero.__addonRef__.caption.recommend;" />
+    <caption label="&zotero.__addonRef__.caption.related;" />
     <checkbox 
-      id="__addonRef__-open-related-recommend" 
-      label="&zotero.__addonRef__.openRelatedRecommaend;"
-      preference="extensions.zotero.__addonRef__.openRelatedRecommaend" />
+      id="__addonRef__-loading-related" 
+      label="&zotero.__addonRef__.loadingRelated;" 
+      preference="extensions.zotero.__addonRef__.loadingRelated" />
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.link;" />

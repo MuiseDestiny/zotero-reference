@@ -39,6 +39,6 @@
   "devDependencies": {
     "dotenv-cli": "^6.0.0",
     "release-it": "^14.14.3",
-    "zotero-types": "^0.0.4"
+    "zotero-types": "^0.1.0"
   }
 }
