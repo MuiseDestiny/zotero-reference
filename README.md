@@ -22,7 +22,7 @@
 绿色表示分区，蓝色被引用量 —— 来自readpaper
 ![image](https://user-images.githubusercontent.com/51939531/208918462-b51f0f32-5267-47cc-9fed-083e717e1a04.png)
 
-![image](https://user-images.githubusercontent.com/51939531/208114512-2b58ebcb-ca34-4187-93b2-d7f96b0ea4c2.png)
+![image](https://user-images.githubusercontent.com/51939531/210032618-e6021742-d31d-41b3-8947-0e1ccfbb9857.png)
 
 ## 👋 使用
 ![image](https://user-images.githubusercontent.com/51939531/208303590-dfe6f3cf-cd48-4afe-90a0-9cce6ff5f9cb.png)
