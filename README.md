@@ -1,3 +1,13 @@
+新版本功能预览
+![image](https://user-images.githubusercontent.com/51939531/211028190-2f795a97-6302-4aec-ae5d-49fe74df5f75.png)
+
+
+
+
+
+
+
+
 # Zotero Reference
 
 [![Latest release](https://img.shields.io/github/v/release/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/releases)
