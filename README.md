@@ -1,11 +1,10 @@
 **新版本功能预览**
 
-
 ![image](https://user-images.githubusercontent.com/51939531/211028337-6ebab572-b14f-4930-b4ad-0ef2c20e2849.png)
-
 
 ![image](https://user-images.githubusercontent.com/51939531/211029472-7feb0dae-f0b2-4d42-b409-ede971431f08.png)
 
+![image](https://user-images.githubusercontent.com/51939531/211052948-a5ad1a33-9433-4659-948e-daf1fbfce569.png)
 
 
 
