@@ -28,6 +28,7 @@
   "releasepage": "https://github.com/MuiseDestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
   "updaterdf": "https://raw.githubusercontent.com/MuiseDestiny/zotero-reference/master/update.rdf",
   "dependencies": {
+    "@types/node": "^18.11.18",
     "compressing": "^1.6.3",
     "esbuild": "^0.14.54",
     "events": "^3.3.0",

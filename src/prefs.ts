@@ -13,6 +13,14 @@ class AddonPrefs extends AddonModule {
     this.bindPrefEvents();
   }
 
+  public get(key) {
+    return Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`)
+  }
+
+  public set(key, value) {
+    return Zotero.Prefs.set(`${this.Addon.addonRef}.${key}`, value)
+  }
+
   private updatePrefsUI() {
     this.Addon.toolkit.Tool.log(`${this.Addon.addonName}: init preferences UI`);
   }

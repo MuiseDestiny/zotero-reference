@@ -6,10 +6,10 @@
 <!ENTITY zotero.__addonRef__.prioritySource.start "Priority is">
 <!ENTITY zotero.__addonRef__.prioritySource.end "used to access references">
 
-<!ENTITY zotero.__addonRef__.minPreLoadPageNum.start "When select PDF, Pre-read the last">
-<!ENTITY zotero.__addonRef__.minPreLoadPageNum.end "pages to remove invalid information">
+<!ENTITY zotero.__addonRef__.preLoadingPageNum.start "When select PDF, Pre-read the last">
+<!ENTITY zotero.__addonRef__.preLoadingPageNum.end "pages to remove invalid information">
 
-<!ENTITY zotero.__addonRef__.minPreLoadPageNum.tooltiptext "1. It is recommended to set an even number, and the header and footer of odd and even pages are generally different; 2. Generally, 4 pages can be pre-read, and some documents like to add abstracts or even table of contents at the end, and these pages do not have a header and footer, which requires 6 pages or even 8 pages; 3. The larger the value, the longer the analysis time.">
+<!ENTITY zotero.__addonRef__.preLoadingPageNum.tooltiptext "1. It is recommended to set an even number, and the header and footer of odd and even pages are generally different; 2. Generally, 4 pages can be pre-read, and some documents like to add abstracts or even table of contents at the end, and these pages do not have a header and footer, which requires 6 pages or even 8 pages; 3. The larger the value, the longer the analysis time.">
 
 
 <!ENTITY zotero.__addonRef__.caption.tip "Tip">

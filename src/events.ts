@@ -1,3 +1,4 @@
+import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import Addon from "./addon";
 import AddonModule from "./module";
 
@@ -12,6 +13,7 @@ class AddonEvents extends AddonModule {
         ids: Array<string>,
         extraData: object
       ) => {
+        log(extraData[ids[0]], type)
         if (
           event == "select" &&
           type == "tab" &&
@@ -33,12 +35,13 @@ class AddonEvents extends AddonModule {
   }
 
   public async onInit() {
-    this.Addon.toolkit.Tool.log("Zotero Reference AddonEvents onInit") 
+    log("Zotero Reference AddonEvents onInit")
     // @ts-ignore
     this.Addon.rootURI = rootURI;
     // Reset prefs
-    this.Addon.views.initViews();
     this.initPrefs();
+    // View
+    this.Addon.views.initViews();
 
     // Register the callback in Zotero as an item observer
     let notifierID = Zotero.Notifier.registerObserver(this.notifierCallback, [
@@ -48,7 +51,7 @@ class AddonEvents extends AddonModule {
     ]);
 
     // Unregister callback when the window closes (important to avoid a memory leak)
-    Zotero.getMainWindow().addEventListener(
+    window.addEventListener(
       "unload",
       (e) => {
         Zotero.Notifier.unregisterObserver(notifierID);
@@ -60,10 +63,11 @@ class AddonEvents extends AddonModule {
   }
 
   public initPrefs() {
+    // before
     const defaultPrefs = {
       priorityPDF: true,
       prioritySource: "PDF",
-      minPreLoadPageNum: 4,
+      preLoadingPageNum: 4,
       autoRefresh: false,
       notAutoRefreshItemTypes: "book, letter, note",
       isShowTip: true,
@@ -71,15 +75,17 @@ class AddonEvents extends AddonModule {
       showTipAfterMillisecond: "233",
       shadeMillisecond: 233,
       removeTipAfterMillisecond: "500",
-      openRelatedRecommaend: true,
-      modifyLinks: true
+      loadingRelated: true,
+      modifyLinks: true,
+      DOIInfoIndex: 0,
+      TitleInfoIndex: 0
     }
     for (let key in defaultPrefs) {
-      if (Zotero.Prefs.get(`${this.Addon.addonRef}.${key}`) == undefined) {
-        Zotero.Prefs.set(`${this.Addon.addonRef}.${key}`, defaultPrefs[key])
+      if (this.Addon.prefs.get(key) == undefined) {
+        this.Addon.prefs.set(key, defaultPrefs[key])
       }
     }
-    this.Addon.toolkit.Tool.log(this.Addon.rootURI);
+    // init
     const prefOptions = {
       pluginID: this.Addon.addonID,
       src: this.Addon.rootURI + "chrome/content/preferences.xhtml",
@@ -104,9 +110,9 @@ class AddonEvents extends AddonModule {
     }
   }
 
-  public async onReaderSelect(reader): Promise<void> {
-    this.Addon.toolkit.Tool.log(this.Addon)
-    await this.Addon.views.updateReferencePanel(reader);
+  public async onReaderSelect(reader) {
+    log("onReaderSelect is called")
+    await this.Addon.views.updateReferenceUI(reader);
   }
 
   public onUnInit(): void {
