@@ -1,7 +1,7 @@
 **新版本功能预览**
 
 
-![image](https://user-images.githubusercontent.com/51939531/211028190-2f795a97-6302-4aec-ae5d-49fe74df5f75.png)
+![image](https://user-images.githubusercontent.com/51939531/211028337-6ebab572-b14f-4930-b4ad-0ef2c20e2849.png)
 
 
 
