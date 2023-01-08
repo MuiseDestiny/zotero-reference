@@ -32,3 +32,7 @@
 
 <!ENTITY zotero.__addonRef__.caption.link "Link">
 <!ENTITY zotero.__addonRef__.modifyLinks "Links within the PDF jump in the split window">
+
+<!ENTITY zotero.__addonRef__.caption.save "Save">
+<!ENTITY zotero.__addonRef__.savePDFReferences "Save references from PDF in the Extra field of item">
+<!ENTITY zotero.__addonRef__.saveAPIReferences "Save references from API in the Extra field of item">

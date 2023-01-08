@@ -1,3 +1,4 @@
+import ZoteroToolkit from "../../zotero-plugin-toolkit/dist"
 import { log } from "../../zotero-plugin-toolkit/dist/utils"
 import { ItemBaseInfo, ItemInfo} from "./types"
 import Utils from "./utils"
@@ -10,6 +11,7 @@ class Requests {
   public cache = {}
 
   async get(url, responseType: string = "json") {
+    log("get", url)
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -30,6 +32,7 @@ class Requests {
   }
 
   async post(url, body: object = {}, responseType: string = "json") {
+    log("post", url)
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -62,15 +65,16 @@ class Requests {
  */
 class API {
   public utils: Utils;
-  public requests: Requests
+  public requests: Requests;
+  public tookit: ZoteroToolkit
   Info: { crossref: Function, readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function};
   BaseInfo: { readcube: Function};
   constructor(utils) {
     this.utils = utils
     this.requests = new Requests()
+    this.tookit = new ZoteroToolkit()
     this.Info = {
       crossref: (item) => {
-        log("crossref", item)
         const types = {
           "journal-article": "journalArticle",
           "report": "report",
@@ -118,7 +122,7 @@ class API {
         const refCount = item["is-referenced-by-count"]
         let info: ItemInfo = {
           identifiers: { DOI: item.DOI },
-          authors: item?.author.map(i => i.family),
+          authors: item?.author?.map(i => i.family),
           title: Array.isArray(item.title) ? item.title[0] : item.title,
           year: item.published["date-parts"][0][0],
           type: types[item.type] || "journalArticle",
@@ -127,7 +131,7 @@ class API {
           abstract: item.abstract,
           publishDate: item.published["date-parts"][0].join("-"),
           source: item.source.toLowerCase(),
-          primaryVenue: item["container-title"][0],
+          primaryVenue: item["container-title"] ? item["container-title"][0] : [],
           references: references,
           tags: [
             ...(refCount && refCount > 0 ? [{
@@ -145,7 +149,7 @@ class API {
           title: this.utils.Html2Text(data.title),
           year: data.year,
           publishDate: data.publishDate,
-          authors: data.authorList.map(i => this.utils.Html2Text(i.name)),
+          authors: data?.authorList.map(i => this.utils.Html2Text(i.name)),
           abstract: this.utils.Html2Text(data.summary),
           primaryVenue: this.utils.Html2Text(data.primaryVenue),
           tags: [
@@ -176,7 +180,7 @@ class API {
           abstract: data.abstract,
           source: "semanticscholar",
           type: "journalArticle",
-          tags: data.fieldsOfStudy,
+          tags: data.fieldsOfStudy || [],
           primaryVenue: data.journal.name
         }
         return info
@@ -277,6 +281,7 @@ class API {
     const api = `https://api.semanticscholar.org/graph/v1/paper/${DOI}?fields=title,authors,abstract,year,journal,fieldsOfStudy,publicationVenue,publicationDate`
     let response = await this.requests.get(api)
     if (response) {
+      response.DOI = DOI
       return this.Info.semanticscholar(response)
     }
   }
@@ -285,6 +290,7 @@ class API {
     const api = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
     let response = await this.requests.get(api)
     if (response) {
+      response.DOI = DOI
       let info: ItemInfo = this.Info.crossref(response)
       return info
     }
@@ -309,8 +315,6 @@ class API {
       "application/xhtml+xml"
     )
     if (response) {
-      // console.log(await xml2js.parseStringPromise(response))
-
       let data = (await xml2js.parseStringPromise(response))?.feed?.entry[0]
       if (data) {
         data.arXiv = arXiv
@@ -355,8 +359,8 @@ class API {
   }
 
   // For CNKI
-  async getCnkiURL(title, author) {
-    log("getCnkiURL", title, author)
+  async getCNKIURL(title, author) {
+    log("getCNKIURL", title, author)
     let cnkiURL
     let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
     Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
@@ -366,23 +370,66 @@ class API {
           return res[1]
         }
       } catch {
-        log(htmlString)
         return
       }
     }.bind(Zotero.Jasminum);
     cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
-    log("cnkiURL", cnkiURL)
+    // log("cnkiURL", cnkiURL)
+    // if (!cnkiURL) {
+    //   if (title.length > 5) {
+    //     return await this.getCNKIURL(title.slice(0, parseInt(String(title.length / 2))), author)
+    //   } else {
+    //     return false
+    //   }
+    // }
     if (!cnkiURL) {
-      if (title.length > 5) {
-        return await this.getCnkiURL(title.slice(0, parseInt(String(title.length / 2))), author)
-      } else {
-        return false
-      }
+      log("cnkiURL", cnkiURL)
+      return
     }
-    let args = this.utils.parseCnkiURL(cnkiURL)
+    let args = this.utils.parseCNKIURL(cnkiURL)
     cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
     return cnkiURL
+  }
+
+  async getTitleInfoByCNKI(refText): Promise<ItemInfo> {
+    // 拒绝非中文请求，避免被封IP
+    if (!this.utils.isChinese(refText)) { return }
+    let res = this.utils.parseRefText(refText)
+    const key = `${res.title}${res.authors[0]}`
+    if (this.requests.cache[key]) {
+      return this.requests.cache[key]
+    }
+    log("parseRefText", refText, res)
+    let url = await this.getCNKIURL(res.title, res.authors[0])
+    if (!url) { return }
+    let htmlString = await this.requests.get(url, "text/html")
+    const parser = this.tookit.Compat.getDOMParser()
+    let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
+    let aTags = doc.querySelectorAll(".top-tip span a")
+    let info: ItemInfo = {
+      identifiers: { CNKI: url },
+      title: doc.querySelector(".brief h1").innerText,
+      abstract: doc.querySelector("span#ChDivSummary").innerText,
+      authors: [...doc.querySelectorAll("#authorpart span a")].map(a => a.innerText),
+      type: "journalArticle",
+      primaryVenue: aTags[0].innerText,
+      year: aTags[1].innerText.split(",")[0],  //2020,32(10)
+      url: url,
+      source: "CNKI",
+      tags: [...doc.querySelectorAll(".keywords a")].map(a => a.innerText.replace(/(\n|\s+|;)/g, ""))
+        .concat([
+          {
+            text: [...doc.querySelectorAll("p.total-inform span")]
+              .find(span => span.innerText.includes("下载"))
+              .innerText.match(/\d+/)[0] as string,
+            color: "#cc7c08",
+            tip: "知网下载量"
+          }
+        ])
+    }
+    this.requests.cache[key] = info
+    return info
   }
 }
 

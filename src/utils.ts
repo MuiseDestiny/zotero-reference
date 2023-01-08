@@ -8,6 +8,7 @@ import { ItemBaseInfo, ItemInfo } from "./types";
 class Utils extends AddonModule{
   API: API;
   PDF: PDF;
+  private cache = {};
   public regex = {
     DOI: /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/,
     arXiv: /arXiv[\.:](\d+\.\d+)/,
@@ -19,7 +20,7 @@ class Utils extends AddonModule{
     this.PDF = new PDF(this);
   }
 
-  private getIdentifiers(text): {DOI?: string, arXiv?: string} {
+  public getIdentifiers(text): {DOI?: string, arXiv?: string} {
     const targets = [
       {
         key: "DOI",
@@ -51,12 +52,12 @@ class Utils extends AddonModule{
     }
   }
   
-  private parseRefText(text) {
+  public parseRefText(text: string): {year: number, authors: string[], title: string} {
     // 匹配年份
     let year
-    let years = text.match(/[^\d]?(\d{4})[^\d]?/g)
-    if (years) {
-      years = years
+    let _years = text.match(/[^\d]?(\d{4})[^\d]?/g) as string[]
+    if (_years) {
+      let years = _years
         .map(year => Number(year.match(/\d{4}/)[0]))
         .filter(year => year > 1900 && year < (new Date()).getFullYear())
       year = years.length > 0 && years[0]
@@ -68,10 +69,9 @@ class Utils extends AddonModule{
       let parts = text
         .replace(/\[.+?\]/g, "")
         .replace(/\s+/g, " ")
-        .split(/(\.\s+|,|，)/)
+        .split(/[\.,\uff0c\uff0e\uff3b\[\]]/) // \uff0c: ，\uff0e: ．
         .map(e => e.trim())
         .filter(e => e)
-      log("parts", parts)
       let authors = []
       let titles = []
       for (let part of parts) {
@@ -118,12 +118,12 @@ class Utils extends AddonModule{
       identifiers: identifiers,
       url: this.extractURL(text) || this.identifiers2URL(identifiers),
       ...this.parseRefText(text),
-      type: (identifiers.arXiv ? "preprint" : "journalArticle") 
+      type: (identifiers.arXiv ? "preprint" : "journalArticle")
     }
   
   }
 
-  public parseCnkiURL(cnkiURL) {
+  public parseCNKIURL(cnkiURL) {
     let FileName = cnkiURL.match(/FileName=(\w+)/i)[1]
     let DbName = cnkiURL.match(/DbName=(\w+)/i)[1]
     let DbCode = cnkiURL.match(/DbCode=(\w+)/i)[1]
@@ -146,7 +146,7 @@ class Utils extends AddonModule{
   }
 
   async createItemByJasminum(title, author) {
-    let cnkiURL = await this.API.getCnkiURL(title, author)
+    let cnkiURL = await this.API.getCNKIURL(title, author)
     // Jasminum
     let articleId = Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
     let postData = Zotero.Jasminum.Scrape.createRefPostData([articleId])
@@ -161,8 +161,8 @@ class Utils extends AddonModule{
     }
   }
 
-  async searchItem(condition, operator, value) {
-    if (!(condition && operator && value)) { return } 
+  private async searchItem(condition, operator, value) {
+    if (!value) { return } 
     let s = new Zotero.Search;
     s.addCondition(condition, operator, value);
     var ids = await s.search();
@@ -172,8 +172,52 @@ class Utils extends AddonModule{
     }
   }
 
+  public searchRelatedItem(item: _ZoteroItem, reference: ItemBaseInfo): _ZoteroItem {
+    let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key))
+    let relatedItem = relatedItems.find((item: _ZoteroItem) => {
+      let flag = (
+        reference.identifiers && (
+          item.getField("DOI") == reference.identifiers.DOI ||
+          item.getField("url").includes(reference.identifiers.arXiv)
+        ) ||
+        item.getField("title") == reference?.title
+      )
+      return flag
+    })
+    return relatedItem
+  }
+
+  public async searchLibraryItem(info: ItemBaseInfo): Promise<_ZoteroItem> {
+    const key = JSON.stringify(info)
+    if (key in this.cache) {
+      return this.cache[key]
+    } else {
+      let item = (
+        await this.Addon.utils.searchItem("title", "contains", info.title) ||
+        await this.Addon.utils.searchItem("DOI", "is", info.identifiers.DOI) ||
+        await this.Addon.utils.searchItem("url", "contains", info.identifiers.arXiv)
+      )
+      if (item) {
+        this.cache[key] = item
+      }
+      return item
+    }
+  } 
+
+  public selectItemInLibrary(item: _ZoteroItem) {
+    Zotero_Tabs.select('zotero-pane');
+    ZoteroPane.selectItem(item.itemID);
+  }
+
+  public getItemType(item) {
+    if (!item) { return }
+    return Zotero.ItemTypes.getName(
+      item.getField("itemTypeID")
+    )
+  }
+
   public isChinese(text) {
-    return (text.match(/[^a-zA-Z]/g)?.length || 0) / text.length > .9
+    return (text.match(/[^a-zA-Z]/g)?.length || 0) / text.length > .5
   }
 
   public isDOI(text) {
@@ -214,6 +258,10 @@ class Utils extends AddonModule{
     return Zotero.Reader.getByTabID(Zotero_Tabs.selectedID) 
   }
 
+  public copyText = (text, show: boolean = true) => {
+    this.Addon.toolkit.Tool.createCopyHelper().addText(text, "text/unicode").copy();
+    show && this.Addon.views.showProgressWindow("Copy", text, "success")
+  }
   public getItem(): _ZoteroItem {
     let reader = this.getReader()
     if (reader) {

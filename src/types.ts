@@ -2,13 +2,15 @@ type ItemBaseInfo = {
 	identifiers: {
 		DOI?: string;
 		arXiv?: string;
+		CNKI?: string; 
 	};
 	authors: string[];
 	type: "journalArticle" | "preprint" | string;
-	text?: string,
+	text?: string;
 	year?: string;
-	title?: string,
-	url?: string
+	title?: string;
+	url?: string;
+	_item?: _ZoteroItem;
 }
 
 type ItemInfo = ItemBaseInfo &  {

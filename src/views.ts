@@ -2,8 +2,8 @@ import Addon from "./addon";
 import Locale from "./locale";
 import AddonModule from "./module";
 import { log } from "../../zotero-plugin-toolkit/dist/utils";
-import {ItemBaseInfo, ItemInfo, Reference} from "./types"
-import { url } from "inspector";
+import {ItemBaseInfo, ItemInfo} from "./types"
+import TipUI from "./tip";
 const lang = Services.locale.getRequestedLocale().split("-")[0];
 
 class AddonViews extends AddonModule {
@@ -137,7 +137,7 @@ class AddonViews extends AddonModule {
   //                               textArray.push(e.value)
   //                             })
   //                             this.showProgressWindow("Reference", "Copy all references", "success")
-  //                             this.Addon.toolkit.Tool.getCopyHelper()
+  //                             this.Addon.toolkit.Tool.createCopyHelper()
   //                               .addText(textArray.join("\n"), "text/unicode")
   //                               .copy();
   //                           }
@@ -244,9 +244,7 @@ class AddonViews extends AddonModule {
     log("notAutoRefreshItemTypes", notAutoRefreshItemTypes)
     const isNot = notAutoRefreshItemTypes
       .indexOf(
-        Zotero.ItemTypes.getName(
-          this.Addon.utils.getItem().getField("itemTypeID")
-        )
+        this.Addon.utils.getItemType(this.Addon.utils.getItem())
       ) != -1
     if (!isNot) {
       this.refreshReferences(tabpanel)
@@ -373,9 +371,7 @@ class AddonViews extends AddonModule {
                                 textArray.push(e.value)
                               })
                               this.showProgressWindow("Reference", "Copy all references", "success")
-                              this.Addon.toolkit.Tool.getCopyHelper()
-                                .addText(textArray.join("\n"), "text/unicode")
-                                .copy();
+                              this.Addon.utils.copyText(textArray.join("\n"), false)
                             }
                           }
                         ]
@@ -464,7 +460,8 @@ class AddonViews extends AddonModule {
     while (!relatedbox.querySelector('#relatedRows'));
 
     let node = relatedbox.querySelector('#relatedRows').parentNode
-    console.log("node", node)
+    // 已经刷新过
+    if (node.querySelector(".zotero-clicky-plus")) { return }
     let relatedArray: ItemBaseInfo[] = await this.Addon.utils.API.getDOIRelatedArray(itemDOI)
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
@@ -492,18 +489,21 @@ class AddonViews extends AddonModule {
   public refreshRelated(array: ItemBaseInfo[], node: XUL.Element) {
     let totalNum = 0
     log("refreshRelated", array)
-    array.forEach((info: ItemBaseInfo) => {
-      console.log(info)
-      let DOI = info.identifiers.DOI
-      let title = this.Addon.utils.Html2Text(info.title)
-      let row = this.addRow(node, title, info, false, true)
+    array.forEach((info: ItemBaseInfo, i: number) => {
+      let row = this.addRow(node, array, i, false, false, true)
       if (!row) { return }
       row.classList.add("only-title")
       totalNum += 1
       window.setTimeout(async () => {
-        let item = await this.Addon.utils.searchItem("DOI", "is", DOI);
+        let item = await this.Addon.utils.searchLibraryItem(info);
         if (!item) {
           (row.querySelector("box") as XUL.Element).style.opacity = ".5"
+        } else {
+          (row.querySelector("box") as XUL.Box).onclick = (event) => {
+            if (event.button == 0) {
+              this.Addon.utils.selectItemInLibrary(item)
+            }
+          }
         }
       }, 0)
     })
@@ -531,7 +531,18 @@ class AddonViews extends AddonModule {
     let item = this.Addon.utils.getItem()
     let reader = this.Addon.utils.getReader()
     if (tabpanel.getAttribute("source") == "PDF") {
-      references = await this.Addon.utils.PDF.getReferences(reader)
+      // 优先本地读取
+      const key = "References-PDF"
+      let rawText = this.Addon.toolkit.Tool.getExtraField(item, key)
+      if (rawText) {
+        this.showProgressWindow("Reference", "From Local")
+        references = JSON.parse(rawText)
+      } else {
+        references = await this.Addon.utils.PDF.getReferences(reader)
+        if (this.Addon.prefs.get("savePDFReferences")) {
+          this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+        }
+      }
     } else {
       // 不再适配知网，没有DOI直接退出
       let DOI = item.getField("DOI")
@@ -539,22 +550,38 @@ class AddonViews extends AddonModule {
         this.showProgressWindow("Reference", `${DOI} is not DOI`, "fail")
         return
       }
-      this.showProgressWindow("[Pending] Zotero Reference", "request references From API")
-      references = (await this.Addon.utils.API.getDOIInfoByCrossref(DOI)).references
-      this.showProgressWindow("[Done] Zotero Reference", `${ references.length } references`, "success")
+      const key = "References-API"
+      let rawText = this.Addon.toolkit.Tool.getExtraField(item, key)
+      if (rawText) {
+        this.showProgressWindow("Reference", "From Local")
+        references = JSON.parse(rawText)
+      } else {
+        this.showProgressWindow("[Pending] Zotero Reference", "request references From API")
+        references = (await this.Addon.utils.API.getDOIInfoByCrossref(DOI)).references
+        if (this.Addon.prefs.get("saveAPIReferences")) {
+          this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+        }
+      }
     }
+    this.showProgressWindow("[Done] Zotero Reference", `${references.length} references`, "success")
 
     const referenceNum = references.length
     let label = tabpanel.querySelector("label#referenceNum")
-    references.forEach(async (reference: ItemBaseInfo, i: number) => {
-      let refText = `[${i + 1}] ${reference.text}`
-      this.addRow(tabpanel, refText, reference);
-      label.value = `${Object.keys(reference).length}/${referenceNum} ${Locale[lang].referenceNumLabel}`;
+    references.forEach(async (reference: ItemBaseInfo, refIndex: number) => {
+      let row = this.addRow(tabpanel, references, refIndex);
+      window.setTimeout(async () => {
+        let localItem = await this.Addon.utils.searchLibraryItem(reference)
+        let itemType = this.Addon.utils.getItemType(localItem)
+        if (itemType) {
+          reference._item = localItem;
+          (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage = 
+            `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
+        }
+      }, 0)
+      label.value = `${refIndex + 1}/${referenceNum} ${Locale[lang].referenceNumLabel}`;
     })
+
     label.value = `${referenceNum} ${Locale[lang].referenceNumLabel}`;
-    log(
-      JSON.parse(this.Addon.toolkit.Tool.getExtraField(item, "references"))
-    )
   }
 
   public addSearch(node) {
@@ -599,22 +626,14 @@ class AddonViews extends AddonModule {
     )
   }
 
-  private searchRelatedItem(item: _ZoteroItem, reference: ItemBaseInfo): _ZoteroItem {
-    let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key))
-    let relatedItem = relatedItems.find((item: _ZoteroItem) => {
-      let flag = (
-        reference.identifiers && (
-          item.getField("DOI") == reference.identifiers.DOI ||
-          item.getField("url").includes(reference.identifiers.arXiv)
-        ) ||
-        item.getField("title") == reference?.title
-      )
-      return flag
-    })
-    return relatedItem
-  }
-
-  public addRow(node: XUL.Element, refText: string, reference: ItemBaseInfo, addSearch: boolean = true, skipRelated: boolean = false) {
+  public addRow(node: XUL.Element, references: ItemBaseInfo[], refIndex: number, addPrefix: boolean = true, addSearch: boolean = true, ignoreRelated: boolean = false) {
+    let reference = references[refIndex]
+    let refText
+    if (addPrefix) {
+      refText = `[${refIndex + 1}] ${reference.text}`
+    } else {
+      refText = reference.text
+    }
     // 避免重复添加
     if ([...node.querySelectorAll("row label")]
       .filter((e: XUL.Label) => e.value == refText)
@@ -627,7 +646,8 @@ class AddonViews extends AddonModule {
     ) || "Reference"
     // 当前item
     let item = this.Addon.utils.getItem()
-    let alreadyRelated = this.searchRelatedItem(item, reference)
+    let alreadyRelated = this.Addon.utils.searchRelatedItem(item, reference)
+    if (alreadyRelated && ignoreRelated) { return }
     // TODO 可以设置
     let editTimer: number
     const row = this.Addon.toolkit.UI.creatElementsFromJSON(
@@ -655,7 +675,7 @@ class AddonViews extends AddonModule {
                       let info: ItemBaseInfo = this.Addon.utils.refText2Info(refText)
                       this.showProgressWindow("[Pending] Request URL From API", refText)
                       if (this.Addon.utils.isChinese(refText)) {
-                        URL = await this.Addon.utils.API.getCnkiURL(info.title, info.authors[0])
+                        URL = await this.Addon.utils.API.getCNKIURL(info.title, info.authors[0])
                       } else {
                         let DOI = await (await this.Addon.utils.API.getTitleInfoByCrossref(refText)).identifiers.DOI
                         URL = this.Addon.utils.identifiers2URL({ DOI })
@@ -667,11 +687,11 @@ class AddonViews extends AddonModule {
                       Zotero.launchURL(URL);
                     }
                   } else {
-                    if (editTimer) { return }
-                    this.showProgressWindow(idText, reference.text, "default", 2500, -1)
-                    this.Addon.toolkit.Tool.getCopyHelper()
-                      .addText((idText ? idText + "\n" : "") + refText, "text/unicode")
-                      .copy();
+                    window.setTimeout(() => {                      
+                      if (editTimer || rows.querySelector("#reference-edit")) { return }
+                      this.showProgressWindow(idText, reference.text, "default", 2500, -1)
+                      this.Addon.utils.copyText((idText ? idText + "\n" : "") + refText, false)
+                    }, 10);
                   }
                 }
               },
@@ -679,6 +699,7 @@ class AddonViews extends AddonModule {
             subElementOptions: [
               {
                 tag: "label",
+                id: "item-type-icon",
                 namespace: "xul",
                 classList: [],
                 styles: {
@@ -701,7 +722,7 @@ class AddonViews extends AddonModule {
                     type: "mousedown",
                     listener: () => {
                       editTimer = window.setTimeout(() => {
-                        editLabel()
+                        enterEdit()
                       }, 500);
                     }
                   },
@@ -709,6 +730,7 @@ class AddonViews extends AddonModule {
                     type: "mouseup",
                     listener: () => {
                       window.clearTimeout(editTimer)
+                      editTimer = null
                     }
                   }
                 ]
@@ -730,8 +752,9 @@ class AddonViews extends AddonModule {
         ]
       }
     ) as XUL.Element
-    
-    let editLabel = () => {
+      
+  
+    let enterEdit = () => {
       let box = row.querySelector("#reference-box") as XUL.Label
       let label = row.querySelector("#reference-label") as XUL.Label
       label.style.display = "none"
@@ -739,25 +762,19 @@ class AddonViews extends AddonModule {
         document,
         {
           tag: "textbox",
+          id: "reference-edit",
           namespace: "xul",
           attributes: {
-            value: label.value,
+            value: addPrefix ? label.value.replace(/^\[\d+\]\s+/, "") : label.value,
             flex: "1",
             multiline: "true",
             rows: "4"
           },
           listeners: [
             {
-              type: "keyup",
-              listener: () => {
-                label.value = textbox.value
-              }
-            },
-            {
               type: "blur",
               listener: () => {
-                label.style.display = ""
-                textbox.remove()
+                exitEdit()
               }
             }
           ]
@@ -766,11 +783,31 @@ class AddonViews extends AddonModule {
       textbox.focus()
       label.parentNode.insertBefore(textbox, label)
       
+      let exitEdit = () => {
+        // 界面恢复
+        let inputText = textbox.value
+        if (!inputText) { return }
+        label.style.display = ""
+        // textbox.style.display = "none"
+        textbox.remove()
+        // 保存结果
+        if (inputText == reference.text) { return }
+        label.value = `[${refIndex + 1}] ${inputText}`;
+        log("\n\n\n--------------", inputText)
+        log(reference)
+        references[refIndex] = { ...reference, ...{ identifiers: this.Addon.utils.getIdentifiers(inputText) }, ...{ text: inputText } }
+        reference = references[refIndex]
+        log(reference)
+        log("--------------\n\n\n")
+        const key = `References-${node.getAttribute("source")}`
+        this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+
+      }
+
       let id = window.setInterval(() => {
         let active = rows.querySelector(".active")
         if (active && active != box) {
-          label.style.display = ""
-          textbox.remove()
+          exitEdit()
           window.clearInterval(id)
         }
       }, 100)
@@ -801,7 +838,7 @@ class AddonViews extends AddonModule {
       this.showProgressWindow("Removing", idText)
       setState()
 
-      let relatedItem = this.searchRelatedItem(item, reference)
+      let relatedItem = this.Addon.utils.searchRelatedItem(item, reference)
       if (!relatedItem) {
         this.showProgressWindow("Removed", idText)
         (node.querySelector("#refreshButton") as XUL.Button).click()
@@ -825,7 +862,7 @@ class AddonViews extends AddonModule {
       if (this.Addon.utils.isChinese(info.title) && Zotero.Jasminum) {
         this.showProgressWindow("CNKI", info.title)
         // search DOI in local
-        refItem = await this.Addon.utils.searchItem("title", "contains", info.title)
+        refItem = await this.Addon.utils.searchLibraryItem(info)
 
         if (refItem) {
           source = "Local Item"
@@ -854,7 +891,7 @@ class AddonViews extends AddonModule {
           reference.identifiers = { DOI }
         }
         // done
-        if (this.searchRelatedItem(item, reference)) {
+        if (this.Addon.utils.searchRelatedItem(item, reference)) {
           this.showProgressWindow("Added", JSON.stringify(reference.identifiers), "success");
           (node.querySelector("#refreshButton") as XUL.Button).click()
           return
@@ -862,7 +899,7 @@ class AddonViews extends AddonModule {
         this.showProgressWindow("Adding", JSON.stringify(reference.identifiers))
         setState()
         // search DOI in local
-        refItem = await this.Addon.utils.searchItem("DOI", "is", JSON.stringify(reference.identifiers));
+        refItem = await this.Addon.utils.searchLibraryItem(reference)
         if (refItem) {
           source = "Local Item"
           for (let collectionID of (collections || item.getCollections())) {
@@ -890,12 +927,13 @@ class AddonViews extends AddonModule {
       // button
       setState("-")
       this.showProgressWindow(`Added with ${source}`, refItem.getField("title"), "success")
+      return row
     }
 
     let getCollectionPath = async (id) => {
       let path = []
       while (true) {
-        let collection = await Zotero.Collections.getAsync(id)
+        let collection = await Zotero.Collections.getAsync(id) as any
         path.push(collection._name)
         if (collection._parentID) {
           id = collection._parentID
@@ -903,12 +941,12 @@ class AddonViews extends AddonModule {
           break
         }
       }
-      console.log(path)
       return path.reverse().join("/")
     }
 
-    let timer = null, tipNode
+    let timer = null, tipUI
     const box = row.querySelector("#reference-box") as XUL.Box
+    // 鼠标进入浮窗展示
     box.addEventListener("mouseenter", () => {
       if (!this.Addon.prefs.get("isShowTip")) { return }
       box.classList.add("active")
@@ -920,71 +958,103 @@ class AddonViews extends AddonModule {
           let info = (new Date(t)).toString().split(" ")
           return `${info[1]} ${info[3]}`
         }
-        tipNode = this.showTip(
-          idText || "Reference",
-          [],
-          [],
-          refText,
-          box
-        )
-        let info: ItemInfo, source
-        log("reference", reference)
+        tipUI = new TipUI(this.Addon)
+        tipUI.onInit(box)
+        let getDefalutInfoByReference = async () => {
+          let info: ItemInfo = {
+            identifiers: {},
+            authors: [],
+            type: "",
+            title: idText || "Reference",
+            tags: [],
+            text: refText,
+            abstract: refText
+          }
+          return info
+        }
+        let coroutines: Promise<ItemInfo>[], prefIndex: number, according: string
         if (reference?.identifiers.arXiv) {
-          info = await this.Addon.utils.API.getArXivInfo(reference.identifiers.arXiv)
-          source = "arXiv"
+          according = "arXiv"
+          coroutines = [
+            getDefalutInfoByReference(),
+            this.Addon.utils.API.getArXivInfo(reference.identifiers.arXiv)
+          ]
+          prefIndex = parseInt(this.Addon.prefs.get(`${according}InfoIndex`) as string)
         } else if (reference?.identifiers.DOI) {
-          let coroutines = [
+          according = "DOI"
+          coroutines = [
+            getDefalutInfoByReference(),
             this.Addon.utils.API.getDOIInfoBySemanticscholar(reference.identifiers.DOI),
             this.Addon.utils.API.getDOIInfoByCrossref(reference.identifiers.DOI)
           ]
-          info = await coroutines[
-            parseInt(this.Addon.prefs.get("DOIInfoIndex") as string) % coroutines.length
-          ]
-          source = "DOIInfo"
+          prefIndex = parseInt(this.Addon.prefs.get(`${according}InfoIndex`) as string)
         } else {
-          let coroutines = [
+          according = "Title"
+          coroutines = [
+            getDefalutInfoByReference(),
             this.Addon.utils.API.getTitleInfoByReadpaper(refText),
-            this.Addon.utils.API.getTitleInfoByCrossref(refText)
+            this.Addon.utils.API.getTitleInfoByCrossref(refText),
+            this.Addon.utils.API.getTitleInfoByCNKI(refText)
           ]
-          info = await coroutines[
-            parseInt(this.Addon.prefs.get("TitleInfoIndex") as string) % coroutines.length
-          ]
-          source = "TitleInfo"
+          prefIndex = parseInt(this.Addon.prefs.get(`${according}InfoIndex`) as string)
         }
+        log("prefIndex", prefIndex)
         const sourceConfig = {
           arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv."},
           readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
           semanticscholar: { color: "#1857b6", tip: "Semantic Scholar is an artificial intelligence–powered research tool for scientific literature developed at the Allen Institute for AI and publicly released in November 2015. It uses advances in natural language processing to provide summaries for scholarly papers. The Semantic Scholar team is actively researching the use of artificial-intelligence in natural language processing, machine learning, Human-Computer interaction, and information retrieval." },
           crossref: { color: "#89bf04", tip: "Crossref is a nonprofit association of approximately 2,000 voting member publishers who represent 4,300 societies and publishers, including both commercial and nonprofit organizations. Crossref includes publishers with varied business models, including those with both open access and subscription policies." },
-          DOI: { color: "#fcb426" }
+          DOI: { color: "#fcb426" },
+          Zotero: { color: "#d63b3b", tip: "Zotero is a free, easy-to-use tool to help you collect, organize, cite, and share your research sources." },
+          CNKI: { color: "#1b66e6", tip: "中国知网知识发现网络平台—面向海内外读者提供中国学术文献、外文文献、学位论文、报纸、会议、年鉴、工具书等各类资源统一检索、统一导航、在线阅读和下载服务。"}
         }
-        if (info) {
-          let tags = info.tags.map((tag: object | string) => {
-            if (typeof tag == "object") {
-              return { color: "#59C1BD", ...(tag as object)}
-            } else {
-              return { color: "#59C1BD", text: tag }
+        for (let i = 0; i < coroutines.length; i++) {
+          // 不阻塞
+          window.setTimeout(async () => {
+            let info = await coroutines[i]
+            if (!info) { return }
+            const tagDefaultColor = "#59C1BD"
+            let tags = info?.tags.map((tag: object | string) => {
+              if (typeof tag == "object") {
+                return { color: tagDefaultColor, ...(tag as object) }
+              } else {
+                return { color: tagDefaultColor, text: tag }
+              }
+            }) as any || []
+            // 展示当前数据源tag
+            if (info.source) { tags.push({ text: info.source, ...sourceConfig[info.source], source: info.source }) }
+            // 展示可点击跳转链接tag
+            if (info.identifiers.DOI) {
+              let DOI = info.identifiers.DOI
+              tags.push({ text: "DOI", color: sourceConfig.DOI.color, tip: DOI, url: info.url })
             }
-          }) as any
-          if (info.source) { tags.push({ text: info.source, ...sourceConfig[info.source], source: source }) }
-          if (info.identifiers.DOI) {
-            let DOI = info.identifiers.DOI
-            tags.push({ text: "DOI", color: sourceConfig.DOI.color, tip: DOI, url: info.url })
-          }
-          if (info.identifiers.arXiv) {
-            let arXiv = info.identifiers.arXiv
-            tags.push({ text: "arXiv", color: sourceConfig.arXiv.color, tip: arXiv, url: info.url })
-          }
-          tipNode = this.showTip(
-            this.Addon.utils.Html2Text(info.title),
-            tags,
-            [
-              info.authors.slice(3).join(" / "),
-              [info?.primaryVenue, toTimeInfo(info.publishDate) || info.year].join(" \u00b7 ")
-            ],
-            this.Addon.utils.Html2Text(info.abstract),
-            box
-          )
+            if (info.identifiers.arXiv) {
+              let arXiv = info.identifiers.arXiv
+              tags.push({ text: "arXiv", color: sourceConfig.arXiv.color, tip: arXiv, url: info.url })
+            }
+            if (info.identifiers.CNKI) {
+              let url = info.identifiers.CNKI
+              tags.push({ text: "URL", color: sourceConfig.CNKI.color, tip: url, url: info.url })
+            }
+            if (reference._item) {
+              // 用本地Item更新数据
+              tags.push({ text: "Zotero", color: sourceConfig.Zotero.color, tip: sourceConfig.Zotero.tip, item: reference._item })
+            }
+            // 添加
+            tipUI.addTip(
+              this.Addon.utils.Html2Text(info.title),
+              tags,
+              [
+                info.authors.slice(0, 3).join(" / "),
+                [info?.primaryVenue, toTimeInfo(info.publishDate) || info.year]
+                  .filter(e => e).join(" \u00b7 ")
+              ].filter(s => s != ""),
+              this.Addon.utils.Html2Text(info.abstract),
+              according,
+              i,
+              prefIndex
+            )
+          }, 0)
         }
       }, timeout);
     })
@@ -992,14 +1062,15 @@ class AddonViews extends AddonModule {
     box.addEventListener("mouseleave", () => {
       box.classList.remove("active")
       window.clearTimeout(timer);
-      let timeout = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
-      this.tipTimer = window.setTimeout(async () => {
+      if (!tipUI) {return}
+      const timeout = tipUI.removeTipAfterMillisecond
+      tipUI.tipTimer = window.setTimeout(async () => {
         // 监测是否连续一段时间内无active
         for (let i = 0; i < timeout / 2; i++) {
           if (rows.querySelector(".active")) { return }
           await Zotero.Promise.delay(1/1000)
         }
-        tipNode && tipNode.remove()
+        tipUI && tipUI.clear()
       }, timeout / 2)
     })
 
@@ -1025,7 +1096,6 @@ class AddonViews extends AddonModule {
     })
 
     row.append(box, label);
-    // const rows = node.querySelector("#referenceRows")
     const rows = node.querySelector("[id$=Rows]")
     rows.appendChild(row);
     let referenceNum = rows.childNodes.length
@@ -1047,276 +1117,6 @@ class AddonViews extends AddonModule {
     this.removeUI()
   }
 
-  public showTip(title, tags: {source: string; text: string, color: string, tip?: string, url?: string}[], descriptions: string[], content: string, element: XUL.Element) {
-    if (!element.classList.contains("active")) { return }
-    let shadeMillisecond = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.shadeMillisecond`) as string)
-    document.querySelectorAll(".zotero-reference-tip").forEach(e => {
-      e.style.opacity = "0"
-      window.setTimeout(() => {
-        e.remove()
-      }, shadeMillisecond);
-    })
-    const winRect = document.querySelector('#main-window').getBoundingClientRect()
-    const rect = element.getBoundingClientRect()
-
-    const ZoteroPDFTranslate = Zotero.ZoteroPDFTranslate
-    const addonRef = this.Addon.addonRef
-    let translateNode = async function(event) {
-      if (event.ctrlKey && Zotero.Prefs.get(`${addonRef}.ctrlClickTranslate`)) {
-        let sourceText = this.getAttribute("sourceText")
-        let translatedText = this.getAttribute("translatedText")
-        console.log(sourceText, translatedText)
-        if (!sourceText) {
-          sourceText = this.innerText;
-          this.setAttribute("sourceText", sourceText)
-        }
-        if (!translatedText) {
-          ZoteroPDFTranslate._sourceText = sourceText
-          const success = await ZoteroPDFTranslate.translate.getTranslation()
-          if (!success) {
-            ZoteroPDFTranslate.view.showProgressWindow(
-              "Translate Failed",
-              success,
-              "fail"
-            );
-            return
-          }
-          translatedText = ZoteroPDFTranslate._translatedText;
-          this.setAttribute("translatedText", translatedText)
-        }
-
-        if (this.innerText == sourceText) {
-          console.log("-> translatedText")
-          this.innerText = translatedText
-        } else if (this.innerText == translatedText) {
-          this.innerText = sourceText
-          console.log("-> sourceText")
-        }
-      }
-    }
-
-    let transformNode = function(event) {
-      if (!event.ctrlKey) { return }
-      let _scale = tipNode.style.transform.match(/scale\((.+)\)/)
-      let scale = _scale ? parseFloat(_scale[1]) : 1
-      let minScale = 1, maxScale = 1.7, step = 0.05
-      if (tipNode.style.bottom == "0px") {
-        tipNode.style.transformOrigin = "center bottom"
-      } else {
-        tipNode.style.transformOrigin = "center center"
-      }
-      if (event.detail > 0) {
-        // 缩小
-        scale = scale - step
-        tipNode.style.transform = `scale(${scale < minScale ? 1 : scale})`;
-      } else {
-        // 放大
-        scale = scale + step
-        tipNode.style.transform = `scale(${scale > maxScale ? maxScale : scale})`;
-      }
-    }
-
-    let copyText = (text) => {
-      this.Addon.toolkit.Tool.getCopyHelper().addText(text, "text/unicode").copy();
-      this.showProgressWindow("Copy", text, "success")
-    }
-
-    const tipNode = this.Addon.toolkit.UI.creatElementsFromJSON(
-      document,
-      {
-        tag: "div",
-        classList: ["zotero-reference-tip"],
-        styles: {
-          position: "fixed",
-          width: "800px",
-          right: `${winRect.width - rect.left + 22}px`,
-          top: `${rect.top}px`,
-          zIndex: "999",
-          "-moz-user-select": "text",
-          border: "2px solid #7a0000",
-          padding: ".5em",
-          backgroundColor: "#f0f0f0",
-          transition: `opacity ${shadeMillisecond / 1000}s linear`,
-        },
-        listeners: [
-          {
-            type: "DOMMouseScroll",
-            listener: transformNode
-          },
-          {
-            type: "mouseenter",
-            listener: () => {
-              window.clearTimeout(this.tipTimer);
-            }
-          },
-          {
-            type: "mouseleave",
-            listener: () => {
-              let timeout = parseInt(Zotero.Prefs.get(`${this.Addon.addonRef}.removeTipAfterMillisecond`) as string)
-              this.tipTimer = window.setTimeout(() => {
-                tipNode.remove()
-              }, timeout)
-            }
-          }
-        ],
-        subElementOptions: [
-          {
-            tag: "span",
-            classList: ["title"],
-            styles: {
-              display: "block",
-              fontWeight: "bold",
-            },
-            directAttributes: {
-              innerText: title
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: translateNode
-              }
-            ]
-          },
-          ...(tags && tags.length > 0 ? [{
-            tag: "div",
-            id: "tags",
-            styles: {
-              width: "100%",
-              margin: "0.5em 0px",
-            },
-            subElementOptions: ((tags) => {
-              if (!tags) { return []}
-              let arr = []
-              for (let tag of tags) {
-                console.log(tag)
-                arr.push({
-                  tag: "span",
-                  directAttributes: {
-                    innerText: tag.text
-                  },
-                  styles: {
-                    backgroundColor: tag.color,
-                    borderRadius: "10px",
-                    marginRight: "1em",
-                    padding: "0 8px",
-                    color: "white",
-                    cursor: "pointer",
-                    userSelect: "none"
-                  },
-                  listeners: [
-                    {
-                      type: "click",
-                      listener: () => {
-                        console.log(tag)
-                        if (tag.url) {
-                          this.showProgressWindow("Launching URL", tag.url)
-                          Zotero.launchURL(tag.url);
-                        } else if (tag.source) { 
-                          this.showProgressWindow("Switch source", tag.source, "success")
-                          const k = `${tag.source}Index`
-                          this.Addon.prefs.set(
-                            k,
-                            parseInt(this.Addon.prefs.get(k) as string) + 1
-                          )
-                          tipNode.remove()
-                        } else {
-                          copyText(tag.text)
-                        }
-                      }
-                    },
-                    {
-                      type: "mouseenter",
-                      listener: () => {
-                        if (!tag.tip) { return }
-                        Zotero.ZoteroReference.views.showProgressWindow("Reference", tag.tip, "default", -1, -1)
-                      }
-                    },
-                    {
-                      type: "mouseleave",
-                      listener: () => {
-                        if (!tag.tip) { return }
-                        Zotero.ZoteroReference.views.progressWindow.close();
-                      }
-                    }
-                  ]
-                })
-              }
-              return arr
-            })(tags) as any
-          }] : []),
-          ...(descriptions && descriptions.length > 0 ? [{
-            tag: "div",
-            id: "descriptions",
-            styles: {
-              marginBottom: "0.25em"
-            },
-            subElementOptions: (function (descriptions) {
-              if (!descriptions) { return [] }
-              let arr = [];
-              for (let text of descriptions) {
-                console.log(text)
-                arr.push({
-                  tag: "span",
-                  id: "content",
-                  styles: {
-                    display: "block",
-                    lineHeight: "1.5em",
-                    opacity: "0.5",
-                    cursor: "pointer",
-                    userSelect: "none"
-                  },
-                  directAttributes: {
-                    innerText: text
-                  },
-                  listeners: [
-                    {
-                      type: "click",
-                      listener: () => {
-                        copyText(text)
-                      }
-                    }
-                  ]
-                })
-              }
-              return arr
-            })(descriptions) as any
-          }] : []),
-          {
-            tag: "span",
-            id: "content",
-            directAttributes: {
-              innerText: content
-            },
-            styles: {
-              display: "block",
-              lineHeight: "1.5em",
-              textAlign: "justify",
-              opacity: "0.8",
-              maxHeight: "300px",
-              overflowY: "auto"
-            },
-            listeners: [
-              {
-                type: "click",
-                listener: translateNode
-              }
-            ]
-          }
-        ]
-      }
-    ) as HTMLDivElement
-
-    document.querySelector('#main-window').appendChild(tipNode)
-
-    let boxRect = tipNode.getBoundingClientRect()
-    if (boxRect.bottom >= winRect.height) {
-      tipNode.style.top = ""
-      tipNode.style.bottom = "0px"
-    }
-    tipNode.style.opacity = "1";
-    return tipNode
-  }
-
   public showProgressWindow(
     header: string,
     context: string,
@@ -1324,7 +1124,6 @@ class AddonViews extends AddonModule {
     t: number = 5000,
     maxLength: number = 100
   ) {
-    console.log(arguments)
     if (this.progressWindow) {
       this.progressWindow.close();
     }

@@ -31,3 +31,7 @@
 
 <!ENTITY zotero.__addonRef__.caption.link "链接">
 <!ENTITY zotero.__addonRef__.modifyLinks "PDF内链接在分割窗口跳转">
+
+<!ENTITY zotero.__addonRef__.caption.save "储存">
+<!ENTITY zotero.__addonRef__.savePDFReferences "储存PDF源参考文献到条目的其它字段">
+<!ENTITY zotero.__addonRef__.saveAPIReferences "储存API源参考文献到条目的其它字段">

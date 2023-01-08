@@ -13,7 +13,6 @@ class AddonEvents extends AddonModule {
         ids: Array<string>,
         extraData: object
       ) => {
-        log(extraData[ids[0]], type)
         if (
           event == "select" &&
           type == "tab" &&
@@ -77,8 +76,11 @@ class AddonEvents extends AddonModule {
       removeTipAfterMillisecond: "500",
       loadingRelated: true,
       modifyLinks: true,
+      arXivInfoIndex: 0,
       DOIInfoIndex: 0,
-      TitleInfoIndex: 0
+      TitleInfoIndex: 0,
+      savePDFReferences: false,
+      saveAPIReferences: false
     }
     for (let key in defaultPrefs) {
       if (this.Addon.prefs.get(key) == undefined) {
