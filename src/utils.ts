@@ -1,4 +1,4 @@
-import { log } from "zotero-plugin-toolkit/dist/utils"
+import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import Addon from "./addon";
 import API from "./api"
 import AddonModule from "./module";
