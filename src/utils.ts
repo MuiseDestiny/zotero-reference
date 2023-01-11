@@ -172,7 +172,8 @@ class Utils extends AddonModule{
     }
   }
 
-  public searchRelatedItem(item: _ZoteroItem, reference: ItemBaseInfo): _ZoteroItem {
+  public searchRelatedItem(item: _ZoteroItem, reference: ItemBaseInfo): _ZoteroItem | boolean {
+    if (!item) { return false}
     let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key))
     let relatedItem = relatedItems.find((item: _ZoteroItem) => {
       let flag = (

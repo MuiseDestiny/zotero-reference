@@ -4,7 +4,7 @@ import AddonModule from "./module";
 import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import {ItemBaseInfo, ItemInfo} from "./types"
 import TipUI from "./tip";
-import AddonItem from "./item";
+import AddonItem from "E:/Github/zotero-style/src/modules/item";
 const lang = Services.locale.getRequestedLocale().split("-")[0];
 Zotero._AddonItemGlobal = Zotero._AddonItemGlobal || new AddonItem()
 const addonItem: AddonItem = Zotero._AddonItemGlobal
@@ -608,7 +608,7 @@ class AddonViews extends AddonModule {
         return
       }
       node.querySelectorAll("row").forEach((row: XUL.Element) => {
-        let content = (row.querySelector("label") as any).value
+        let content = (row.querySelector("#reference-label") as any).value
         let isAllMatched = true;
         for (let i = 0; i < keywords.length; i++) {
           isAllMatched = isAllMatched && content.toLowerCase().includes(keywords[i].toLowerCase())
