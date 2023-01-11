@@ -35,11 +35,11 @@
     "replace-in-file": "^6.3.5",
     "timers": "^0.1.1",
     "xml2js": "^0.4.23",
-    "zotero-plugin-toolkit": "^0.0.6"
+    "zotero-plugin-toolkit": "^1.0.1"
   },
   "devDependencies": {
     "dotenv-cli": "^6.0.0",
     "release-it": "^14.14.3",
-    "zotero-types": "^0.1.0"
+    "zotero-types": "^0.1.5"
   }
 }

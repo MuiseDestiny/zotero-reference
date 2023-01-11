@@ -286,15 +286,6 @@ export default class TipUI {
 												if (tag.url) {
 													this.Addon.views.showProgressWindow("Launching URL", tag.url)
 													Zotero.launchURL(tag.url);
-												} else if (tag.source) {
-													// 切换API源
-													this.Addon.views.showProgressWindow("Switch source", tag.source, "success")
-													const k = `${tag.source}Index`
-													this.Addon.prefs.set(
-														k,
-														parseInt(this.Addon.prefs.get(k) as string) + 1
-													)
-													contentNode.remove()
 												} else if (tag.item) {
 													this.clear()
 													this.Addon.utils.selectItemInLibrary(tag.item)

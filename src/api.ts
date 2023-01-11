@@ -11,7 +11,6 @@ class Requests {
   public cache = {}
 
   async get(url, responseType: string = "json") {
-    log("get", url)
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -32,7 +31,6 @@ class Requests {
   }
 
   async post(url, body: object = {}, responseType: string = "json") {
-    log("post", url)
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -40,15 +38,14 @@ class Requests {
     let res = await Zotero.HTTP.request(
       "POST",
       url,
-      {
+      Object.assign({
         responseType: responseType,
-        ...(Object.keys(body).length > 0 ? {
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(body)
-        } : {})
-      }
+      }, (Object.keys(body).length > 0 ? {
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      } : {}))
     )
     if (res.status == 200) {
       this.cache[k] = res.response

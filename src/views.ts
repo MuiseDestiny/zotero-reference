@@ -4,7 +4,10 @@ import AddonModule from "./module";
 import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import {ItemBaseInfo, ItemInfo} from "./types"
 import TipUI from "./tip";
+import AddonItem from "./item";
 const lang = Services.locale.getRequestedLocale().split("-")[0];
+Zotero._AddonItemGlobal = Zotero._AddonItemGlobal || new AddonItem()
+const addonItem: AddonItem = Zotero._AddonItemGlobal
 
 class AddonViews extends AddonModule {
   private progressWindowIcon: object;
@@ -44,6 +47,7 @@ class AddonViews extends AddonModule {
   }
 
   public async updateReferenceUI(reader: _ZoteroReaderInstance) {
+    if (!addonItem.item) { await addonItem.init() }
     log("updateReferenceUI is called")
     await Zotero.uiReadyPromise;
     // addon is disabled
@@ -533,14 +537,13 @@ class AddonViews extends AddonModule {
     if (tabpanel.getAttribute("source") == "PDF") {
       // 优先本地读取
       const key = "References-PDF"
-      let rawText = this.Addon.toolkit.Tool.getExtraField(item, key)
-      if (rawText) {
+      references = addonItem.get(item, key)
+      if (references) {
         this.showProgressWindow("Reference", "From Local")
-        references = JSON.parse(rawText)
       } else {
         references = await this.Addon.utils.PDF.getReferences(reader)
         if (this.Addon.prefs.get("savePDFReferences")) {
-          this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+          await addonItem.set(item, key, references)
         }
       }
     } else {
@@ -551,15 +554,17 @@ class AddonViews extends AddonModule {
         return
       }
       const key = "References-API"
-      let rawText = this.Addon.toolkit.Tool.getExtraField(item, key)
-      if (rawText) {
+      // let rawText = this.Addon.toolkit.Tool.getExtraField(item, key)
+      references = addonItem.get(item, key)
+
+      if (references) {
         this.showProgressWindow("Reference", "From Local")
-        references = JSON.parse(rawText)
       } else {
         this.showProgressWindow("[Pending] Zotero Reference", "request references From API")
         references = (await this.Addon.utils.API.getDOIInfoByCrossref(DOI)).references
         if (this.Addon.prefs.get("saveAPIReferences")) {
-          this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+          // this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+          await addonItem.set(item, key, references)
         }
       }
     }
@@ -773,8 +778,8 @@ class AddonViews extends AddonModule {
           listeners: [
             {
               type: "blur",
-              listener: () => {
-                exitEdit()
+              listener: async () => {
+                await exitEdit()
               }
             }
           ]
@@ -783,7 +788,7 @@ class AddonViews extends AddonModule {
       textbox.focus()
       label.parentNode.insertBefore(textbox, label)
       
-      let exitEdit = () => {
+      let exitEdit = async () => {
         // 界面恢复
         let inputText = textbox.value
         if (!inputText) { return }
@@ -793,21 +798,17 @@ class AddonViews extends AddonModule {
         // 保存结果
         if (inputText == reference.text) { return }
         label.value = `[${refIndex + 1}] ${inputText}`;
-        log("\n\n\n--------------", inputText)
-        log(reference)
         references[refIndex] = { ...reference, ...{ identifiers: this.Addon.utils.getIdentifiers(inputText) }, ...{ text: inputText } }
         reference = references[refIndex]
-        log(reference)
-        log("--------------\n\n\n")
         const key = `References-${node.getAttribute("source")}`
-        this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
-
+        // this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
+        await addonItem.set(item, key, references)
       }
 
-      let id = window.setInterval(() => {
+      let id = window.setInterval(async () => {
         let active = rows.querySelector(".active")
         if (active && active != box) {
-          exitEdit()
+          await exitEdit()
           window.clearInterval(id)
         }
       }, 100)
