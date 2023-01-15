@@ -454,7 +454,7 @@ class AddonViews extends AddonModule {
    */
   async loadingRelated(tabContainer) {
     this.Addon.toolkit.log("loadingRelated");
-    let item = this.Addon.utils.getItem()
+    let item = this.Addon.utils.getItem() as _ZoteroItem
     if (!item) { return }
     let itemDOI = item.getField("DOI")
     if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
@@ -471,12 +471,29 @@ class AddonViews extends AddonModule {
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
     let relatedArray: ItemBaseInfo[] = await this.Addon.utils.API.getDOIRelatedArray(itemDOI)
+    relatedArray = item.relatedItems.map((key: string) => {
+        let item = Zotero.Items.getByLibraryAndKey(1, key)
+        return {
+          identifiers: { DOI: item.getField("DOI") },
+          authors: ["fw"],
+          title: item.getField("title"),
+          text: item.getField("title"),
+          url: item.getField("url"),
+          type: item.itemType,
+          year: item.getField("year")
+        } as ItemBaseInfo
+    }).concat(relatedArray)    
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
       func.call(relatedbox)
+      // node.querySelectorAll("row").forEach(e=>e.remove())
+      // #42，为Zotero相关条目添加悬浮提示
+      // 把Zotero条目转化为Reference可识别形式
+      node.querySelectorAll("rows row").forEach(e=>e.remove())
+      console.log(relatedArray)
       this.refreshRelated(relatedArray, node)
       node.querySelectorAll("box image.zotero-box-icon")
-        .forEach((e: XUL.Element) => {
+        .forEach((e: any) => {
           let label = this.Addon.toolkit.UI.creatElementsFromJSON(
             document,
             {
@@ -489,7 +506,7 @@ class AddonViews extends AddonModule {
             }
           )
           e.parentNode.replaceChild(label, e)
-      })
+        })
     }
     relatedbox.refresh()
   }
@@ -498,7 +515,7 @@ class AddonViews extends AddonModule {
     let totalNum = 0
     this.Addon.toolkit.log("refreshRelated", array)
     array.forEach((info: ItemBaseInfo, i: number) => {
-      let row = this.addRow(node, array, i, false, false, true)
+      let row = this.addRow(node, array, i, false, false, false)
       if (!row) { return }
       row.classList.add("only-title")
       totalNum += 1
@@ -650,7 +667,9 @@ class AddonViews extends AddonModule {
     // 避免重复添加
     if ([...node.querySelectorAll("row label")]
       .filter((e: XUL.Label) => e.value == refText)
-      .length > 0) { return }
+      .length > 0) {
+      return
+    }
     // id描述
     let idText = (
       reference.identifiers
@@ -766,7 +785,6 @@ class AddonViews extends AddonModule {
       }
     ) as XUL.Element
       
-  
     let enterEdit = () => {
       let box = row.querySelector("#reference-box") as XUL.Label
       let label = row.querySelector("#reference-label") as XUL.Label
@@ -1107,7 +1125,7 @@ class AddonViews extends AddonModule {
     })
 
     row.append(box, label);
-    const rows = node.querySelector("[id$=Rows]")
+    const rows = node.querySelector("rows[id$=Rows]")
     rows.appendChild(row);
     let referenceNum = rows.childNodes.length
     if (addSearch && referenceNum && !node.querySelector("#zotero-reference-search")) { this.addSearch(node) }
