@@ -7,7 +7,7 @@ class AddonPrefs extends AddonModule {
     super(parent);
   }
   public initPreferences(_window: Window) {
-    this.Addon.toolkit.Tool.log(`${this.Addon.addonName}: init preferences`);
+    this.Addon.toolkit.log(`${this.Addon.addonName}: init preferences`);
     this._window = _window;
     this.updatePrefsUI();
     this.bindPrefEvents();
@@ -22,7 +22,7 @@ class AddonPrefs extends AddonModule {
   }
 
   private updatePrefsUI() {
-    this.Addon.toolkit.Tool.log(`${this.Addon.addonName}: init preferences UI`);
+    this.Addon.toolkit.log(`${this.Addon.addonName}: init preferences UI`);
   }
 
   private bindPrefEvents() {

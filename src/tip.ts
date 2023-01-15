@@ -1,4 +1,3 @@
-import { log } from "zotero-plugin-toolkit/dist/utils";
 import Addon from "./addon";
 
 export default class TipUI {

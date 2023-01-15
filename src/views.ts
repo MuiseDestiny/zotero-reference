@@ -1,7 +1,6 @@
 import Addon from "./addon";
 import Locale from "./locale";
 import AddonModule from "./module";
-import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import {ItemBaseInfo, ItemInfo} from "./types"
 import TipUI from "./tip";
 import AddonItem from "E:/Github/zotero-style/src/modules/item";
@@ -17,7 +16,6 @@ class AddonViews extends AddonModule {
   public tipTimer: number | null;
   public iconStyles: object;
   constructor(parent: Addon) {
-    console.log("AddonViews constructor")
     super(parent);
     this.progressWindowIcon = {
       success: "chrome://zotero/skin/tick.png",
@@ -48,7 +46,7 @@ class AddonViews extends AddonModule {
 
   public async updateReferenceUI(reader: _ZoteroReaderInstance) {
     if (!addonItem.item) { await addonItem.init() }
-    log("updateReferenceUI is called")
+    this.Addon.toolkit.log("updateReferenceUI is called")
     await Zotero.uiReadyPromise;
     // addon is disabled
     if (!Zotero.ZoteroReference) {
@@ -59,7 +57,7 @@ class AddonViews extends AddonModule {
     this.reader = reader
 
     const item = this.Addon.utils.getItem()
-    log("reading -> ", item.getField("title"));
+    this.Addon.toolkit.log("reading -> ", item.getField("title"));
     await reader._waitForReader();
     let tabContainer = this.getTabContainer()
     if (!(tabContainer && tabContainer.querySelector("#zotero-reference-tab"))) {
@@ -80,13 +78,13 @@ class AddonViews extends AddonModule {
 
   // using tookit
   // public initViews() {
-  //   this.Addon.toolkit.Tool.log("Initializing UI");
+  //   this.Addon.toolkit.log("Initializing UI");
   //   const readerTabId = "zotero-reference"
   //   this.Addon.toolkit.UI.registerReaderTabPanel(
   //     Locale[lang].tabLabel,
   //     async (panel: any, deck: XUL.Deck, window: Window, reader: _ZoteroReaderInstance) => {
   //       if (!panel) {
-  //         this.Addon.toolkit.Tool.log(
+  //         this.Addon.toolkit.log(
   //           "This reader do not have right-side bar. Adding reader tab skipped."
   //         );
   //         return;
@@ -134,7 +132,7 @@ class AddonViews extends AddonModule {
   //                         {
   //                           type: "dblclick",
   //                           listener: () => {
-  //                             console.log("Copy all references")
+  //                             this.Addon.toolkit.log("Copy all references")
   //                             let textArray = []
   //                             let labels = relatedbox.querySelectorAll("rows row box label")
   //                             labels.forEach((e: XUL.Label) => {
@@ -207,7 +205,7 @@ class AddonViews extends AddonModule {
   //       if (Zotero.Prefs.get(`${this.Addon.addonRef}.autoRefresh`) === true) {
   //         let _notAutoRefreshItemTypes = Zotero.Prefs.get(`${this.Addon.addonRef}.notAutoRefreshItemTypes`) as string
   //         let notAutoRefreshItemTypes = _notAutoRefreshItemTypes.split(/,\s*/g)
-  //         console.log(_notAutoRefreshItemTypes, notAutoRefreshItemTypes)
+  //         this.Addon.toolkit.log(_notAutoRefreshItemTypes, notAutoRefreshItemTypes)
   //         const isExclude = notAutoRefreshItemTypes
   //           .indexOf(
   //             Zotero.ItemTypes.getName(
@@ -227,7 +225,7 @@ class AddonViews extends AddonModule {
   // }
 
   // public async updateReferencePanel(reader: _ZoteroReaderInstance) {
-  //   console.log("updateReferencePanel")
+  //   this.Addon.toolkit.log("updateReferencePanel")
   //   await Zotero.uiReadyPromise;
   //   if (!Zotero.ZoteroReference) {
   //     return this.removeTabPanel()
@@ -245,7 +243,7 @@ class AddonViews extends AddonModule {
   public autoRefresh(tabpanel) {
     let _notAutoRefreshItemTypes = this.Addon.prefs.get("notAutoRefreshItemTypes") as string
     let notAutoRefreshItemTypes = _notAutoRefreshItemTypes.split(/,\s*/g)
-    log("notAutoRefreshItemTypes", notAutoRefreshItemTypes)
+    this.Addon.toolkit.log("notAutoRefreshItemTypes", notAutoRefreshItemTypes)
     const isNot = notAutoRefreshItemTypes
       .indexOf(
         this.Addon.utils.getItemType(this.Addon.utils.getItem())
@@ -282,8 +280,14 @@ class AddonViews extends AddonModule {
               }
               await Zotero.Promise.delay(1000)
             }
+            let dest = unescape(href.slice(1))
+            this.Addon.toolkit.log(dest)
+            try {
+              dest = JSON.parse(dest)
+            } catch { }
+            // 有报错，#39
             reader._iframeWindow.wrappedJSObject.secondViewIframeWindow.PDFViewerApplication
-              .pdfViewer.linkService.goToDestination(unescape(href.slice(1)))
+              .pdfViewer.linkService.goToDestination(dest)
           })
         })
     }, 100)
@@ -303,7 +307,7 @@ class AddonViews extends AddonModule {
   }
 
   private buildTabPanel(tabContainer) {
-    this.Addon.toolkit.Tool.log("buildTabPanel");
+    this.Addon.toolkit.log("buildTabPanel");
     let tabbox = tabContainer.querySelector("tabbox")
     const tabs = tabbox.querySelector("tabs") as HTMLElement;
     const tabpanels = tabbox.querySelector("tabpanels") as HTMLElement;
@@ -368,7 +372,7 @@ class AddonViews extends AddonModule {
                           {
                             type: "dblclick",
                             listener: () => {
-                              console.log("Copy all references")
+                              this.Addon.toolkit.log("Copy all references")
                               let textArray = []
                               let labels = tabpanel.querySelectorAll("rows row box label")
                               labels.forEach((e: XUL.Label) => {
@@ -449,12 +453,12 @@ class AddonViews extends AddonModule {
    * @returns 
    */
   async loadingRelated(tabContainer) {
-    log("loadingRelated");
+    this.Addon.toolkit.log("loadingRelated");
     let item = this.Addon.utils.getItem()
     if (!item) { return }
     let itemDOI = item.getField("DOI")
     if (!itemDOI || !this.Addon.utils.isDOI(itemDOI)) {
-      log("Not DOI", itemDOI);
+      this.Addon.toolkit.log("Not DOI", itemDOI);
       return
     }
     let relatedbox = tabContainer.querySelector("tabpanel:nth-child(3) relatedbox")
@@ -492,7 +496,7 @@ class AddonViews extends AddonModule {
 
   public refreshRelated(array: ItemBaseInfo[], node: XUL.Element) {
     let totalNum = 0
-    log("refreshRelated", array)
+    this.Addon.toolkit.log("refreshRelated", array)
     array.forEach((info: ItemBaseInfo, i: number) => {
       let row = this.addRow(node, array, i, false, false, true)
       if (!row) { return }
@@ -543,7 +547,9 @@ class AddonViews extends AddonModule {
       } else {
         references = await this.Addon.utils.PDF.getReferences(reader)
         if (this.Addon.prefs.get("savePDFReferences")) {
-          await addonItem.set(item, key, references)
+          window.setTimeout(async () => {
+            await addonItem.set(item, key, references)
+          })
         }
       }
     } else {
@@ -564,7 +570,9 @@ class AddonViews extends AddonModule {
         references = (await this.Addon.utils.API.getDOIInfoByCrossref(DOI)).references
         if (this.Addon.prefs.get("saveAPIReferences")) {
           // this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
-          await addonItem.set(item, key, references)
+          window.setTimeout(async () => {
+            await addonItem.set(item, key, references)
+          })
         }
       }
     }
@@ -590,7 +598,7 @@ class AddonViews extends AddonModule {
   }
 
   public addSearch(node) {
-    this.Addon.toolkit.Tool.log("addSearch")
+    this.Addon.toolkit.log("addSearch")
     let textbox = document.createElement("textbox");
     textbox.setAttribute("id", "zotero-reference-search");
     textbox.setAttribute("type", "search");
@@ -598,7 +606,7 @@ class AddonViews extends AddonModule {
     textbox.style.marginBottom = ".5em";
     textbox.addEventListener("input", (event: XUL.XULEvent) => {
       let text = (event.target as any).value
-      this.Addon.toolkit.Tool.log(
+      this.Addon.toolkit.log(
         `ZoteroReference: source text modified to ${text}`
       );
 
@@ -673,7 +681,7 @@ class AddonViews extends AddonModule {
                   event.preventDefault()
                   event.stopPropagation()
                   if (event.ctrlKey) {
-                    console.log(reference)
+                    this.Addon.toolkit.log(reference)
                     let URL = reference.url
                     if (!URL) {
                       const refText = reference.text
@@ -802,7 +810,9 @@ class AddonViews extends AddonModule {
         reference = references[refIndex]
         const key = `References-${node.getAttribute("source")}`
         // this.Addon.toolkit.Tool.setExtraField(item, key, JSON.stringify(references))
-        await addonItem.set(item, key, references)
+        window.setTimeout(async () => {
+          await addonItem.set(item, key, references)
+        })
       }
 
       let id = window.setInterval(async () => {
@@ -835,7 +845,7 @@ class AddonViews extends AddonModule {
     }
 
     let remove = async () => {
-      log("removeRelatedItem")
+      this.Addon.toolkit.log("removeRelatedItem")
       this.showProgressWindow("Removing", idText)
       setState()
 
@@ -871,7 +881,7 @@ class AddonViews extends AddonModule {
           refItem = await this.Addon.utils.createItemByJasminum(info.title, info.authors[0])
           source = "Created Item"
         }
-        this.Addon.toolkit.Tool.log("addToCollection")
+        this.Addon.toolkit.log("addToCollection")
         for (let collectionID of (collections || item.getCollections())) {
           refItem.addToCollection(collectionID)
           await refItem.saveTx()
@@ -914,13 +924,13 @@ class AddonViews extends AddonModule {
           } catch (e) {
             this.showProgressWindow(`Add ${source}`, JSON.stringify(reference.identifiers) + "\n" + e.toString(), "fail")
             setState("+")
-            this.Addon.toolkit.Tool.log(e)
+            this.Addon.toolkit.log(e)
             return
           }
         }
       }
       // addRelatedItem
-      log("addRelatedItem")
+      this.Addon.toolkit.log("addRelatedItem")
       item.addRelatedItem(refItem)
       refItem.addRelatedItem(item)
       await item.saveTx()
@@ -999,7 +1009,7 @@ class AddonViews extends AddonModule {
           ]
           prefIndex = parseInt(this.Addon.prefs.get(`${according}InfoIndex`) as string)
         }
-        log("prefIndex", prefIndex)
+        this.Addon.toolkit.log("prefIndex", prefIndex)
         const sourceConfig = {
           arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv."},
           readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
@@ -1081,7 +1091,7 @@ class AddonViews extends AddonModule {
       if (label.value == "+") {
         if (event.ctrlKey) {
           let collection = ZoteroPane.getSelectedCollection();
-          log(collection)
+          this.Addon.toolkit.log(collection)
           if (collection) {
             this.showProgressWindow("Adding to collection", `${await getCollectionPath(collection.id)}`)
             await add([collection.id])
@@ -1105,9 +1115,9 @@ class AddonViews extends AddonModule {
   }
 
   public insertAfter(node, _node) {
-    this.Addon.toolkit.Tool.log("nextSibling", _node.nextSibling)
+    this.Addon.toolkit.log("nextSibling", _node.nextSibling)
     if (_node.nextSibling) {
-      this.Addon.toolkit.Tool.log("insert After")
+      this.Addon.toolkit.log("insert After")
       _node.parentNode.insertBefore(node, _node.nextSibling);
     } else {
       _node.parentNode.appendChild(node);

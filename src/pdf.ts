@@ -1,7 +1,7 @@
-import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import { PDFLine, PDFItem, PDFAnnotation, ItemInfo } from "./types";
 import { addonName, addonID, addonRef } from "../package.json";
 import Utils from "./utils";
+
 
 /**
  * 解析PDF的参考文献
@@ -45,7 +45,7 @@ class PDF {
 			this.showProgressWindow("[Fail] Zotero Reference", "Function mergeSameRef: 0 reference", "fail")
 		}
 
-		log("references", references)
+		console.log("references", references)
 		for (let i = 0; i < references.length; i++) {
 			let ref = references[i]
 			ref.text = ref.text
@@ -134,18 +134,18 @@ class PDF {
 	 */
 	private mergeSameRef(refLines) {
 		const _refLines = [...refLines]
-		log(this.copy(_refLines))
+		console.log(this.copy(_refLines))
 		let firstLine = refLines[0]
 		// 已知新一行参考文献缩进
 		let firstX = firstLine.x
 		let secondLine = refLines.slice(1).find(line => {
 			return line.x != firstX && this.abs(line.x - firstX) < 10 * firstLine.height
 		})
-		log(secondLine)
+		console.log(secondLine)
 		let indent = secondLine ? firstX - secondLine.x : 0
-		log("indent", indent)
+		console.log("indent", indent)
 		let refType = this.getRefType(firstLine.text)
-		log(firstLine.text, refType)
+		console.log(firstLine.text, refType)
 		let ref
 		for (let i = 0; i < refLines.length; i++) {
 			let line = refLines[i]
@@ -174,14 +174,14 @@ class PDF {
 				)
 			) {
 				ref = line
-				log("->", line.text)
+				console.log("->", line.text)
 			} else {
 				if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(indent)) > 5 * line.height) {
 					refLines = refLines.slice(0, i)
-					log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
+					console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
 					break
 				}
-				log("+", text)
+				console.log("+", text)
 				// Poly-
 				// gon
 				// -> Polygon
@@ -297,11 +297,11 @@ class PDF {
 		for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
 			let show = pageNum + 1 == 14
 			show = true
-			if (show) { log("\n\n---------------------", "current page", pageNum + 1) }
+			if (show) { console.log("\n\n---------------------", "current page", pageNum + 1) }
 			let pdfPage = pages[pageNum].pdfPage
 			maxWidth = pdfPage._pageInfo.view[2];
 			maxHeight = pdfPage._pageInfo.view[3];
-			if (show) { log(maxWidth, maxHeight) }
+			if (show) { console.log(maxWidth, maxHeight) }
 			let lines
 			if (pageNum in pageLines) {
 				lines = [...pageLines[pageNum]]
@@ -390,7 +390,7 @@ class PDF {
 			}
 			lines = lines.filter(e => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
 			if (lines.length == 0) { continue }
-			if (show) { log("remove", [...removeLines]) }
+			if (show) { console.log("remove", [...removeLines]) }
 
 			// 分栏
 			// 跳过图表影响正常分栏
@@ -421,14 +421,14 @@ class PDF {
 					column.push(line)
 				}
 			}
-			if (show) { log("columns", this.copy(columns)) }
+			if (show) { console.log("columns", this.copy(columns)) }
 			columns.forEach((column, columnIndex) => {
 				column.forEach(line => {
 					line["column"] = columnIndex
 					line["pageNum"] = pageNum
 				})
 			})
-			if (show) { log("remove indent", this.copy(lines)) }
+			if (show) { console.log("remove indent", this.copy(lines)) }
 
 			// part
 			let isStart = false
@@ -489,7 +489,7 @@ class PDF {
 						/(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
 					)
 				) {
-					log("Not start, skip", line.text, line.y)
+					console.log("Not start, skip", line.text, line.y)
 					continue
 				} else {
 					isStart = true
@@ -529,16 +529,16 @@ class PDF {
 					donePart(part)
 					part = []
 					if (show) {
-						log("break", line.text, " - ", lines[i - 1].text)
+						console.log("break", line.text, " - ", lines[i - 1].text)
 					}
 				}
 			}
 			if (refPart) {
-				log("\n\n\nBreak by reference keyword\n\n\n")
+				console.log("\n\n\nBreak by reference keyword\n\n\n")
 				break
 			}
 		}
-		log("parts", this.copy(parts))
+		console.log("parts", this.copy(parts))
 		if (!refPart) {
 			let partRefNum = []
 			for (let i = 0; i < parts.length; i++) {
@@ -548,7 +548,7 @@ class PDF {
 			let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
 			refPart = parts[i]
 		}
-		log("refPart", this.copy(refPart))
+		console.log("refPart", this.copy(refPart))
 		progressWindow.changeHeadline("[Done] Zotero Reference");
 		progressWindow.startCloseTimer(5000)
 		return refPart

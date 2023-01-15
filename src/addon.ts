@@ -2,7 +2,7 @@ import Utils from "./utils";
 import AddonPrefs from "./prefs";
 import AddonViews from "./views";
 import AddonEvents from "./events";
-import ZoteroToolkit from "E:/Github/zotero-plugin-toolkit"
+import ZoteroToolkit from "zotero-plugin-toolkit"
 import { addonName, addonID, addonRef } from "../package.json";
 
 class Addon {

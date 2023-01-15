@@ -1,9 +1,9 @@
-import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import Addon from "./addon";
 import API from "./api"
 import AddonModule from "./module";
 import PDF from "./pdf";
 import { ItemBaseInfo, ItemInfo } from "./types";
+var log = console.log
 
 class Utils extends AddonModule{
   API: API;
@@ -260,7 +260,7 @@ class Utils extends AddonModule{
   }
 
   public copyText = (text, show: boolean = true) => {
-    this.Addon.toolkit.Tool.createCopyHelper().addText(text, "text/unicode").copy();
+    (new this.Addon.toolkit.Clibpoard()).addText(text, "text/unicode").copy();
     show && this.Addon.views.showProgressWindow("Copy", text, "success")
   }
   public getItem(): _ZoteroItem {

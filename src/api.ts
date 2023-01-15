@@ -1,5 +1,3 @@
-import ZoteroToolkit from "../../zotero-plugin-toolkit/dist"
-import { log } from "../../zotero-plugin-toolkit/dist/utils"
 import { ItemBaseInfo, ItemInfo} from "./types"
 import Utils from "./utils"
 var xml2js = require('xml2js')
@@ -26,7 +24,7 @@ class Requests {
       this.cache[k] = res.response
       return res.response
     } else {
-      log(`get ${url} error`, res)
+      console.log(`get ${url} error`, res)
     }
   }
 
@@ -51,7 +49,7 @@ class Requests {
       this.cache[k] = res.response
       return res.response
     } else {
-      log(`post ${url} error`, res)
+      console.log(`post ${url} error`, res)
     }
   }
 }
@@ -63,13 +61,11 @@ class Requests {
 class API {
   public utils: Utils;
   public requests: Requests;
-  public tookit: ZoteroToolkit
   Info: { crossref: Function, readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function};
   BaseInfo: { readcube: Function};
   constructor(utils) {
     this.utils = utils
     this.requests = new Requests()
-    this.tookit = new ZoteroToolkit()
     this.Info = {
       crossref: (item) => {
         const types = {
@@ -178,7 +174,8 @@ class API {
           source: "semanticscholar",
           type: "journalArticle",
           tags: data.fieldsOfStudy || [],
-          primaryVenue: data.journal.name
+          primaryVenue: data.journal.name,
+          url: data.DOI ? `http://doi.org/${data.DOI}` : undefined
         }
         return info
       },
@@ -357,7 +354,7 @@ class API {
 
   // For CNKI
   async getCNKIURL(title, author) {
-    log("getCNKIURL", title, author)
+    console.log("getCNKIURL", title, author)
     let cnkiURL
     let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
     Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
@@ -372,7 +369,7 @@ class API {
     }.bind(Zotero.Jasminum);
     cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
-    // log("cnkiURL", cnkiURL)
+    // console.log("cnkiURL", cnkiURL)
     // if (!cnkiURL) {
     //   if (title.length > 5) {
     //     return await this.getCNKIURL(title.slice(0, parseInt(String(title.length / 2))), author)
@@ -381,7 +378,7 @@ class API {
     //   }
     // }
     if (!cnkiURL) {
-      log("cnkiURL", cnkiURL)
+      console.log("cnkiURL", cnkiURL)
       return
     }
     let args = this.utils.parseCNKIURL(cnkiURL)
@@ -397,11 +394,11 @@ class API {
     if (this.requests.cache[key]) {
       return this.requests.cache[key]
     }
-    log("parseRefText", refText, res)
+    console.log("parseRefText", refText, res)
     let url = await this.getCNKIURL(res.title, res.authors[0])
     if (!url) { return }
     let htmlString = await this.requests.get(url, "text/html")
-    const parser = this.tookit.Compat.getDOMParser()
+    const parser = this.tookit.getDOMParser()
     let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
     let aTags = doc.querySelectorAll(".top-tip span a")
     let info: ItemInfo = {

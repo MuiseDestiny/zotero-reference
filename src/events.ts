@@ -1,6 +1,7 @@
-import { log } from "../../zotero-plugin-toolkit/dist/utils";
 import Addon from "./addon";
 import AddonModule from "./module";
+
+import { ZoteroToolkit } from "E:/Github/zotero-plugin-toolkit/dist"
 
 class AddonEvents extends AddonModule {
   private notifierCallback: any;
@@ -34,7 +35,7 @@ class AddonEvents extends AddonModule {
   }
 
   public async onInit() {
-    log("Zotero Reference AddonEvents onInit")
+    this.Addon.toolkit.log("Zotero Reference AddonEvents onInit")
     // @ts-ignore
     this.Addon.rootURI = rootURI;
     // Reset prefs
@@ -58,7 +59,9 @@ class AddonEvents extends AddonModule {
       false
     );
 
-    await this.Addon.toolkit.Prompt.registerExample()
+    // Prompt测试
+    const tool = new ZoteroToolkit()
+    tool.Prompt.registerExample();
   }
 
   public initPrefs() {
@@ -99,21 +102,21 @@ class AddonEvents extends AddonModule {
         this.Addon.prefs.initPreferences(_window);
       },
     };
-    if (this.Addon.toolkit.Compat.isZotero7()) {
+    if (this.Addon.toolkit.isZotero7()) {
       Zotero.PreferencePanes.register(prefOptions);
     } else {
-      this.Addon.toolkit.Compat.registerPrefPane(prefOptions);
+      this.Addon.toolkit.PreferencePane.register(prefOptions);
     }
   }
 
   private unInitPrefs() {
-    if (!this.Addon.toolkit.Compat.isZotero7()) {
-      this.Addon.toolkit.Compat.unregisterPrefPane();
+    if (!this.Addon.toolkit.isZotero7()) {
+      this.Addon.toolkit.PreferencePane.unregisterAll();
     }
   }
 
   public async onReaderSelect(reader) {
-    log("onReaderSelect is called")
+    this.Addon.toolkit.log("onReaderSelect is called")
     await this.Addon.views.updateReferenceUI(reader);
   }
 
