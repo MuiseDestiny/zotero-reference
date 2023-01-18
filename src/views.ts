@@ -486,7 +486,6 @@ class AddonViews extends AddonModule {
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
       func.call(relatedbox)
-      // node.querySelectorAll("row").forEach(e=>e.remove())
       // #42，为Zotero相关条目添加悬浮提示
       // 把Zotero条目转化为Reference可识别形式
       node.querySelectorAll("rows row").forEach(e=>e.remove())

@@ -369,14 +369,6 @@ class API {
     }.bind(Zotero.Jasminum);
     cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
-    // console.log("cnkiURL", cnkiURL)
-    // if (!cnkiURL) {
-    //   if (title.length > 5) {
-    //     return await this.getCNKIURL(title.slice(0, parseInt(String(title.length / 2))), author)
-    //   } else {
-    //     return false
-    //   }
-    // }
     if (!cnkiURL) {
       console.log("cnkiURL", cnkiURL)
       return
@@ -397,8 +389,10 @@ class API {
     console.log("parseRefText", refText, res)
     let url = await this.getCNKIURL(res.title, res.authors[0])
     if (!url) { return }
-    let htmlString = await this.requests.get(url, "text/html")
-    const parser = this.tookit.getDOMParser()
+
+    let htmlString = await this.requests.get(url, "text")
+    console.log(url, htmlString)
+    const parser = new window.DOMParser();
     let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
     let aTags = doc.querySelectorAll(".top-tip span a")
     let info: ItemInfo = {

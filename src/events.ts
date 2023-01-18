@@ -1,7 +1,7 @@
 import Addon from "./addon";
 import AddonModule from "./module";
 
-import { ZoteroToolkit } from "E:/Github/zotero-plugin-toolkit/dist"
+// import { ZoteroToolkit } from "E:/Github/zotero-plugin-toolkit/dist"
 
 class AddonEvents extends AddonModule {
   private notifierCallback: any;
@@ -60,8 +60,8 @@ class AddonEvents extends AddonModule {
     );
 
     // Prompt测试
-    const tool = new ZoteroToolkit()
-    tool.Prompt.registerExample();
+    // const tool = new ZoteroToolkit()
+    // tool.Prompt.registerExample();
   }
 
   public initPrefs() {
