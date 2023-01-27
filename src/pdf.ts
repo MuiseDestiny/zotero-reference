@@ -285,10 +285,10 @@ class PDF {
 			let lines = await this.readPdfPage(pdfPage)
 			if (lines.length == 0) { continue }
 			pageLines[pageNum] = lines;
-			progressWindow.progress.setProgress(((pages.length - pageNum) / preLoadPageNum) * 100)
+			let pct = ((pages.length - pageNum) / preLoadPageNum) * 100
+			progressWindow.progress.setProgress(pct > 90 ? 90 : pct)
 			progressWindow.progress._itemText.innerHTML = `[${pages.length - pageNum}/${preLoadPageNum}] Read PDF`;
 		}
-		progressWindow.progress.setProgress(100);
 		// analysis maxPct
 		// 可能奇数页没有，偶数有
 		let parts = []
@@ -308,6 +308,8 @@ class PDF {
 			} else {
 				lines = await this.readPdfPage(pdfPage);
 				pageLines[pageNum] = [...lines]
+				let p = pages.length - pageNum
+				progressWindow.progress._itemText.innerHTML = `[${p}/${p}] Read PDF`;
 			}
 			if (lines.length == 0) { continue }
 			console.log("lines", lines)
@@ -316,7 +318,13 @@ class PDF {
 			// 正向匹配移除PDF顶部无效信息
 			let removeLines = new Set()
 			let removeNumber = (text) => {
-				return text.replace(/\s+/g, "").replace(/\d+/g, "")
+				// 英文页码
+				if (/^[A-Z]{1,3}$/.test(text)) {
+					text = ""
+				}
+				// 正常页码1,2,3
+				text = text.replace(/\s+/g, "").replace(/\d+/g, "")
+				return text
 			}
 			let isIntersectLines = (lineA, lineB) => {
 				let rectA = {
@@ -538,6 +546,7 @@ class PDF {
 				break
 			}
 		}
+		progressWindow.progress.setProgress(100);
 		console.log("parts", this.copy(parts))
 		if (!refPart) {
 			let partRefNum = []

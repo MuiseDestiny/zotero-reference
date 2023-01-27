@@ -58,11 +58,7 @@ class AddonEvents extends AddonModule {
       },
       false
     );
-
-    // Prompt测试
-    // const tool = new ZoteroToolkit()
-    // tool.Prompt.registerExample();
-  }
+  } 
 
   public initPrefs() {
     // before
