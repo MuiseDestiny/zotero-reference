@@ -591,8 +591,8 @@ class AddonViews extends AddonModule {
           })
         }
       }
+      this.showProgressWindow("[Done] Zotero Reference", `${references.length} references`, "success")
     }
-    this.showProgressWindow("[Done] Zotero Reference", `${references.length} references`, "success")
 
     const referenceNum = references.length
     let label = tabpanel.querySelector("label#referenceNum")

@@ -184,7 +184,23 @@ export default class TipUI {
 		index?: number,
 		prefIndex?: number
 	) {
-		const ZoteroPDFTranslate = Zotero.ZoteroPDFTranslate
+		const translate = async (text) => {
+			if (Zotero.ZoteroPDFTranslate) {
+				Zotero.ZoteroPDFTranslate._sourceText = text
+				const success = await Zotero.ZoteroPDFTranslate.translate.getTranslation()
+				if (!success) {
+					Zotero.ZoteroPDFTranslate.view.showProgressWindow(
+						"Translate Failed",
+						success,
+						"fail"
+					);
+					return
+				}
+				return Zotero.ZoteroPDFTranslate._translatedText;
+			} else if (Zotero.PDFTranslate) {
+				return (await Zotero.PDFTranslate.api.translate(text))?.result
+			}
+		}
 		const addonRef = this.Addon.addonRef
 		let translateNode = async function (event) {
 			if (event.ctrlKey && Zotero.Prefs.get(`${addonRef}.ctrlClickTranslate`)) {
@@ -196,17 +212,7 @@ export default class TipUI {
 					this.setAttribute("sourceText", sourceText)
 				}
 				if (!translatedText) {
-					ZoteroPDFTranslate._sourceText = sourceText
-					const success = await ZoteroPDFTranslate.translate.getTranslation()
-					if (!success) {
-						ZoteroPDFTranslate.view.showProgressWindow(
-							"Translate Failed",
-							success,
-							"fail"
-						);
-						return
-					}
-					translatedText = ZoteroPDFTranslate._translatedText;
+					translatedText = await translate(sourceText)
 					this.setAttribute("translatedText", translatedText)
 				}
 
