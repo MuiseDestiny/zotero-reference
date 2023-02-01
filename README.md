@@ -62,7 +62,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
 
-**在PDF空白处右键取消勾选XX分栏即可取消分栏**
+**在PDF空白处右键取消勾选`XX分割`即可取消分栏**
 ![image](https://user-images.githubusercontent.com/51939531/215972501-3090e93f-e09c-47ff-817c-874419154429.png)
 
 **推荐关联**
