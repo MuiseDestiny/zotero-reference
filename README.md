@@ -9,11 +9,9 @@
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
 
-> 一个插件的自述
-
 ![Reference](addon/chrome/content/icons/favicon.png)
 
-🎉 我，一个插件，大名叫`ZOTERO-REFERENCE`，小名叫`zotero-reference`，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
+🎉 我，一个Zotero插件，大名叫`ZOTERO-REFERENCE`，小名叫`zotero-reference`，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
 
 🐇 虽然我的理解力有限，有时候会很慢🐌，但请你相信我，我总会，毫无保留地，告诉你我所知道的，关于参考文献的一切。
 
