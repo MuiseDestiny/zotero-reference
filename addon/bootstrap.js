@@ -1,7 +1,9 @@
-/* Copyright 2012 Will Shanks.
- * This Source Code Form is subject to the terms of the Mozilla Public
- * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+/**
+ * Most of this code is from Zotero team's official Make It Red example[1]
+ * or the Zotero 7 documentation[2].
+ * [1] https://github.com/zotero/make-it-red
+ * [2] https://www.zotero.org/support/dev/zotero_7_for_developers
+ */
 
 if (typeof Zotero == "undefined") {
   var Zotero;
@@ -59,7 +61,7 @@ async function waitForZotero() {
   await Zotero.initializationPromise;
 }
 
-function install(data, reason) { }
+function install(data, reason) {}
 
 async function startup({ id, version, resourceURI, rootURI }, reason) {
   await waitForZotero();
@@ -68,22 +70,6 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
   if (!rootURI) {
     rootURI = resourceURI.spec;
   }
-
-  const window = Zotero.getMainWindow();
-  // Global variables for plugin code
-  const ctx = {
-    Zotero,
-    rootURI,
-    window,
-    document: window.document,
-    Zotero_Tabs: window.Zotero_Tabs,
-    ZoteroPane: Zotero.getActiveZoteroPane(),
-  };
-
-  Services.scriptloader.loadSubScript(
-    `${rootURI}/chrome/content/scripts/index.js`,
-    ctx
-  );
 
   if (Zotero.platformMajorVersion >= 102) {
     var aomStartup = Components.classes[
@@ -95,7 +81,25 @@ async function startup({ id, version, resourceURI, rootURI }, reason) {
       ["locale", "__addonRef__", "en-US", rootURI + "chrome/locale/en-US/"],
       ["locale", "__addonRef__", "zh-CN", rootURI + "chrome/locale/zh-CN/"],
     ]);
+  } else {
+    setDefaultPrefs(rootURI);
   }
+
+  /**
+   * Global variables for plugin code.
+   * The `_globalThis` is the global root variable of the plugin sandbox environment
+   * and all child variables assigned to it is globally accessible.
+   * See `src/index.ts` for details.
+   */
+  const ctx = {
+    rootURI,
+  };
+  ctx._globalThis = ctx;
+
+  Services.scriptloader.loadSubScript(
+    `${rootURI}/chrome/content/scripts/index.js`,
+    ctx
+  );
 }
 
 function shutdown({ id, version, resourceURI, rootURI }, reason) {
@@ -107,7 +111,7 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
       Components.interfaces.nsISupports
     ).wrappedJSObject;
   }
-  Zotero.AddonTemplate.events.onUnInit(Zotero);
+  Zotero.__addonInstance__.hooks.onShutdown();
 
   Cc["@mozilla.org/intl/stringbundle;1"]
     .getService(Components.interfaces.nsIStringBundleService)
@@ -121,4 +125,28 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
   }
 }
 
-function uninstall(data, reason) { }
+function uninstall(data, reason) {}
+
+// Loads default preferences from defaults/preferences/prefs.js in Zotero 6
+function setDefaultPrefs(rootURI) {
+  var branch = Services.prefs.getDefaultBranch("");
+  var obj = {
+    pref(pref, value) {
+      switch (typeof value) {
+        case "boolean":
+          branch.setBoolPref(pref, value);
+          break;
+        case "string":
+          branch.setStringPref(pref, value);
+          break;
+        case "number":
+          branch.setIntPref(pref, value);
+          break;
+        default:
+          Zotero.logError(`Invalid type '${typeof value}' for pref '${pref}'`);
+      }
+    },
+  };
+  Zotero.getMainWindow().console.log(rootURI + "prefs.js");
+  Services.scriptloader.loadSubScript(rootURI + "prefs.js", obj);
+}

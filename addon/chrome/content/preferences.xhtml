@@ -1,33 +1,22 @@
-<vbox
-  id="zotero-prefpane-__addonRef__"
-  onload="Zotero.ZoteroReference.prefs.initPreferences(window)"
->
+<vbox id="zotero-prefpane-__addonRef__" onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', {window})">
   <groupbox>
-    <caption label="&zotero.__addonRef__.caption.refresh;"/>
-    <checkbox
-      id="__addonRef__-auto-refresh"
-      label="&zotero.__addonRef__.autoRefresh;"
-      preference="extensions.zotero.__addonRef__.autoRefresh"
-    />
-    <html:div
-      style="
+    <caption label="&zotero.__addonRef__.caption.refresh;" />
+    <checkbox id="__addonRef__-auto-refresh" label="&zotero.__addonRef__.autoRefresh;"
+      preference="extensions.zotero.__addonRef__.autoRefresh" />
+    <html:div style="
         display: flex;
         margin-top: .5em;
         flex-direction: row;
         align-items: left;
         width: 80%;
-      "
-    >
-      <html:input
-        style="
+      ">
+      <html:input style="
           width: 100%;
           margin: auto .5em;
-        "
-        type="text" 
-        id="__addonRef__-not-auto-refresh-item-types"
+        " type="text" id="__addonRef__-not-auto-refresh-item-types"
         preference="extensions.zotero.__addonRef__.notAutoRefreshItemTypes">
       </html:input>
-  </html:div>
+    </html:div>
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.source;" />
@@ -37,12 +26,10 @@
       margin-left: .5em;
     ">
       <html:span style="margin: auto 0;">&zotero.__addonRef__.prioritySource.start;</html:span>
-      <html:select
-        style="width: 4em; height: 1.5em; margin: auto .5em;"
-        id="__addonRef__-priority-source" 
-        preference="extensions.zotero.__addonRef__.prioritySource" >
-          <html:option value="PDF">PDF</html:option>
-          <html:option value="API">API</html:option>
+      <html:select style="width: 4em; height: 1.5em; margin: auto .5em;" id="__addonRef__-priority-source"
+        preference="extensions.zotero.__addonRef__.prioritySource">
+        <html:option value="PDF">PDF</html:option>
+        <html:option value="API">API</html:option>
       </html:select>
       <html:span style="margin: auto 0;">&zotero.__addonRef__.prioritySource.end;</html:span>
     </html:div>
@@ -52,14 +39,11 @@
       margin-left: .5em;
     ">
       <html:span style="margin: auto 0; margin-right: .5em;">&zotero.__addonRef__.preLoadingPageNum.start;</html:span>
-      <html:input 
-        style="width: 2em; margin: auto 0; height: 1em;" 
-        type="text" id="__addonRef__-min-pre-load-page-num"
+      <html:input style="width: 2em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-min-pre-load-page-num"
         preference="extensions.zotero.__addonRef__.preLoadingPageNum">
       </html:input>
       <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.preLoadingPageNum.end;</html:span>
-      <image 
-        src="chrome://__addonRef__/skin/information.png" 
+      <image src="chrome://__addonRef__/content/icons/information.png"
         tooltiptext="&zotero.__addonRef__.preLoadingPageNum.tooltiptext;" />
     </html:div>
   </groupbox>
@@ -71,9 +55,7 @@
     ">
       <checkbox id="__addonRef__-is-show-tip" label="&zotero.__addonRef__.isShowTip.start;"
         preference="extensions.zotero.__addonRef__.isShowTip" />
-      <html:input 
-        style="width: 4em; margin: auto 0; height: 1em;"
-        type="text" 
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
         id="__addonRef__-remove-tip-after-millisecond"
         preference="extensions.zotero.__addonRef__.showTipAfterMillisecond">
       </html:input>
@@ -83,36 +65,29 @@
       preference="extensions.zotero.__addonRef__.ctrlClickTranslate" />
     <hbox>
       <description>&zotero.__addonRef__.shadeMillisecond.start;</description>
-      <html:input 
-        style="width: 4em; margin: auto 0; height: 1em;" 
-        type="text" 
-        id="__addonRef__-shade-millisecond"
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-shade-millisecond"
         preference="extensions.zotero.__addonRef__.shadeMillisecond">
       </html:input>
       <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.shadeMillisecond.end;</html:span>
     </hbox>
     <hbox>
       <description>&zotero.__addonRef__.removeTipAfterMillisecond.start;</description>
-      <html:input 
-        style="width: 4em; margin: auto 0; height: 1em;"
-        type="text" 
-        id="__addonRef__-remove-tip-after-millisecond" 
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
+        id="__addonRef__-remove-tip-after-millisecond"
         preference="extensions.zotero.__addonRef__.removeTipAfterMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.removeTipAfterMillisecond.end;</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.removeTipAfterMillisecond.end;
+      </html:span>
     </hbox>
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.related;" />
-    <checkbox 
-      id="__addonRef__-loading-related" 
-      label="&zotero.__addonRef__.loadingRelated;" 
+    <checkbox id="__addonRef__-loading-related" label="&zotero.__addonRef__.loadingRelated;"
       preference="extensions.zotero.__addonRef__.loadingRelated" />
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.link;" />
-    <checkbox id="__addonRef__-modify-links" 
-      label="&zotero.__addonRef__.modifyLinks;"
+    <checkbox id="__addonRef__-modify-links" label="&zotero.__addonRef__.modifyLinks;"
       preference="extensions.zotero.__addonRef__.modifyLinks" />
   </groupbox>
   <groupbox>

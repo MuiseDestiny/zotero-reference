@@ -1,4 +1,3 @@
-import { ItemBaseInfo, ItemInfo} from "./types"
 import Utils from "./utils"
 var xml2js = require('xml2js')
 
@@ -6,9 +5,9 @@ class Requests {
   /**
  * Record api response
  */
-  public cache = {}
+  public cache: {[key: string]: any} = {}
 
-  async get(url, responseType: string = "json") {
+  async get(url: string, responseType: string = "json") {
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -28,7 +27,7 @@ class Requests {
     }
   }
 
-  async post(url, body: object = {}, responseType: string = "json") {
+  async post(url: string, body: object = {}, responseType: string = "json") {
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -61,24 +60,24 @@ class Requests {
 class API {
   public utils: Utils;
   public requests: Requests;
-  Info: { crossref: Function, readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function};
-  BaseInfo: { readcube: Function};
-  constructor(utils) {
+  public Info: { crossref: Function, readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function };
+  public BaseInfo: { readcube: Function };
+  constructor(utils: Utils) {
     this.utils = utils
     this.requests = new Requests()
     this.Info = {
-      crossref: (item) => {
-        const types = {
+      crossref: (item: any) => {
+        const types: any = {
           "journal-article": "journalArticle",
           "report": "report",
           "posted-content": "preprint",
           "book-chapter": "bookSection"
         }
-        let references: ItemBaseInfo[] = item.reference?.map(item => {
+        let references: ItemBaseInfo[] = item.reference?.map((item: any) => {
           let identifiers
-          let url: string
+          let url: string | undefined
           let text: string
-          let textInfo: ItemBaseInfo
+          let textInfo = {}
           if (item.unstructured) {
             text = item.unstructured
             textInfo = this.utils.refText2Info(text)
@@ -100,9 +99,9 @@ class API {
           if (item.DOI) {
             identifiers = { DOI: item.DOI }
             url = this.utils.identifiers2URL(identifiers)
-          } 
+          }
           let info: ItemBaseInfo = {
-            identifiers: identifiers || textInfo?.identifiers || {},
+            identifiers: identifiers || textInfo!.identifiers || {},
             title: item["article-title"],
             authors: [item?.author],
             year: item.year,
@@ -115,7 +114,7 @@ class API {
         const refCount = item["is-referenced-by-count"]
         let info: ItemInfo = {
           identifiers: { DOI: item.DOI },
-          authors: item?.author?.map(i => i.family),
+          authors: item?.author?.map((i: any) => i.family),
           title: Array.isArray(item.title) ? item.title[0] : item.title,
           year: item.published["date-parts"][0][0],
           type: types[item.type] || "journalArticle",
@@ -131,18 +130,18 @@ class API {
               text: refCount,
               color: "#2fb8cb",
               tip: "is-referenced-by-count"
-            }]: []),
+            }] : []),
           ]
         }
         return info
       },
-      readpaper: (data) => {
+      readpaper: (data: any) => {
         let info: ItemInfo = {
           identifiers: {},
           title: this.utils.Html2Text(data.title),
           year: data.year,
           publishDate: data.publishDate,
-          authors: data?.authorList.map(i => this.utils.Html2Text(i.name)),
+          authors: data?.authorList.map((i: any) => this.utils.Html2Text(i.name)),
           abstract: this.utils.Html2Text(data.summary),
           primaryVenue: this.utils.Html2Text(data.primaryVenue),
           tags: [
@@ -163,11 +162,11 @@ class API {
         }
         return info
       },
-      semanticscholar(data) {
+      semanticscholar(data: any) {
         let info: ItemInfo = {
           identifiers: { DOI: data.DOI },
           title: data.title,
-          authors: data.authors.map(i => i.name),
+          authors: data.authors.map((i: any) => i.name),
           year: data.year,
           publishDate: data.publicationDate,
           abstract: data.abstract,
@@ -179,8 +178,8 @@ class API {
         }
         return info
       },
-      unpaywall(data) {
-        const types = {
+      unpaywall(data: any) {
+        const types: any = {
           "journal-article": "journalArticle",
           "report": "report",
           "posted-content": "preprint",
@@ -188,7 +187,7 @@ class API {
         }
         let info: ItemInfo = {
           identifiers: { DOI: data.DOI },
-          authors: data.z_authors.map(i => i.family),
+          authors: data.z_authors.map((i: any) => i.family),
           title: data.title,
           year: data.year,
           type: types[data.genre],
@@ -199,16 +198,16 @@ class API {
         }
         return info
       },
-      arXiv: (data) => {
+      arXiv: (data: any) => {
         let info: ItemInfo = {
           identifiers: { arXiv: data.arXiv },
           title: data.title[0].replace(/\n/g, ""),
           year: data.year,
-          authors: data.author.map(e => e.name[0]),
+          authors: data.author.map((e: any) => e.name[0]),
           abstract: data.summary[0].replace(/\n/g, ""),
           url: this.utils.identifiers2URL({ arXiv: data.arXiv }),
           type: "preprint",
-          tags: data.category.map(e => e["$"].term),
+          tags: data.category.map((e: any) => e["$"].term),
           publishDate: data.published && data.published[0],
           primaryVenue: data["arxiv:comment"] && data["arxiv:comment"][0]["_"].replace(/\n/g, "")
         }
@@ -216,7 +215,7 @@ class API {
       }
     }
     this.BaseInfo = {
-      readcube: (data) => {
+      readcube: (data: any) => {
         let identifiers
         if (data.doi && this.utils.regex.arXiv.test(data.doi)) {
           data.arxiv = data.doi.match(this.utils.regex.arXiv).slice(-1)[0]
@@ -244,17 +243,9 @@ class API {
     }
   }
 
-  async test() {
-    let data = await this.getDOIBaseInfo("frf") 
-    let d2 = await this.getDOIRelatedArray("")
-    d2.forEach(d => {
-      d
-    })
-  }
-
   // For DOI
-  async getDOIBaseInfo(DOI: string): Promise<ItemBaseInfo> {
-    const routes = {
+  async getDOIBaseInfo(DOI: string): Promise<ItemBaseInfo | undefined> {
+    const routes: any = {
       semanticscholar: `https://api.semanticscholar.org/graph/v1/paper/${DOI}?fields=title,year,authors`,
       unpaywall: `https://api.unpaywall.org/v2/${DOI}?email=ZoteroReference@polygon.org`
     }
@@ -262,7 +253,7 @@ class API {
       let response = await this.requests.get(routes[route])
       if (response) {
         response.DOI = DOI
-        return this.Info[route](response) as ItemBaseInfo
+        return this.Info[route as keyof typeof this.Info](response) as ItemBaseInfo
       }
     }
   }
@@ -271,7 +262,7 @@ class API {
    * From semanticscholar API
    * @param DOI 
    */
-  async getDOIInfoBySemanticscholar(DOI: string): Promise<ItemInfo> {
+  async getDOIInfoBySemanticscholar(DOI: string): Promise<ItemInfo | undefined> {
     const api = `https://api.semanticscholar.org/graph/v1/paper/${DOI}?fields=title,authors,abstract,year,journal,fieldsOfStudy,publicationVenue,publicationDate`
     let response = await this.requests.get(api)
     if (response) {
@@ -280,7 +271,7 @@ class API {
     }
   }
 
-  async getDOIInfoByCrossref(DOI: string): Promise<ItemInfo> {
+  async getDOIInfoByCrossref(DOI: string): Promise<ItemInfo | undefined> {
     const api = `https://api.crossref.org/works/${DOI}/transform/application/vnd.citationstyles.csl+json`
     let response = await this.requests.get(api)
     if (response) {
@@ -290,11 +281,11 @@ class API {
     }
   }
 
-  async getDOIRelatedArray(DOI: string): Promise<ItemBaseInfo[]> {
+  async getDOIRelatedArray(DOI: string): Promise<ItemBaseInfo[] | undefined> {
     const api = `https://services.readcube.com/reader/related?doi=${DOI}`
     let response = await this.requests.get(api)
     if (response) {
-      let arr: ItemBaseInfo[] = response.map(i => {
+      let arr: ItemBaseInfo[] = response.map((i: any) => {
         return this.BaseInfo.readcube(i) as ItemBaseInfo
       })
       return arr
@@ -323,18 +314,18 @@ class API {
    * @param title 
    * @returns 
    */
-  async getTitleInfoByCrossref(title: string): Promise<ItemInfo> {
+  async getTitleInfoByCrossref(title: string): Promise<ItemInfo | undefined> {
     const api = `https://api.crossref.org/works?query=${title}`
     let response = await this.requests.get(api)
     if (response) {
       const skipTypes = ["component"]
-      let item = response.message.items.filter(e => skipTypes.indexOf(e.type) == -1)[0]
+      let item = response.message.items.filter((e: any) => skipTypes.indexOf(e.type) == -1)[0]
       let info = this.Info.crossref(item) as ItemInfo
       return info
     }
   }
 
-  async getTitleInfoByReadpaper(title: string, body: object = {}): Promise<ItemInfo> {
+  async getTitleInfoByReadpaper(title: string, body: object = {}): Promise<ItemInfo|undefined> {
     const api = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
     let _body = {
       keywords: title,
@@ -343,7 +334,7 @@ class API {
       searchType: Number(Object.values(body).length > 0)
     }
     body = { ..._body, ...body }
-    
+
     let response = await this.requests.post(api, body)
     if (response) {
       let data = response?.data?.list[0]
@@ -353,13 +344,13 @@ class API {
   }
 
   // For CNKI
-  async getCNKIURL(title, author) {
+  async getCNKIURL(title: string, author: string) {
     console.log("getCNKIURL", title, author)
     let cnkiURL
     let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
-    Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString) {
+    Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString: string) {
       try {
-        let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/i)
+        let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/i) as any[]
         if (res.length) {
           return res[1]
         }
@@ -378,7 +369,7 @@ class API {
     return cnkiURL
   }
 
-  async getTitleInfoByCNKI(refText): Promise<ItemInfo> {
+  async getTitleInfoByCNKI(refText: string): Promise<ItemInfo |undefined> {
     // 拒绝非中文请求，避免被封IP
     if (!this.utils.isChinese(refText)) { return }
     let res = this.utils.parseRefText(refText)

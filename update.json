@@ -1,0 +1,26 @@
+{
+  "addons": {
+    "zoteroreference@polygon.org": {
+      "updates": [
+        {
+          "version": "0.3.0",
+          "update_link": "https://github.com/muisedestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
+          "applications": {
+            "gecko": {
+              "strict_min_version": "60.0"
+            }
+          }
+        },
+        {
+          "version": "0.3.0",
+          "update_link": "https://github.com/muisedestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
+          "applications": {
+            "zotero": {
+              "strict_min_version": "6.999"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

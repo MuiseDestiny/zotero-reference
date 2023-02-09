@@ -1,5 +1,6 @@
 # Zotero Reference
 
+[![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-round&logo=github)](https://github.com/windingwind/zotero-plugin-template)
 [![Latest release](https://img.shields.io/github/v/release/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/releases)
 ![Release Date](https://img.shields.io/github/release-date/MuiseDestiny/zotero-reference?color=9cf)
 [![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
@@ -62,6 +63,9 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 
 ![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
 
+**在PDF空白处右键取消勾选`XX分割`即可取消分栏**
+![image](https://user-images.githubusercontent.com/51939531/215972501-3090e93f-e09c-47ff-817c-874419154429.png)
+
 **推荐关联**
 > `readcube API`
 
@@ -121,12 +125,6 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
   ```
   
 </details>
-
-
-
-## 🌸 实现
-
-[视频介绍](https://www.bilibili.com/video/BV17v4y1Q7gn/?spm_id_from=333.999.0.0&vd_source=5a8c42dfa6d28820002ecae5a4a4fa64)
 
 ## 🕊️ TODO
 - [ ] 根据反馈，是否需要在主界面（非阅读状态）添加`参考文献`到侧边栏，目前仅阅读状态下添加

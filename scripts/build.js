@@ -9,13 +9,9 @@ const {
   author,
   description,
   homepage,
-  releasepage,
-  updaterdf,
-  addonName,
-  addonID,
-  addonRef,
   version,
-} = require("./package.json");
+  config,
+} = require("../package.json");
 
 function copyFileSync(source, target) {
   var targetFile = target;
@@ -89,24 +85,48 @@ async function main() {
   const buildDir = "builds";
 
   console.log(
-    `[Build] BUILD_DIR=${buildDir}, VERSION=${version}, BUILD_TIME=${buildTime}`
+    `[Build] BUILD_DIR=${buildDir}, VERSION=${version}, BUILD_TIME=${buildTime}, ENV=${[
+      process.env.NODE_ENV,
+    ]}`
   );
 
   clearFolder(buildDir);
 
   copyFolderRecursiveSync("addon", buildDir);
 
+  copyFileSync("update-template.json", "update.json");
+  copyFileSync("update-template.rdf", "update.rdf");
+
   await esbuild
     .build({
       entryPoints: ["src/index.ts"],
+      define: {
+        __env__: `"${process.env.NODE_ENV}"`,
+      },
       bundle: true,
-      // Entry should be the same as addon/chrome/content/overlay.xul
       outfile: path.join(buildDir, "addon/chrome/content/scripts/index.js"),
+      // Don't turn minify on
       // minify: true,
+      target: "firefox60"
     })
     .catch(() => process.exit(1));
 
   console.log("[Build] Run esbuild OK");
+
+  const replaceFrom = [
+    /__author__/g,
+    /__description__/g,
+    /__homepage__/g,
+    /__buildVersion__/g,
+    /__buildTime__/g,
+  ];
+
+  const replaceTo = [author, description, homepage, version, buildTime];
+
+  replaceFrom.push(
+    ...Object.keys(config).map((k) => new RegExp(`__${k}__`, "g"))
+  );
+  replaceTo.push(...Object.values(config));
 
   const optionsAddon = {
     files: [
@@ -114,37 +134,16 @@ async function main() {
       path.join(buildDir, "**/*.dtd"),
       path.join(buildDir, "**/*.xul"),
       path.join(buildDir, "**/*.xhtml"),
-      path.join(buildDir, "**/*.manifest"),
-      path.join(buildDir, "addon/defaults", "**/*.js"),
+      path.join(buildDir, "**/*.json"),
+      path.join(buildDir, "addon/prefs.js"),
+      path.join(buildDir, "addon/chrome.manifest"),
+      path.join(buildDir, "addon/manifest.json"),
       path.join(buildDir, "addon/bootstrap.js"),
+      "update.json",
       "update.rdf",
     ],
-    from: [
-      /__author__/g,
-      /__description__/g,
-      /__homepage__/g,
-      /__releasepage__/g,
-      /__updaterdf__/g,
-      /__addonName__/g,
-      /__addonID__/g,
-      /__addonRef__/g,
-      /__buildVersion__/g,
-      /__buildTime__/g,
-      /<em:version>\S*<\/em:version>/g,
-    ],
-    to: [
-      author,
-      description,
-      homepage,
-      releasepage,
-      updaterdf,
-      addonName,
-      addonID,
-      addonRef,
-      version,
-      buildTime,
-      `<em:version>${version}</em:version>`,
-    ],
+    from: replaceFrom,
+    to: replaceTo,
     countMatches: true,
   };
 
@@ -174,4 +173,7 @@ async function main() {
   );
 }
 
-main();
+main().catch((err) => {
+  console.log(err);
+  process.exit(1);
+});

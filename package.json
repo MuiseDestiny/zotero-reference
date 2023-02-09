@@ -1,45 +1,58 @@
 {
   "name": "zotero-reference",
-  "addonName": "Zotero Reference",
-  "addonID": "zoteroreference@polygon.org",
-  "addonRef": "zoteroreference",
-  "version": "0.2.6",
-  "description": "侧边栏展示正在阅读文献的所有参考文献，双向关联，推荐关联，悬浮窗...",
-  "main": "src/index.js",
+  "version": "0.3.0",
+  "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，双向关联...",
+  "config": {
+    "addonName": "Zotero Reference",
+    "addonID": "zoteroreference@polygon.org",
+    "addonRef": "zoteroreference",
+    "addonInstance": "ZoteroReference",
+    "releasepage": "https://github.com/muisedestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
+    "updaterdf": "https://raw.githubusercontent.com/muisedestiny/zotero-reference/bootstrap/update.json"
+  },
+  "main": "src/index.ts",
   "scripts": {
-    "build": "node build.js",
-    "start": "node start.js",
-    "stop": "node stop.js",
-    "prerestart": "npm run build",
-    "restart": "node restart.js",
+    "build-dev": "cross-env NODE_ENV=development node scripts/build.js",
+    "build-prod": "cross-env NODE_ENV=production node scripts/build.js",
+    "build": "concurrently -c auto npm:build-prod npm:tsc",
+    "tsc": "tsc --noEmit",
+    "start-z6": "node scripts/start.js --z 6",
+    "start-z7": "node scripts/start.js --z 7",
+    "start": "node scripts/start.js",
+    "stop": "node scripts/stop.js",
+    "restart-dev": "npm run build-dev && npm run stop && npm run start",
+    "restart-prod": "npm run build-prod && npm run stop && npm run start",
+    "restart": "npm run restart-dev",
     "release": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MuiseDestiny/zotero-reference.git"
+    "url": "git+https://github.com/muisedestiny/zotero-reference.git"
   },
   "author": "Polygon",
   "license": "AGPL-3.0-or-later",
   "bugs": {
-    "url": "https://github.com/MuiseDestiny/zotero-reference/issues"
+    "url": "https://github.com/muisedestiny/zotero-reference/issues"
   },
-  "homepage": "https://github.com/MuiseDestiny/zotero-reference#readme",
-  "releasepage": "https://github.com/MuiseDestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
-  "updaterdf": "https://raw.githubusercontent.com/MuiseDestiny/zotero-reference/master/update.rdf",
+  "homepage": "https://github.com/muisedestiny/zotero-reference#readme",
   "dependencies": {
-    "@types/node": "^18.11.18",
-    "compressing": "^1.6.3",
-    "esbuild": "^0.14.54",
     "events": "^3.3.0",
-    "replace-in-file": "^6.3.5",
+    "save": "^2.9.0",
     "timers": "^0.1.1",
     "xml2js": "^0.4.23",
-    "zotero-plugin-toolkit": "^1.0.3"
+    "zotero-plugin-toolkit": "^2.0.0"
   },
   "devDependencies": {
-    "dotenv-cli": "^6.0.0",
-    "release-it": "^14.14.3",
-    "zotero-types": "^0.1.5"
+    "@types/node": "^18.13.0",
+    "compressing": "^1.7.0",
+    "concurrently": "^7.6.0",
+    "cross-env": "^7.0.3",
+    "esbuild": "^0.17.6",
+    "minimist": "^1.2.7",
+    "release-it": "^15.6.0",
+    "replace-in-file": "^6.3.5",
+    "typescript": "^4.9.5",
+    "zotero-types": "^1.0.8"
   }
 }
