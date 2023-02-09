@@ -302,6 +302,7 @@ export default class TipUI {
                           Zotero.launchURL(tag.url);
                         } else if (tag.item) {
                           this.clear()
+                          Zotero.ProgressWindowSet.closeAll();
                           this.utils.selectItemInLibrary(tag.item)
                         }
                         else {
