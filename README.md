@@ -1,12 +1,17 @@
 # Zotero Reference
 
+
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-round&logo=github)](https://github.com/windingwind/zotero-plugin-template)
+
 [![Latest release](https://img.shields.io/github/v/release/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/releases)
 ![Release Date](https://img.shields.io/github/release-date/MuiseDestiny/zotero-reference?color=9cf)
 [![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
+
 > 一个插件的自述
+
+![Reference](addon/chrome/content/icons/favicon.png)
 
 🎉 我，一个插件，大名叫`ZOTERO-REFERENCE`，小名叫`zotero-reference`，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
 
