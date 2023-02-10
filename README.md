@@ -53,6 +53,7 @@
 * readpaper（标题搜索）
 * crossref（标题，DOI搜素）
 * semanticscholar（DOI搜素）
+* arXiv（arXivID搜索）
 
 ![image](https://user-images.githubusercontent.com/51939531/217994089-100d5d20-8a6b-42ec-ad9b-5550cf354366.png)
 
