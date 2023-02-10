@@ -79,9 +79,9 @@
 
 ![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
 
-**在PDF空白处右键取消勾选`XX分割`即可取消分栏**
+如何关闭？下图取消勾选
 
-![image](https://user-images.githubusercontent.com/51939531/215972501-3090e93f-e09c-47ff-817c-874419154429.png)
+![image](https://user-images.githubusercontent.com/51939531/217995465-d5893305-c0d2-4c50-b4ca-42c50d2f077c.png)
 
 **推荐关联**
 > 来自`readcube API`
