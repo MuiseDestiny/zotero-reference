@@ -69,6 +69,7 @@
 
 **翻译**
 > 需要安装[zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)插件
+> 
 > ctrl+鼠标左键在原文/译文之间自由切换
 
 ![image](https://user-images.githubusercontent.com/51939531/217994498-87ce1191-407f-45e1-bf97-ddd178375d07.png)
