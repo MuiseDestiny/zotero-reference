@@ -297,7 +297,7 @@ export default class TipUI {
                       listener: () => {
                         if (tag.url) {
                           (new ztoolkit.ProgressWindow("Launching URL"))
-                            .createLine({ text: tag.url })
+                            .createLine({ text: tag.url, type: "default"})
                             .show()
                           Zotero.launchURL(tag.url);
                         } else if (tag.item) {

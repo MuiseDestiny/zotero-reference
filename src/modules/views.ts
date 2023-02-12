@@ -93,8 +93,8 @@ export default class Views {
                               let labels = relatedbox.querySelectorAll("rows row box label")
                               labels.forEach((e: any) => {
                                 textArray.push(e.value)
-                              })
-                              new ztoolkit.ProgressWindow("Reference")
+                              });
+                              (new ztoolkit.ProgressWindow("Reference"))
                                 .createLine({text: "Copy all references", type: "success"})
                                 .show();
                               (new ztoolkit.Clipboard())
@@ -184,7 +184,7 @@ export default class Views {
         })
       },
       {
-        targetIndex: 3,
+        targetIndex: Zotero.PDFTranslate ? 3 : -1,
         tabId: "zotero-reference",
       }
     )
@@ -484,7 +484,7 @@ export default class Views {
                     }
                     if (URL) {
                       (new ztoolkit.ProgressWindow("Launching URL"))
-                        .createLine({ text: URL , type: "default"})
+                        .createLine({ text: URL, type: "default"})
                         .show()
                       Zotero.launchURL(URL);
                     }

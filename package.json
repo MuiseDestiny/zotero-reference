@@ -41,18 +41,18 @@
     "save": "^2.9.0",
     "timers": "^0.1.1",
     "xml2js": "^0.4.23",
-    "zotero-plugin-toolkit": "^2.0.0"
+    "zotero-plugin-toolkit": "^2.0.3"
   },
   "devDependencies": {
     "@types/node": "^18.13.0",
     "compressing": "^1.7.0",
     "concurrently": "^7.6.0",
     "cross-env": "^7.0.3",
-    "esbuild": "^0.17.6",
-    "minimist": "^1.2.7",
+    "esbuild": "^0.17.7",
+    "minimist": "^1.2.8",
     "release-it": "^15.6.0",
     "replace-in-file": "^6.3.5",
     "typescript": "^4.9.5",
-    "zotero-types": "^1.0.8"
+    "zotero-types": "^1.0.9"
   }
 }
