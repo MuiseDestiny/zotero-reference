@@ -4,10 +4,6 @@ import TipUI from "./tip";
 import Utils from "./utils";
 import LocalStroge from "E:/Github/zotero-style/src/modules/localSorage";
 const localStroage = new LocalStroge(config.addonRef);
-// import AddonItem from "E:/Github/zotero-style/src/modules/item";
-
-// Zotero._AddonItemGlobal = Zotero._AddonItemGlobal || new AddonItem()
-// const addonItem: AddonItem = Zotero._AddonItemGlobal
 
 export default class Views {
   private utils!: Utils;
