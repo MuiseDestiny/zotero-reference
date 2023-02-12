@@ -2,7 +2,6 @@
 
 
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-round&logo=github)](https://github.com/windingwind/zotero-plugin-template)
-
 [![Latest release](https://img.shields.io/github/v/release/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/releases)
 ![Release Date](https://img.shields.io/github/release-date/MuiseDestiny/zotero-reference?color=9cf)
 [![License](https://img.shields.io/github/license/MuiseDestiny/zotero-reference)](https://github.com/MuiseDestiny/zotero-reference/blob/master/LICENSE)
@@ -23,54 +22,69 @@
 
 🎈 首次使用建议打开首选项，进行个性化配置，**插件不生产数据，只是数据的搬运工**
 
-绿色表示分区，蓝色被引用量 —— 来自readpaper
-![image](https://user-images.githubusercontent.com/51939531/208918462-b51f0f32-5267-47cc-9fed-083e717e1a04.png)
+> 浮窗顶部小圆点代表不同的数据源，点击切换源
 
-![image](https://user-images.githubusercontent.com/51939531/210032618-e6021742-d31d-41b3-8947-0e1ccfbb9857.png)
+![image](https://user-images.githubusercontent.com/51939531/217991811-44d2e6f3-4f55-4517-9d18-0d0cf19e914e.png)
+
+![image](https://user-images.githubusercontent.com/51939531/217991894-b81f66f8-749c-478c-9012-62943145c1c7.png)
+
+![image](https://user-images.githubusercontent.com/51939531/217991933-2aa121ac-a98e-4dff-875f-d7d543283b05.png)
+
 
 ## 👋 使用
+
 ![image](https://user-images.githubusercontent.com/51939531/208303590-dfe6f3cf-cd48-4afe-90a0-9cce6ff5f9cb.png)
 
-单击蓝色区域 -> 复制此条参考文献信息；
-
-ctrl+单击蓝色区域 -> 用默认浏览器打开文献地址；
-
-单击`+` -> 添加参考文献至`正在阅读文献`所在文件夹下并与之双向关联；
-
-ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向关联；
+|操作|触发|说明|
+|--|--|--|
+|单击蓝色区域|复制参考文献信息|连同标识符一起复制，如DOI|
+|ctrl+单击蓝色区域|用系统浏览器打开文献URL|偶尔会查询文献地址消耗一定的时间|
+|单击`+`|添加参考文献到正在阅读文献所在的所有文件夹下，并双向关联||
+|ctrl+单击`+`|添加到`Zotero主面板`选择的文件夹下，并双向关联|如下图的GEE|
+|单击`-`|取消双向关联|但是不会删除该文献，它仍在`我的文库`中|
 
 ![image](https://user-images.githubusercontent.com/51939531/208303399-0dc09046-997c-4809-8639-9100001e6002.png)
 
-如，这里的GEE就是当前所在文件夹，可以在主界面点击要添加到的文件夹，然后回到阅读文献ctrl+单击`+`即可。
 
 **浮窗**
-> 浮窗文献信息默认从`readpaper API`获取，如有`arXiv`的id则从`arXiv`获取，并标注`arXiv`
 
-![image](https://user-images.githubusercontent.com/51939531/209902209-33cb1167-e275-4820-b777-96a908b6d0d6.png)
+支持下列源
+* PDF（默认）
+* readpaper（标题搜索）
+* crossref（标题，DOI搜素）
+* semanticscholar（DOI搜素）
+* arXiv（arXivID搜索）
+
+![image](https://user-images.githubusercontent.com/51939531/217994089-100d5d20-8a6b-42ec-ad9b-5550cf354366.png)
 
 **浮窗内文字可选择复制**
 
-![image](https://user-images.githubusercontent.com/51939531/208624530-d519d3c2-408b-48ec-a579-79bbeb61eeee.png)
+![image](https://user-images.githubusercontent.com/51939531/217994406-64e96f4e-68bf-49bf-bda3-f6fe4a003df9.png)
 
 **放大/缩小**
 
-![image](https://user-images.githubusercontent.com/51939531/209040199-91a73bf1-5c8d-4ab1-8d0b-5f6dc48daf4f.png)
+> ctrl+鼠标滚轮
+
+![image](https://user-images.githubusercontent.com/51939531/217994453-686cc320-d2bf-49dc-be73-6b95cd5cdbfb.png)
 
 **翻译**
 > 需要安装[zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)插件
+> 
+> ctrl+鼠标左键在原文/译文之间自由切换
 
-![image](https://user-images.githubusercontent.com/51939531/209253029-74152289-6b63-4e6e-9134-2ed1bfe43316.png)
+![image](https://user-images.githubusercontent.com/51939531/217994498-87ce1191-407f-45e1-bf97-ddd178375d07.png)
 
 **分栏快速跳转**
 > 主阅读界面若有跳转链接如`Fig 4`，点击后会在分割界面（横向/竖向）跳转，主阅读界面无跳转，避免点击前进后退。可满足看图，公式，表格的需求。但只针对有跳转链接的PDF。
 
 ![image](https://user-images.githubusercontent.com/51939531/209768934-c959f54c-09d2-47e9-871c-defe42074afe.png)
 
-**在PDF空白处右键取消勾选`XX分割`即可取消分栏**
-![image](https://user-images.githubusercontent.com/51939531/215972501-3090e93f-e09c-47ff-817c-874419154429.png)
+如何关闭？下图取消勾选
+
+![image](https://user-images.githubusercontent.com/51939531/217995465-d5893305-c0d2-4c50-b4ca-42c50d2f077c.png)
 
 **推荐关联**
-> `readcube API`
+> 来自`readcube API`
 
 ![图片1](https://user-images.githubusercontent.com/51939531/209890021-14b421a6-f5d8-476f-801f-294a8104f95f.png)
 
@@ -79,7 +93,7 @@ ctrl+单击`+` -> 添加参考文献至`当前所在文件夹`下并与之双向
 - `自动抓取参考文献` - 是否在文献被打开时自动抓取参考文献
 - `下述条目类型...` - 排除一些类型的文献，一般它们页数过多，若自动刷新往往会带来影响
 - `优先从...` - 第一次点击刷新从PDF/URL解析
-- `ctrl点击...` - 勾选后悬浮的摘要标题可通过按住ctrl+点击以翻译（基于zotero-pdf-translate，冬日限定，贴心功能）
+- `ctrl点击...` - 勾选后悬浮的摘要标题可通过按住ctrl+点击以翻译（基于zotero-pdf-translate插件，需要提前安装）
 
 **注意**：即便设置了不自动刷新，或者正在阅读的文献类型被你设置为不自动刷新，你仍然可以通过点击刷新来抓取参考文献。
 条目类型的输入为英文，且`,`隔开，现将所有字段列出，通过翻译可找到对应中文：
