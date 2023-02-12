@@ -2,10 +2,12 @@ import { config } from "../../package.json";
 import { getString, initLocale } from "../modules/locale";
 import TipUI from "./tip";
 import Utils from "./utils";
-import AddonItem from "E:/Github/zotero-style/src/modules/item";
+import LocalStroge from "E:/Github/zotero-style/src/modules/localSorage";
+const localStroage = new LocalStroge(config.addonRef);
+// import AddonItem from "E:/Github/zotero-style/src/modules/item";
 
-Zotero._AddonItemGlobal = Zotero._AddonItemGlobal || new AddonItem()
-const addonItem: AddonItem = Zotero._AddonItemGlobal
+// Zotero._AddonItemGlobal = Zotero._AddonItemGlobal || new AddonItem()
+// const addonItem: AddonItem = Zotero._AddonItemGlobal
 
 export default class Views {
   private utils!: Utils;
@@ -29,7 +31,6 @@ export default class Views {
   }
 
   public async onInit() {
-    if (!addonItem.item) { await addonItem.init() }
     ztoolkit.ReaderTabPanel.register(
       getString("tabpanel.reader.tab.label"),
       (
@@ -357,7 +358,10 @@ export default class Views {
     if (panel.getAttribute("source") == "PDF") {
       // 优先本地读取
       const key = "References-PDF"
-      references = local && addonItem.get(item, key)
+      // references = local && addonItem.get(item, key)
+      references = local && localStroage.get(item, key)
+
+      localStroage
       if (references) {
         (new ztoolkit.ProgressWindow("[Local] PDF"))
           .createLine({ text: `${references.length} references`, type: "success"})
@@ -366,7 +370,8 @@ export default class Views {
         references = await this.utils.PDF.getReferences(reader)
         if (Zotero.Prefs.get(`${config.addonRef}.savePDFReferences`)) {
           window.setTimeout(async () => {
-            await addonItem.set(item, key, references)
+            // await addonItem.set(item, key, references)
+            await localStroage.set(item, key, references)
           })
         }
       }
@@ -380,7 +385,7 @@ export default class Views {
         return
       }
       const key = "References-API"
-      references = local && addonItem.get(item, key)
+      references = local && localStroage.get(item, key)
       if (references) {
         (new ztoolkit.ProgressWindow("[Local] API"))
           .createLine({ text: `${references.length} references`, type: "success" })
@@ -393,7 +398,7 @@ export default class Views {
         references = (await this.utils.API.getDOIInfoByCrossref(DOI))?.references!
         if (Zotero.Prefs.get(`${config.addonRef}.saveAPIReferences`)) {
           window.setTimeout(async () => {
-            references && await addonItem.set(item, key, references)
+            references && await localStroage.set(item, key, references)
           })
         }
         popupWin.changeHeadline("[Done] API")
@@ -465,7 +470,7 @@ export default class Views {
                   event.preventDefault()
                   event.stopPropagation()
                   if (event.ctrlKey) {
-                    ztoolkit.log(reference)
+                    window.clearTimeout(editTimer)
                     let URL = reference.url
                     if (!URL) {
                       const refText = reference.text!
@@ -597,7 +602,7 @@ export default class Views {
         const key = `References-${node.getAttribute("source")}`
         // ztoolkit.Tool.setExtraField(item, key, JSON.stringify(references))
         window.setTimeout(async () => {
-          await addonItem.set(item, key, references)
+          await localStroage.set(item, key, references)
         })
       }
 

@@ -523,7 +523,7 @@ class PDF {
           (
             lines[i - 1] &&
             (
-              // line.height != lines[i - 1].height ||
+              line.height != lines[i - 1].height ||
               lines[i].column < lines[i - 1].column ||
               (
                 line.pageNum == lines[i - 1].pageNum &&
