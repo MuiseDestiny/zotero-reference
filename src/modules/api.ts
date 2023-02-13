@@ -325,7 +325,7 @@ class API {
     }
   }
 
-  async getTitleInfoByReadpaper(title: string, body: object = {}): Promise<ItemInfo|undefined> {
+  async getTitleInfoByReadpaper(title: string, body: object = {}, doi: string): Promise<ItemInfo|undefined> {
     const api = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
     let _body = {
       keywords: title,
@@ -338,7 +338,19 @@ class API {
     let response = await this.requests.post(api, body)
     if (response) {
       let data = response?.data?.list[0]
+      // 验证DOI
+      if (doi) {
+        // 获取paperId的doi
+        let _res = await this.requests.post(
+          "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/getPaperDetailInfo",
+          { paperId:data.id }
+        )
+        if (_res.data.doi.toUpperCase() != doi.toUpperCase()) {
+          return
+        }
+      }
       let info = this.Info.readpaper(data) as ItemInfo
+      if (doi) { info.identifiers = { DOI: doi }}
       return info
     }
   }

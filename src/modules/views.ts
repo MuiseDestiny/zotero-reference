@@ -801,6 +801,7 @@ export default class Views {
           coroutines = [
             getDefalutInfoByReference(),
             this.utils.API.getDOIInfoBySemanticscholar(reference.identifiers.DOI),
+            this.utils.API.getTitleInfoByReadpaper(refText, {}, reference.identifiers.DOI),
             this.utils.API.getDOIInfoByCrossref(reference.identifiers.DOI)
           ]
           prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
