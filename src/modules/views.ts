@@ -2,8 +2,8 @@ import { config } from "../../package.json";
 import { getString, initLocale } from "../modules/locale";
 import TipUI from "./tip";
 import Utils from "./utils";
-import LocalStroge from "E:/Github/zotero-style/src/modules/localSorage";
-const localStroage = new LocalStroge(config.addonRef);
+import LocalStorge from "E:/Github/zotero-style/src/modules/localStorage";
+const localStorage = new LocalStorge(config.addonRef);
 
 export default class Views {
   private utils!: Utils;
@@ -177,6 +177,9 @@ export default class Views {
           }
           if (Zotero.Prefs.get(`${config.addonRef}.modifyLinks`)) {
             this.modifyLinks(reader)
+          }
+          if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
+            await this.refreshReferences(panel)
           }
         })
       },
@@ -355,9 +358,9 @@ export default class Views {
       // 优先本地读取
       const key = "References-PDF"
       // references = local && addonItem.get(item, key)
-      references = local && localStroage.get(item, key)
+      references = local && localStorage.get(item, key)
 
-      localStroage
+      localStorage
       if (references) {
         (new ztoolkit.ProgressWindow("[Local] PDF"))
           .createLine({ text: `${references.length} references`, type: "success"})
@@ -367,7 +370,7 @@ export default class Views {
         if (Zotero.Prefs.get(`${config.addonRef}.savePDFReferences`)) {
           window.setTimeout(async () => {
             // await addonItem.set(item, key, references)
-            await localStroage.set(item, key, references)
+            await localStorage.set(item, key, references)
           })
         }
       }
@@ -381,7 +384,7 @@ export default class Views {
         return
       }
       const key = "References-API"
-      references = local && localStroage.get(item, key)
+      references = local && localStorage.get(item, key)
       if (references) {
         (new ztoolkit.ProgressWindow("[Local] API"))
           .createLine({ text: `${references.length} references`, type: "success" })
@@ -394,7 +397,7 @@ export default class Views {
         references = (await this.utils.API.getDOIInfoByCrossref(DOI))?.references!
         if (Zotero.Prefs.get(`${config.addonRef}.saveAPIReferences`)) {
           window.setTimeout(async () => {
-            references && await localStroage.set(item, key, references)
+            references && await localStorage.set(item, key, references)
           })
         }
         popupWin.changeHeadline("[Done] API")
@@ -598,7 +601,7 @@ export default class Views {
         const key = `References-${node.getAttribute("source")}`
         // ztoolkit.Tool.setExtraField(item, key, JSON.stringify(references))
         window.setTimeout(async () => {
-          await localStroage.set(item, key, references)
+          await localStorage.set(item, key, references)
         })
       }
 
@@ -871,7 +874,7 @@ export default class Views {
               i,
               prefIndex
             )
-          }, 0)
+          })
         }
       }, timeout);
     })

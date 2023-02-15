@@ -325,7 +325,7 @@ class API {
     }
   }
 
-  async getTitleInfoByReadpaper(title: string, body: object = {}, doi: string): Promise<ItemInfo|undefined> {
+  async getTitleInfoByReadpaper(title: string, body: object = {}, doi: string | undefined = undefined): Promise<ItemInfo|undefined> {
     const api = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
     let _body = {
       keywords: title,
@@ -345,6 +345,7 @@ class API {
           "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/getPaperDetailInfo",
           { paperId:data.id }
         )
+        console.log(doi, _res.data.doi)
         if (_res.data.doi.toUpperCase() != doi.toUpperCase()) {
           return
         }

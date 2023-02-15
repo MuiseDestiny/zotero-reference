@@ -250,7 +250,8 @@ class Utils {
       text = html
     }
     if (text) {
-      return text.replace(/<(\w+?)>(.+?)<\/\1>/g, (match, p1, p2) => p2)
+      return text
+        .replace(/<([\w:]+?)>([\s\S]+?)<\/\1>/g, (match, p1, p2) => p2)
     }
   }
 
