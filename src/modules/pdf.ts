@@ -16,6 +16,7 @@ class PDF {
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
       [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/], // 1. Polygon
+      [/^\d+\s+/], // 1 Polygon
       [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],  // 中文
     ];
   }
@@ -167,6 +168,7 @@ class PDF {
         ) ||
         (
           indent != 0 &&
+          lineRefType == refType &&
           _refLines.find(_line => {
             let flag = (
               line != _line &&
@@ -504,9 +506,10 @@ class PDF {
         }
         // 前一页第一行与当前页最后一行
         if (
-          part.length > 0 && part.slice(-1)[0].height != line.height
+          part.length > 0 &&
+          part.slice(-1)[0].height != line.height
+          // this.abs(part.slice(-1)[0].height - line.height) > line.height * .1
         ) {
-          console.log("前一页第一行与当前页最后一行")
           donePart(part)
           part = [line]
           continue
@@ -523,6 +526,7 @@ class PDF {
           (
             lines[i - 1] &&
             (
+              // this.abs(line.height - lines[i - 1].height) > line.height * .1 ||
               line.height != lines[i - 1].height ||
               lines[i].column < lines[i - 1].column ||
               (

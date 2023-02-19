@@ -174,17 +174,27 @@ export default class Views {
         window.setTimeout(async () => {
           if (Zotero.Prefs.get(`${config.addonRef}.loadingRelated`)) {
             await this.loadingRelated();
-          }
+          };
           if (Zotero.Prefs.get(`${config.addonRef}.modifyLinks`)) {
             this.modifyLinks(reader)
-          }
+          };
           if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
-            await this.refreshReferences(panel)
+            let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
+            if (panel.getAttribute("isAutoRefresh") != "true") { 
+              const item = Zotero.Items.get(reader._itemID).parentItem
+              // @ts-ignore
+              const id = item.getType()
+              const itemType = Zotero.ItemTypes.getTypes().find(i => i.id == id)?.name as string
+              if (excludeItemTypes.indexOf(itemType) == -1) {
+                await this.refreshReferences(panel)
+                panel.setAttribute("isAutoRefresh", "true")
+              }
+            }
           }
         })
       },
       {
-        targetIndex: Zotero.PDFTranslate ? 3 : -1,
+        targetIndex: 3,
         tabId: "zotero-reference",
       }
     )
