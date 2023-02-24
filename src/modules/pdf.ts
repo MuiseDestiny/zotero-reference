@@ -11,18 +11,17 @@ class PDF {
   constructor(utils: Utils) {
     this.utils = utils
     this.refRegex = [
-      [/^[A-Z]\w.+?\(\d+[a-z]?\)/], // Polygon (2023a)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
       [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/], // 1. Polygon
       [/^\d+\s+/], // 1 Polygon
-      [/^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],  // 中文
+      [/^[A-Z]\w.+?\(\d+[a-z]?\)/, /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],  // 中文
     ];
   }
 
-  async getReferences(reader: _ZoteroTypes.ReaderInstance): Promise<ItemInfo[]> {
-    let refLines = await this.getRefLines(reader)
+  async getReferences(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean): Promise<ItemInfo[]> {
+    let refLines = await this.getRefLines(reader, fromCurrentPage)
     Zotero.ProgressWindowSet.closeAll();
     if (refLines.length == 0) {
       (new ztoolkit.ProgressWindow("[Fail] PDF"))
@@ -263,7 +262,7 @@ class PDF {
     return lines
   }
 
-  private async getRefLines(reader:_ZoteroTypes.ReaderInstance) {
+  private async getRefLines(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean) {
     const PDFViewerApplication = (reader._iframeWindow as any).wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
@@ -272,17 +271,22 @@ class PDF {
     let pageLines: any = {};
     // read 2 page to remove head and tail
     let maxWidth: number, maxHeight: number
-
+    // offset
+    let offset = 0
+    if (fromCurrentPage) {
+      offset = pages.length - PDFViewerApplication.page
+    }
+    const totalPageNum = pages.length - offset
     const minPreLoadPageNum = parseInt(Zotero.Prefs.get(`${config.addonRef}.preLoadingPageNum`) as string)
-    let preLoadPageNum = pages.length > minPreLoadPageNum ? minPreLoadPageNum : pages.length
+    let preLoadPageNum = totalPageNum > minPreLoadPageNum ? minPreLoadPageNum : totalPageNum
     const popupWin = new ztoolkit.ProgressWindow("[Pending] PDF", {closeTime: -1});
     popupWin.createLine({
       text: `[0/${preLoadPageNum}] Analysis PDF`,
       type: "success",
       progress: 1
     }).show();
-
-    for (let pageNum = pages.length - 1; pageNum >= pages.length - preLoadPageNum; pageNum--) {
+    
+    for (let pageNum = totalPageNum - 1; pageNum >= totalPageNum - preLoadPageNum; pageNum--) {
       let pdfPage = pages[pageNum].pdfPage
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
@@ -290,9 +294,9 @@ class PDF {
       let lines = await this.readPdfPage(pdfPage)
       if (lines.length == 0) { continue }
       pageLines[pageNum] = lines;
-      let pct = ((pages.length - pageNum) / preLoadPageNum) * 100
+      let pct = ((totalPageNum - pageNum) / preLoadPageNum) * 100
       popupWin.changeLine({
-        text: `[${pages.length - pageNum}/${preLoadPageNum}] Read text`,
+        text: `[${totalPageNum - pageNum}/${preLoadPageNum}] Read text`,
         progress: pct > 90 ? 90 : pct
       })
     }
@@ -301,7 +305,7 @@ class PDF {
     let parts: any = []
     let part = []
     let refPart = undefined
-    for (let pageNum = pages.length - 1; pageNum >= 1; pageNum--) {
+    for (let pageNum = totalPageNum - 1; pageNum >= 1; pageNum--) {
       let show = true
       if (show) { console.log("\n\n---------------------", "current page", pageNum + 1) }
       let pdfPage = pages[pageNum].pdfPage
@@ -314,7 +318,7 @@ class PDF {
       } else {
         lines = await this.readPdfPage(pdfPage);
         pageLines[pageNum] = [...lines]
-        let p = pages.length - pageNum
+        let p = totalPageNum - pageNum
         popupWin.changeLine({ text: `[${p}/${p}] Read PDF` });
       }
       if (lines.length == 0) { continue }
@@ -490,7 +494,7 @@ class PDF {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
         if (
-          !isStart && pageNum < pages.length - 1 &&
+          !isStart && pageNum < totalPageNum - 1 &&
           // 图表等
           (
             // 我们认为上一页的正文（非图表）应从页面最低端开始

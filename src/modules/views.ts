@@ -111,22 +111,22 @@ export default class Views {
                         listeners: [
                           {
                             type: "mousedown",
-                            listener: () => {
+                            listener: (event: any) => {
                               timer = window.setTimeout(async () => {
                                 timer = undefined
                                 // 不从本地储存读取
-                                await this.refreshReferences(panel, false)
+                                await this.refreshReferences(panel, false, event.ctrlKey)
                               }, 1000)
                             }
                           },
                           {
                             type: "mouseup",
-                            listener: async () => {
+                            listener: async (event: any) => {
                               if (timer) {
                                 window.clearTimeout(timer) 
                                 timer = undefined
                                 // 本地储存读取
-                                await this.refreshReferences(panel)
+                                await this.refreshReferences(panel, true, event.ctrlKey)
                               }
                             }
                           }
@@ -339,7 +339,13 @@ export default class Views {
     }, 100)
   }
 
-  public async refreshReferences(panel: XUL.TabPanel, local: boolean = true) {
+  /**
+   * 刷新按钮触发
+   * @param local 是否允许从本地读取
+   * @param fromCurrentPage 从当前页向前查询参考文献
+   * @returns 
+   */
+  public async refreshReferences(panel: XUL.TabPanel, local: boolean = true, fromCurrentPage: boolean = false) {
     Zotero.ProgressWindowSet.closeAll();
     let label = panel.querySelector("label#referenceNum") as XUL.Label;
     label.value = `${0} ${getString("relatedbox.number.label")}`;
@@ -376,7 +382,7 @@ export default class Views {
           .createLine({ text: `${references.length} references`, type: "success"})
           .show()
       } else {
-        references = await this.utils.PDF.getReferences(reader)
+        references = await this.utils.PDF.getReferences(reader, fromCurrentPage)
         if (Zotero.Prefs.get(`${config.addonRef}.savePDFReferences`)) {
           window.setTimeout(async () => {
             // await addonItem.set(item, key, references)
