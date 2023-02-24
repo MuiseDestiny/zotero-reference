@@ -34,6 +34,8 @@
 
 ### 刷新
 
+> 小小刷新，大有乾坤
+
 ![image](https://user-images.githubusercontent.com/51939531/221145006-56834b6e-e5c2-4bb4-a369-cfcf15a53349.png)
 
 |操作|触发|说明|
@@ -43,6 +45,7 @@
 | `Ctrl` + 点击/长按 | 从当前所在页向前解析参考文献 | 适用于PDF源，对API源无效，建议解析硕博论文时使用，需要提前将PDF滚动到最后一条参考文献所在页面 | 
 
 ### 参考文献
+
 ![image](https://user-images.githubusercontent.com/51939531/208303590-dfe6f3cf-cd48-4afe-90a0-9cce6ff5f9cb.png)
 
 |操作|触发|说明|
