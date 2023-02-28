@@ -61,6 +61,7 @@ class PDF {
         text: ref.text,
         ...this.utils.refText2Info(ref.text),
       } as ItemInfo
+      references[i].url ??= ref.url
     }
     return references as ItemInfo[]
   }
@@ -490,11 +491,14 @@ class PDF {
         })
       })
       const endLine = endLines.slice(-1)[0]
+      console.log(endLine)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
         if (
-          !isStart && pageNum < totalPageNum - 1 &&
+          // !isStart && pageNum < totalPageNum - 1 &&
+          // 考虑到有些PDF最后一页以图表结尾
+          !isStart &&
           // 图表等
           (
             // 我们认为上一页的正文（非图表）应从页面最低端开始
@@ -504,6 +508,12 @@ class PDF {
           )
         ) {
           console.log("Not start, skip", line.text, line.y)
+          // 这里考虑到可能一开始就是图表需要打包扔掉之前的part
+          // 10.1016/j.scitotenv.2018.03.202
+          if (part.length && pageNum == totalPageNum - 1) {
+            donePart(part)
+            part = []
+          }
           continue
         } else {
           isStart = true

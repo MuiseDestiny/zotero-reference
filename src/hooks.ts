@@ -10,6 +10,8 @@ async function onStartup() {
     Zotero.uiReadyPromise,
   ]);
   initLocale();
+  ztoolkit.UI.basicOptions.ui.enableElementRecord = false
+  ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false
   // 右下角提示
   ztoolkit.ProgressWindow.setIconURI(
     "default",
