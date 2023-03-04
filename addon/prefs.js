@@ -17,3 +17,5 @@ pref("extensions.zotero.__addonRef__.DOIInfoIndex", 0);
 pref("extensions.zotero.__addonRef__.TitleInfoIndex", 0);
 pref("extensions.zotero.__addonRef__.savePDFReferences", false);
 pref("extensions.zotero.__addonRef__.saveAPIReferences", false);
+
+pref("extensions.zotero.__addonRef__.notInLibarayOpacity", "0.5");

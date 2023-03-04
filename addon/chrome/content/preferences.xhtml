@@ -43,8 +43,6 @@
         preference="extensions.zotero.__addonRef__.preLoadingPageNum">
       </html:input>
       <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.preLoadingPageNum.end;</html:span>
-      <image src="chrome://__addonRef__/content/icons/information.png"
-        tooltiptext="&zotero.__addonRef__.preLoadingPageNum.tooltiptext;" />
     </html:div>
   </groupbox>
   <groupbox>
@@ -96,5 +94,15 @@
       preference="extensions.zotero.__addonRef__.savePDFReferences" />
     <checkbox id="__addonRef__-save-api-references" label="&zotero.__addonRef__.saveAPIReferences;"
       preference="extensions.zotero.__addonRef__.saveAPIReferences" />
+  </groupbox>
+  <groupbox>
+    <caption label="&zotero.__addonRef__.caption.match;" />
+    <hbox>
+      <description>&zotero.__addonRef__.notInLibarayOpacity.start;</description>
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-not-in-library-opacity"
+        preference="extensions.zotero.__addonRef__.notInLibarayOpacity">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.notInLibarayOpacity.end;</html:span>
+    </hbox>
   </groupbox>
 </vbox>

@@ -215,20 +215,20 @@ export default class Views {
       row.classList.add("only-title")
       totalNum += 1;
       let box = row.querySelector("box") as XUL.Box
-      if (!row.querySelector(".zotero-clicky-minus")) {
-        window.setTimeout(async () => {        
-          box.style.opacity = ".5"
-          let item = (await this.utils.searchLibraryItem(info)) as Zotero.Item;
-          if (item) {
-            box.style.opacity = "1";
-            box.onclick = (event) => {
-              if (event.button == 0) {
-                this.utils.selectItemInLibrary(item)
-              }
-            }
-          }
-        })
-      }
+      // if (!row.querySelector(".zotero-clicky-minus")) {
+      //   window.setTimeout(async () => {        
+      //     box.style.opacity = ".5"
+      //     let item = (await this.utils.searchLibraryItem(info)) as Zotero.Item;
+      //     if (item) {
+      //       box.style.opacity = "1";
+      //       box.onclick = (event) => {
+      //         if (event.button == 0) {
+      //           this.utils.selectItemInLibrary(item)
+      //         }
+      //       }
+      //     }
+      //   })
+      // }
     })
     return totalNum
   }
@@ -426,23 +426,185 @@ export default class Views {
 
     references.forEach(async (reference: ItemBaseInfo, refIndex: number) => {
       let row = this.addRow(panel, references, refIndex)!;
-      window.setTimeout(async () => {
-        let localItem = (await this.utils.searchLibraryItem(reference)) as Zotero.Item
-        let itemType = this.utils.getItemType(localItem)
-        if (itemType) {
-          reference._item = localItem;
-          (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
-            `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
-        }
-      }, 0)
       label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
     })
 
     label.value = `${referenceNum} ${getString("relatedbox.number.label")}`;
+    // 刷新参考文献后，检测阅读PDF选区事件
+    await this.listenSelection(references, panel)
+  }
+
+  public async listenSelection(references: ItemBaseInfo[], panel: XUL.TabPanel) {
+    const reader = await ztoolkit.Reader.getReader() as _ZoteroTypes.ReaderInstance;
+    if (!reader) { return }
+    // @ts-ignore
+    let win = reader._iframeWindow.wrappedJSObject;
+    let doc = win.document;
+    let isEmptySelection = false
+    doc.addEventListener("mousedown", () => {
+      const searchText = ztoolkit.Reader.getSelectedText(reader);
+      isEmptySelection = !searchText
+    })
+    doc.addEventListener("mouseup", (event: MouseEvent) => {
+      console.log(event)
+      if (!isEmptySelection) { return }
+      const searchText = ztoolkit.Reader.getSelectedText(reader);
+      if (!searchText) { return }
+      // 搜索匹配算法
+      let reference: ItemBaseInfo | undefined;
+      if (/\[\d+\]/.test(searchText)) {
+        let res = searchText.match(/\d+/)
+        if (res && res.length > 0) {
+          reference = references[Number(res[0]) - 1];
+        }
+      } else {
+        const keywords = searchText
+          .replace("et al", "")
+          .replace("and", "")
+          .replace(",", "")
+          .replace(".", "")
+          .split(/\s+/) as string[];
+        console.log(keywords)
+        reference = references.find(ref => {
+          return keywords.every(keyword=>ref.text?.indexOf(keyword) != -1)
+        })
+      }
+      console.log(reference)
+      if (reference) {
+        window.setTimeout(() => {          
+          let rect = doc.querySelector(".selection-menu").getBoundingClientRect()
+          const winRect = document.documentElement.getBoundingClientRect()
+          rect.y = winRect.height - rect.y;
+          console.log(rect)
+          const tipUI = this.showTipUI(
+            rect,
+            reference!,
+            "bootom center"
+          )
+          tipUI.container.style.flexDirection = "column-reverse"
+        }, 500)
+      }
+    })
+  }
+
+  private showTipUI(refRect: Rect, reference: ItemBaseInfo, position: string, idText?: string) {
+    let toTimeInfo = (t: string) => {
+      if (!t) { return undefined }
+      let info = (new Date(t)).toString().split(" ")
+      return `${info[1]} ${info[3]}`
+    }
+    let tipUI = new TipUI()
+    tipUI.onInit(refRect, position)
+    const refText = reference.text!;
+    let getDefalutInfoByReference = async () => {
+      let info: ItemInfo = {
+        identifiers: {},
+        authors: [],
+        type: "",
+        title: idText || "Reference",
+        tags: [],
+        text: refText,
+        abstract: refText
+      }
+      return info
+    }
+    let coroutines: Promise<ItemInfo | undefined>[], prefIndex: number, according: string
+    if (reference?.identifiers.arXiv) {
+      according = "arXiv"
+      coroutines = [
+        getDefalutInfoByReference(),
+        this.utils.API.getArXivInfo(reference.identifiers.arXiv)
+      ]
+      prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
+    } else if (reference?.identifiers.DOI) {
+      according = "DOI"
+      coroutines = [
+        getDefalutInfoByReference(),
+        this.utils.API.getDOIInfoBySemanticscholar(reference.identifiers.DOI),
+        this.utils.API.getTitleInfoByReadpaper(refText, {}, reference.identifiers.DOI),
+        this.utils.API.getDOIInfoByCrossref(reference.identifiers.DOI)
+      ]
+      prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
+    } else {
+      according = "Title"
+      coroutines = [
+        getDefalutInfoByReference(),
+        this.utils.API.getTitleInfoByReadpaper(refText),
+        this.utils.API.getTitleInfoByCrossref(refText),
+        this.utils.API.getTitleInfoByCNKI(refText)
+      ]
+      prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
+    }
+    ztoolkit.log("prefIndex", prefIndex)
+    const sourceConfig = {
+      arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv." },
+      readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
+      semanticscholar: { color: "#1857b6", tip: "Semantic Scholar is an artificial intelligence–powered research tool for scientific literature developed at the Allen Institute for AI and publicly released in November 2015. It uses advances in natural language processing to provide summaries for scholarly papers. The Semantic Scholar team is actively researching the use of artificial-intelligence in natural language processing, machine learning, Human-Computer interaction, and information retrieval." },
+      crossref: { color: "#89bf04", tip: "Crossref is a nonprofit association of approximately 2,000 voting member publishers who represent 4,300 societies and publishers, including both commercial and nonprofit organizations. Crossref includes publishers with varied business models, including those with both open access and subscription policies." },
+      DOI: { color: "#fcb426" },
+      Zotero: { color: "#d63b3b", tip: "Zotero is a free, easy-to-use tool to help you collect, organize, cite, and share your research sources." },
+      CNKI: { color: "#1b66e6", tip: "中国知网知识发现网络平台—面向海内外读者提供中国学术文献、外文文献、学位论文、报纸、会议、年鉴、工具书等各类资源统一检索、统一导航、在线阅读和下载服务。" }
+    }
+    for (let i = 0; i < coroutines.length; i++) {
+      // 不阻塞
+      window.setTimeout(async () => {
+        let info = await coroutines[i]
+        if (!info) { return }
+        const tagDefaultColor = "#59C1BD"
+        let tags = info.tags!.map((tag: object | string) => {
+          if (typeof tag == "object") {
+            return { color: tagDefaultColor, ...(tag as object) }
+          } else {
+            return { color: tagDefaultColor, text: tag }
+          }
+        }) as any || []
+        // 展示当前数据源tag
+        if (info.source) { tags.push({ text: info.source, ...sourceConfig[info.source as keyof typeof sourceConfig], source: info.source }) }
+        // 展示可点击跳转链接tag
+        if (info.identifiers.DOI) {
+          let DOI = info.identifiers.DOI
+          tags.push({ text: "DOI", color: sourceConfig.DOI.color, tip: DOI, url: info.url })
+        }
+        if (info.identifiers.arXiv) {
+          let arXiv = info.identifiers.arXiv
+          tags.push({ text: "arXiv", color: sourceConfig.arXiv.color, tip: arXiv, url: info.url })
+        }
+        if (info.identifiers.CNKI) {
+          let url = info.identifiers.CNKI
+          tags.push({ text: "URL", color: sourceConfig.CNKI.color, tip: url, url: info.url })
+        }
+        if (reference._item) {
+          // 用本地Item更新数据
+          tags.push({ text: "Zotero", color: sourceConfig.Zotero.color, tip: sourceConfig.Zotero.tip, item: reference._item })
+        }
+        // 添加
+        tipUI.addTip(
+          this.utils.Html2Text(info.title!)!,
+          tags,
+          [
+            info.authors.slice(0, 3).join(" / "),
+            [info?.primaryVenue, toTimeInfo(info.publishDate as string) || info.year]
+              .filter(e => e).join(" \u00b7 ")
+          ].filter(s => s != ""),
+          this.utils.Html2Text(info.abstract!)!,
+          according,
+          i,
+          prefIndex
+        )
+      })
+    }
+    return tipUI
   }
 
   public addRow(node: XUL.Element, references: ItemBaseInfo[], refIndex: number, addPrefix: boolean = true, addSearch: boolean = true) {
+    let notInLibarayOpacity: string|number = Zotero.Prefs.get(`${config.addonRef}.notInLibarayOpacity`) as string
+    if (/[\d\.]+/.test(notInLibarayOpacity)) {
+      notInLibarayOpacity = Number(notInLibarayOpacity);
+    } else {
+      notInLibarayOpacity = 1
+    }
     let reference = references[refIndex]
+    // 非阻塞搜索
     let refText: string
     if (addPrefix) {
       refText = `[${refIndex + 1}] ${reference.text}`
@@ -477,6 +639,9 @@ export default class Views {
             tag: "box",
             id: "reference-box",
             namespace: "xul",
+            styles: {
+              opacity: alreadyRelated ? "1" : String(notInLibarayOpacity)
+            },
             classList: ["zotero-clicky"],
             listeners: [
               {
@@ -484,8 +649,12 @@ export default class Views {
                 listener: async (event: any) => {
                   event.preventDefault()
                   event.stopPropagation()
+                  // ctrl点击跳转本地item/url
                   if (event.ctrlKey) {
                     window.clearTimeout(editTimer)
+                    if (reference._item) {
+                      return this.utils.selectItemInLibrary(reference._item)
+                    }
                     let URL = reference.url
                     if (!URL) {
                       const refText = reference.text!
@@ -600,7 +769,7 @@ export default class Views {
         }
       ) as XUL.Textbox
       textbox.focus()
-      label.parentNode.insertBefore(textbox, label)
+      label.parentNode!.insertBefore(textbox, label)
 
       let exitEdit = async () => {
         // 界面恢复
@@ -680,7 +849,6 @@ export default class Views {
       let info: ItemBaseInfo = this.utils.refText2Info(reference.text!);
       setState()
       let popupWin
-      // 认为中文知网一定能解决
       if (this.utils.isChinese(info.title!) && Zotero.Jasminum) {
         popupWin = (new ztoolkit.ProgressWindow("CNKI", { closeTime: -1 }))
           .createLine({ text: info.title, type: "default" })
@@ -781,116 +949,29 @@ export default class Views {
 
     let timer: undefined | number, tipUI: TipUI;
     const box = row.querySelector("#reference-box") as XUL.Box
+    if (notInLibarayOpacity < 1) {
+      window.setTimeout(async () => {
+        const item = await this.utils.searchLibraryItem(reference) as Zotero.Item
+        if (item) {
+          box.style.opacity =  "1"
+          let itemType = this.utils.getItemType(item)
+          if (itemType) {
+            (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
+              `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
+          }
+        }
+
+      }, refIndex * 500)
+    }
     // 鼠标进入浮窗展示
     box.addEventListener("mouseenter", () => {
       if (!Zotero.Prefs.get(`${config.addonRef}.isShowTip`)) { return }
       box.classList.add("active")
-      const refText = reference.text as string
       let timeout = parseInt(Zotero.Prefs.get(`${config.addonRef}.showTipAfterMillisecond`) as string)
       timer = window.setTimeout(async () => {
-        let toTimeInfo = (t: string) => {
-          if (!t) { return undefined }
-          let info = (new Date(t)).toString().split(" ")
-          return `${info[1]} ${info[3]}`
-        }
-        tipUI = new TipUI()
-        tipUI.onInit(box)
-        let getDefalutInfoByReference = async () => {
-          let info: ItemInfo = {
-            identifiers: {},
-            authors: [],
-            type: "",
-            title: idText || "Reference",
-            tags: [],
-            text: refText,
-            abstract: refText
-          }
-          return info
-        }
-        let coroutines: Promise<ItemInfo | undefined>[], prefIndex: number, according: string
-        if (reference?.identifiers.arXiv) {
-          according = "arXiv"
-          coroutines = [
-            getDefalutInfoByReference(),
-            this.utils.API.getArXivInfo(reference.identifiers.arXiv)
-          ]
-          prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
-        } else if (reference?.identifiers.DOI) {
-          according = "DOI"
-          coroutines = [
-            getDefalutInfoByReference(),
-            this.utils.API.getDOIInfoBySemanticscholar(reference.identifiers.DOI),
-            this.utils.API.getTitleInfoByReadpaper(refText, {}, reference.identifiers.DOI),
-            this.utils.API.getDOIInfoByCrossref(reference.identifiers.DOI)
-          ]
-          prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
-        } else {
-          according = "Title"
-          coroutines = [
-            getDefalutInfoByReference(),
-            this.utils.API.getTitleInfoByReadpaper(refText),
-            this.utils.API.getTitleInfoByCrossref(refText),
-            this.utils.API.getTitleInfoByCNKI(refText)
-          ]
-          prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
-        }
-        ztoolkit.log("prefIndex", prefIndex)
-        const sourceConfig = {
-          arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv." },
-          readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
-          semanticscholar: { color: "#1857b6", tip: "Semantic Scholar is an artificial intelligence–powered research tool for scientific literature developed at the Allen Institute for AI and publicly released in November 2015. It uses advances in natural language processing to provide summaries for scholarly papers. The Semantic Scholar team is actively researching the use of artificial-intelligence in natural language processing, machine learning, Human-Computer interaction, and information retrieval." },
-          crossref: { color: "#89bf04", tip: "Crossref is a nonprofit association of approximately 2,000 voting member publishers who represent 4,300 societies and publishers, including both commercial and nonprofit organizations. Crossref includes publishers with varied business models, including those with both open access and subscription policies." },
-          DOI: { color: "#fcb426" },
-          Zotero: { color: "#d63b3b", tip: "Zotero is a free, easy-to-use tool to help you collect, organize, cite, and share your research sources." },
-          CNKI: { color: "#1b66e6", tip: "中国知网知识发现网络平台—面向海内外读者提供中国学术文献、外文文献、学位论文、报纸、会议、年鉴、工具书等各类资源统一检索、统一导航、在线阅读和下载服务。" }
-        }
-        for (let i = 0; i < coroutines.length; i++) {
-          // 不阻塞
-          window.setTimeout(async () => {
-            let info = await coroutines[i]
-            if (!info) { return }
-            const tagDefaultColor = "#59C1BD"
-            let tags = info.tags!.map((tag: object | string) => {
-              if (typeof tag == "object") {
-                return { color: tagDefaultColor, ...(tag as object) }
-              } else {
-                return { color: tagDefaultColor, text: tag }
-              }
-            }) as any || []
-            // 展示当前数据源tag
-            if (info.source) { tags.push({ text: info.source, ...sourceConfig[info.source as keyof typeof sourceConfig], source: info.source }) }
-            // 展示可点击跳转链接tag
-            if (info.identifiers.DOI) {
-              let DOI = info.identifiers.DOI
-              tags.push({ text: "DOI", color: sourceConfig.DOI.color, tip: DOI, url: info.url })
-            }
-            if (info.identifiers.arXiv) {
-              let arXiv = info.identifiers.arXiv
-              tags.push({ text: "arXiv", color: sourceConfig.arXiv.color, tip: arXiv, url: info.url })
-            }
-            if (info.identifiers.CNKI) {
-              let url = info.identifiers.CNKI
-              tags.push({ text: "URL", color: sourceConfig.CNKI.color, tip: url, url: info.url })
-            }
-            if (reference._item) {
-              // 用本地Item更新数据
-              tags.push({ text: "Zotero", color: sourceConfig.Zotero.color, tip: sourceConfig.Zotero.tip, item: reference._item })
-            }
-            // 添加
-            tipUI.addTip(
-              this.utils.Html2Text(info.title!)!,
-              tags,
-              [
-                info.authors.slice(0, 3).join(" / "),
-                [info?.primaryVenue, toTimeInfo(info.publishDate as string) || info.year]
-                  .filter(e => e).join(" \u00b7 ")
-              ].filter(s => s != ""),
-              this.utils.Html2Text(info.abstract!)!,
-              according,
-              i,
-              prefIndex
-            )
-          })
+        tipUI = this.showTipUI(box.getBoundingClientRect(), reference, "left", idText)
+        if (!box.classList.contains("active")) {
+          tipUI.container.style.display = "none"
         }
       }, timeout);
     })

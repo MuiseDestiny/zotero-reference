@@ -5,7 +5,7 @@ import PDF from "./pdf";
 class Utils {
   API: API;
   PDF: PDF;
-  private cache: {[key: string]: any} = {};
+  private cache: { [key: string]: any } = {};
   public regex = {
     DOI: /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/,
     arXiv: /arXiv[\.:](\d+\.\d+)/,
@@ -185,18 +185,50 @@ class Utils {
     return relatedItem
   }
 
+  /**
+   * 搜索本地，获取参考文献的本地item引用
+   * @param info 
+   * @returns 
+   */
   public async searchLibraryItem(info: ItemBaseInfo): Promise<Zotero.Item | undefined> {
-    const key = JSON.stringify(info)
+    const key = JSON.stringify(info.identifiers) + info.text + "library-item"
     if (key in this.cache) {
       return this.cache[key]
     } else {
-      let item = (
+      // 精确匹配，时间较快
+      let item: Zotero.Item | undefined = (
         await this.searchItem("title", "contains", info.title!) ||
         await this.searchItem("DOI", "is", info.identifiers.DOI!) ||
         await this.searchItem("url", "contains", info.identifiers.arXiv!)
-      ) as Zotero.Item
+      )
+      // 此处肥肠耗时
+      if (!item) {
+        // 进行粗暴搜索，可能时间缓慢
+        let items: Zotero.Item[] = await Zotero.Items.getAll(1);
+        item = items.filter(i => i.isRegularItem() && i.getField("title")).find((item: Zotero.Item) => {
+          try {
+            let getPureText = (s: string) => s.toLowerCase().match(/[a-z\u4e00-\u9fa5]+/g)?.join("")!
+            const title = getPureText(item.getField("title") as string)
+            const searchTitle = getPureText(info.title || info.text as string)
+            console.log(title)
+            if (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1) {
+              console.log(item.getField("title"), info)
+              return item
+            }
+          } catch (e) {
+            console.log("error in searchLibraryItem", e)
+          }
+        })
+      }
       if (item) {
+        info._item = item 
         this.cache[key] = item
+        // 用本地得到的信息反向更新info
+        info.title = item.getField("title") as string
+        let DOI = item.getField("DOI") as string
+        if (DOI) {
+          info.identifiers = {DOI}
+        }
       }
       return item
     }

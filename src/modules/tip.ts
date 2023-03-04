@@ -3,8 +3,9 @@ import Utils from "./utils";
 
 export default class TipUI {
   private utils: Utils;
-  private element!: XUL.Element;
-  private container!: HTMLElement;
+  private refRect!: Rect;
+  private position!: string;
+  public container!: HTMLElement;
   public shadeMillisecond!: number;
   public removeTipAfterMillisecond!: number;
   private option = {
@@ -22,8 +23,9 @@ export default class TipUI {
     this.utils = new Utils()
   }
 
-  public onInit(element: XUL.Element) {
-    this.element = element
+  public onInit(refRect: Rect, position:string) {
+    this.refRect = refRect;
+    this.position = position;
     // 初始化，先移除其它container
     this.clear()
     this.buildContainer()
@@ -74,22 +76,50 @@ export default class TipUI {
     const winRect: Rect = document.documentElement.getBoundingClientRect()
     const maxWidth = winRect.width;
     const maxHeight = winRect.height;
-    const eleRect: Rect = this.element.getBoundingClientRect()
+    const refRect = this.refRect;
 
-    // 先决定是放在element左侧还是上下侧
     // 左侧
-    let styles = {
-      right: `${maxWidth - eleRect.x + maxWidth * .014}px`,
-      bottom: "",
-      top: `${eleRect.y}px`,
-      width: `${eleRect.x * .7}px`
+    let styles: any
+    if (this.position == "left") {
+      styles = {
+        right: `${maxWidth - refRect.x + maxWidth * .014}px`,
+        bottom: "",
+        top: `${refRect.y}px`,
+        width: `${refRect.x * .7}px`
+      }
+    } else if (this.position == "bootom center") {
+      let width = maxWidth * .7
+      styles = {
+        width: `${width}px`,
+        left: `${refRect.x + refRect.width / 2 - width / 2}px`,
+        bottom: `${refRect.y + 50}px`,
+        top: "",
+      }
     }
     let rect = setStyles(styles)
-    // 判断是否超出下届
+    // 判断是否超届
     if (rect.bottom > maxHeight) {
       setStyles({
         top: "",
-        bottom: "0px"
+        bottom: "0px",
+      })
+    }
+    if (rect.top < 0) {
+      setStyles({
+        bottom: "",
+        top: "0px",
+      })
+    }
+    if (rect.left < 30) {
+      setStyles({
+        right: "",
+        left: "30px"
+      })
+    }
+    if (maxWidth - rect.right < 30 ) {
+      setStyles({
+        left: "",
+        right: "30px"
       })
     }
     this.container.style.opacity = "1";
@@ -105,8 +135,7 @@ export default class TipUI {
         namespace: "html",
         classList: ["zotero-reference-tip-container"],
         styles: {
-          // 防止操作过快
-          display: this.element.classList.contains("active") ? "flex" : "none",
+          display: "flex",
           flexDirection: "column",
           justifyContent: "center",
           position: "fixed",

@@ -9,7 +9,6 @@
 <!ENTITY zotero.__addonRef__.preLoadingPageNum.start "当从PDF解析参考文献时，预读取页面最后">
 <!ENTITY zotero.__addonRef__.preLoadingPageNum.end "页，以去页眉页脚等信息">
 
-<!ENTITY zotero.__addonRef__.preLoadingPageNum.tooltiptext "1.建议设置偶数，奇偶页页眉页脚一般不同；2.一般预读取4页即可，部分文献喜欢在最后加摘要甚至目录，而这些页面又没有页眉页脚，就需要6页甚至8页；3.数值越大解析时间越长。">
 
 
 <!ENTITY zotero.__addonRef__.caption.tip "浮窗">
@@ -35,3 +34,8 @@
 <!ENTITY zotero.__addonRef__.caption.save "储存">
 <!ENTITY zotero.__addonRef__.savePDFReferences "储存PDF源参考文献">
 <!ENTITY zotero.__addonRef__.saveAPIReferences "储存API源参考文献">
+
+<!ENTITY zotero.__addonRef__.caption.match "匹配">
+<!ENTITY zotero.__addonRef__.notInLibarayOpacity.start "匹配本地条目，并且以透明度">
+<!ENTITY zotero.__addonRef__.notInLibarayOpacity.end "显示不在我的文库的条目">
+

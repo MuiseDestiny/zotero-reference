@@ -9,8 +9,6 @@
 <!ENTITY zotero.__addonRef__.preLoadingPageNum.start "When select PDF, Pre-read the last">
 <!ENTITY zotero.__addonRef__.preLoadingPageNum.end "pages to remove invalid information">
 
-<!ENTITY zotero.__addonRef__.preLoadingPageNum.tooltiptext "1. It is recommended to set an even number, and the header and footer of odd and even pages are generally different; 2. Generally, 4 pages can be pre-read, and some documents like to add abstracts or even table of contents at the end, and these pages do not have a header and footer, which requires 6 pages or even 8 pages; 3. The larger the value, the longer the analysis time.">
-
 
 <!ENTITY zotero.__addonRef__.caption.tip "Tip">
 <!ENTITY zotero.__addonRef__.isShowTip.start "The floating window is displayed after the mouse stays on the reference for">
@@ -36,3 +34,8 @@
 <!ENTITY zotero.__addonRef__.caption.save "Save">
 <!ENTITY zotero.__addonRef__.savePDFReferences "Save references from PDF">
 <!ENTITY zotero.__addonRef__.saveAPIReferences "Save references from API">
+
+
+<!ENTITY zotero.__addonRef__.caption.match "Match">
+<!ENTITY zotero.__addonRef__.notInLibarayOpacity.start "Match items and show items that are not in my library with transparency">
+<!ENTITY zotero.__addonRef__.notInLibarayOpacity.end "">
