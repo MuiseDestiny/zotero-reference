@@ -79,7 +79,7 @@ class Utils {
         }
       }
       let title = titles.sort((a, b) => b.length - a.length)[0]
-      ztoolkit.log(text, "\n->\n", title, authors)
+      // ztoolkit.log(text, "\n->\n", title, authors)
       return { title, authors, year }
     } else {
       let authors: string[] = []
@@ -121,10 +121,12 @@ class Utils {
   }
 
   public parseCNKIURL(cnkiURL: string) {
-    let FileName = cnkiURL.match(/FileName=(\w+)/i)![1]
-    let DbName = cnkiURL.match(/DbName=(\w+)/i)![1]
-    let DbCode = cnkiURL.match(/DbCode=(\w+)/i)![1]
-    return { FileName, DbName, DbCode }
+    try {
+      let fileName = cnkiURL.match(/fileName=(\w+)/i)![1]
+      let dbName = cnkiURL.match(/dbName=(\w+)/i)![1]
+      let dbCode = cnkiURL.match(/dbCode=(\w+)/i)![1]
+      return { fileName, dbName, dbCode }
+    } catch {}
   }
 
   async createItemByZotero(identifiers: ItemBaseInfo["identifiers"], collections: number[]) {
@@ -173,6 +175,7 @@ class Utils {
     if (!item) { return false }
     let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item)
     let relatedItem = relatedItems.find((item: Zotero.Item) => {
+      if (!item) { return false }
       let flag = (
         reference.identifiers && (
           item.getField("DOI") == reference.identifiers.DOI ||
@@ -210,7 +213,7 @@ class Utils {
             let getPureText = (s: string) => s.toLowerCase().match(/[a-z\u4e00-\u9fa5]+/g)?.join("")!
             const title = getPureText(item.getField("title") as string)
             const searchTitle = getPureText(info.title || info.text as string)
-            console.log(title)
+            if (!(title && searchTitle)) { return }
             if (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1) {
               console.log(item.getField("title"), info)
               return item

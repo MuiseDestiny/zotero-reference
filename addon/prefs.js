@@ -19,3 +19,8 @@ pref("extensions.zotero.__addonRef__.savePDFReferences", false);
 pref("extensions.zotero.__addonRef__.saveAPIReferences", false);
 
 pref("extensions.zotero.__addonRef__.notInLibarayOpacity", "0.5");
+
+pref("extensions.zotero.__addonRef__.CNKI.username", "");
+pref("extensions.zotero.__addonRef__.CNKI.password", "");
+
+

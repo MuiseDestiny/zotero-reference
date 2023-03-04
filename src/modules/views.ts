@@ -391,14 +391,6 @@ export default class Views {
         }
       }
     } else {
-      // 不再适配知网，没有DOI直接退出
-      let DOI = item.getField("DOI") as string
-      if (!this.utils.isDOI(DOI)) {
-        (new ztoolkit.ProgressWindow("[Fail] API"))
-          .createLine({ text: `${DOI} is not DOI`, type: "fail" })
-          .show()
-        return
-      }
       const key = "References-API"
       references = local && localStorage.get(item, key)
       if (references) {
@@ -406,11 +398,54 @@ export default class Views {
           .createLine({ text: `${references.length} references`, type: "success" })
           .show()
       } else {
-        const popupWin = new ztoolkit.ProgressWindow("[Pending] API", {closeTime: -1})
-        popupWin
-          .createLine({ text: "Request references..." , type: "default"})
-          .show()
-        references = (await this.utils.API.getDOIInfoByCrossref(DOI))?.references!
+        
+        let DOI = item.getField("DOI") as string
+        let url = item.getField("url") as string
+        let title = item.getField("title") as string
+
+        let fileName = this.utils.parseCNKIURL(url)?.fileName
+        let popupWin
+        if (this.utils.isDOI(DOI)) {
+          popupWin = new ztoolkit.ProgressWindow("[Pending] API", { closeTime: -1 })
+          popupWin
+            .createLine({ text: "Request DOI references...", type: "default" })
+            .show()
+          references = (await this.utils.API.getDOIInfoByCrossref(DOI))?.references!
+        }
+        else {
+          if (!fileName) {
+            try {
+              let url = await this.utils.API.getCNKIURL(title, "") as string
+              if (url) {
+                fileName = this.utils.parseCNKIURL(url)?.fileName
+                item.setField("url", url)
+                await item.saveTx()
+              }
+            } catch {
+              (new ztoolkit.ProgressWindow("[Fail] API"))
+                .createLine({ text: `Error, Get CNKI URL`, type: "fail" })
+                .show()
+              return
+            }
+            if (!fileName) {
+              (new ztoolkit.ProgressWindow("[Fail] API"))
+                .createLine({ text: `Fail, Get CNKI URL`, type: "fail" })
+                .show()
+              return 
+            }
+          }
+          popupWin = new ztoolkit.ProgressWindow("[Pending] API", { closeTime: -1 })
+          popupWin
+            .createLine({ text: "Request CNKI references...", type: "default" })
+            .show()
+          references = (await this.utils.API.getCNKIFileInfo(fileName))?.references!
+          if (!references) {
+            popupWin.changeHeadline("[Fail] API")
+            popupWin.changeLine({ text: `Not Supported, ${fileName}`, type: "fail" })
+            popupWin.startCloseTimer(3000)
+            return
+          }
+        }
         if (Zotero.Prefs.get(`${config.addonRef}.saveAPIReferences`)) {
           window.setTimeout(async () => {
             references && await localStorage.set(item, key, references)
@@ -960,7 +995,6 @@ export default class Views {
               `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
           }
         }
-
       }, refIndex * 500)
     }
     // 鼠标进入浮窗展示

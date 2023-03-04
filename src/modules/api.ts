@@ -1,13 +1,15 @@
 import Utils from "./utils"
 var xml2js = require('xml2js')
+import { config } from "../../package.json";
+
 
 class Requests {
   /**
- * Record api response
- */
+   * Record api response
+   */
   public cache: {[key: string]: any} = {}
 
-  async get(url: string, responseType: string = "json") {
+  async get(url: string, responseType: string = "json", headers: object = {}) {
     const k = JSON.stringify(arguments)
     if (this.cache[k]) {
       return this.cache[k]
@@ -16,7 +18,8 @@ class Requests {
       "GET",
       url,
       {
-        responseType: responseType
+        responseType: responseType,
+        headers
       }
     )
     if (res.status == 200) {
@@ -371,22 +374,24 @@ class API {
         return
       }
     }.bind(Zotero.Jasminum);
-    cnkiURL = await Zotero.Jasminum.Scrape.search({ author: author, keyword: title })
+    cnkiURL = await Zotero.Jasminum.Scrape.search({ keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
     if (!cnkiURL) {
       console.log("cnkiURL", cnkiURL)
       return
     }
     let args = this.utils.parseCNKIURL(cnkiURL)
-    cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.FileName}&DbName=${args.DbName}&DbCode=${args.DbCode}`
-    return cnkiURL
+    if (args) {
+      cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
+      return cnkiURL
+    }
   }
 
-  async getTitleInfoByCNKI(refText: string): Promise<ItemInfo |undefined> {
+  async getTitleInfoByCNKI(refText: string): Promise<ItemInfo | undefined> {
     // 拒绝非中文请求，避免被封IP
     if (!this.utils.isChinese(refText)) { return }
     let res = this.utils.parseRefText(refText)
-    const key = `${res.title}${res.authors[0]}`
+    const key = `${res.title}${res.authors[0]}${refText}`
     if (this.requests.cache[key]) {
       return this.requests.cache[key]
     }
@@ -396,7 +401,7 @@ class API {
 
     let htmlString = await this.requests.get(url, "text")
     console.log(url, htmlString)
-    const parser = new window.DOMParser();
+    const parser = ztoolkit.getDOMParser();
     let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
     let aTags = doc.querySelectorAll(".top-tip span a")
     let info: ItemInfo = {
@@ -423,7 +428,53 @@ class API {
     this.requests.cache[key] = info
     return info
   }
-}
+
+  async getCNKIFileInfo(fileName: string): Promise<ItemInfo | undefined> {
+    /**
+     * 根据账号密码登录
+     */
+    const prefsKey = `${config.addonRef}.CNKI.token`
+    let updateToken = async () => {
+      let res = await this.requests.post(
+        "https://apix.cnki.net/databusapi/api/v1.0/credential/namepasswithcleartext/personalaccount",
+        {
+          Username: Zotero.Prefs.get(`${config.addonRef}.CNKI.username`) as string,
+          Password: Zotero.Prefs.get(`${config.addonRef}.CNKI.password`) as string,
+          Clientip: "127.0.0.1"
+        }
+      )
+      const token = res.Content
+      Zotero.Prefs.set(prefsKey, token)
+    }
+    const api = `https://x.cnki.net/readApi/api/v1/paperInfo?fileName=${fileName}&tableName=CJFDTOTAL&dbCode=CJFD&from=ReadingHistory&type=psmc&fsType=1&taskId=0`
+    const data = await this.requests.get(api, "json", {
+      token: Zotero.Prefs.get(prefsKey) as string
+    })
+    if (String(data.code) != "200") {
+      await updateToken()
+      return await this.getCNKIFileInfo(fileName)
+    }
+    let info: ItemInfo = {
+      identifiers: { CNKI: "" },
+      authors: [],
+      type: "",
+      references: []
+    }
+    data.content.paper.bibliography.forEach((ref: { title: string }) => {
+      const text = ref.title.replace(/^\[\d+\]/, "")
+      info.references?.push(
+        {
+          identifiers: {},
+          authors: [],
+          type: "journalArticle",
+          text: text,
+        }
+      )
+    })
+    console.log(info)
+    return info
+  }
+ }
 
 export default API
 
