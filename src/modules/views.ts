@@ -534,7 +534,9 @@ export default class Views {
           }),
           abstract: localItem.getField("abstractNote") as string,
           title: localItem.getField("title") as string,
-          type: ""
+          year: localItem.getField("year") as string,
+          primaryVenue: localItem.getField("publicationTitle") as string,
+          type: "",
         }
         console.log(info.tags)
       } else {

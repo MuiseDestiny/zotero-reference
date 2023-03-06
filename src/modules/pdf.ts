@@ -11,6 +11,7 @@ class PDF {
   constructor(utils: Utils) {
     this.utils = utils
     this.refRegex = [
+      [/^\(\d+\)/], // (1)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
@@ -110,8 +111,18 @@ class PDF {
         let hh = lastLine._height
         // lastLine.height = hh.sort((a, b) => a - b)[parseInt(String(hh.length / 2))]
         // 用最大值
-        lastLine.height = hh.sort((a, b) => b-a)[0]
-
+        // lastLine.height = hh.sort((a, b) => b-a)[0]
+        // 众数
+        const num: any = {}
+        for (let i = 0; i < hh.length; i++) {
+          num[String(hh[i])] ??= 0
+          num[String(hh[i])] += 1
+        }
+        lastLine.height = Number(
+          Object.keys(num).sort((h1: string, h2: string) => {
+            return num[h2] - num[h1]
+          })[0]
+        )
         // 新的一行
         lines.push(line)
       }
@@ -160,6 +171,7 @@ class PDF {
       let lineRefType = this.getRefType(text)
       if (
         // this.abs(line.x - firstX) < line.height * 1.2 &&
+        (lineRefType == refType && refType <= 3) ||
         (
           indent == 0 &&
           lineRefType != -1 &&
@@ -490,6 +502,11 @@ class PDF {
           return (_line.x + _line.width < line.x + line.width || _line.y > line.y)
         })
       })
+      let heightOverlap = (hh1: number[], hh2: number[]) => {
+        return hh1.some(h1 => {
+          return hh2.some(h2=>h1==h2)
+        })
+      }
       const endLine = endLines.slice(-1)[0]
       console.log(endLine)
       for (let i = lines.length - 1; i >= 0; i--) {
@@ -521,8 +538,9 @@ class PDF {
         // 前一页第一行与当前页最后一行
         if (
           part.length > 0 &&
-          part.slice(-1)[0].height != line.height
-          // this.abs(part.slice(-1)[0].height - line.height) > line.height * .1
+          // part.slice(-1)[0].height != line.height
+          !heightOverlap(part.slice(-1)[0]._height, line._height)
+          // this.abs(part.slice(-1)[0].height - line.height) > line.height * .5
         ) {
           donePart(part)
           part = [line]
@@ -540,8 +558,9 @@ class PDF {
           (
             lines[i - 1] &&
             (
-              // this.abs(line.height - lines[i - 1].height) > line.height * .1 ||
-              line.height != lines[i - 1].height ||
+              // line.height != lines[i - 1].height ||
+              // this.abs(line.height - lines[i - 1].height) > line.height * .5 ||
+              !heightOverlap(line._height, lines[i - 1]._height) ||
               lines[i].column < lines[i - 1].column ||
               (
                 line.pageNum == lines[i - 1].pageNum &&

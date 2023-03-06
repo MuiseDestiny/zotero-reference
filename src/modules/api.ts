@@ -402,10 +402,12 @@ class API {
     }
   }
 
-  async getCNKIURL(keywords: string) {
-    (new ztoolkit.ProgressWindow("[Pending] API", {closeOtherProgressWindows: true}))
-      .createLine({ text: `Get CNKI URL`, type: "default" })
-      .show()
+  async getCNKIURL(keywords: string, slience: boolean = false) {
+    if (!slience) {
+      (new ztoolkit.ProgressWindow("[Pending] API", {closeOtherProgressWindows: true}))
+        .createLine({ text: `Get CNKI URL`, type: "default" })
+        .show()
+    }
     const res = await Zotero.HTTP.request(
       "POST",
       "https://kns.cnki.net/kns8/Brief/GetGridTableHtml",
@@ -440,10 +442,12 @@ class API {
           }
         }
       }
-    } catch {}
-    (new ztoolkit.ProgressWindow("[Pending] API", { closeOtherProgressWindows: true }))
-      .createLine({ text: `Get CNKI URL Fail`, type: "fail" })
-      .show()
+    } catch { }
+    if (!slience) {
+      (new ztoolkit.ProgressWindow("[Pending] API", { closeOtherProgressWindows: true }))
+        .createLine({ text: `Get CNKI URL Fail`, type: "fail" })
+        .show()
+    }
   }
 
   async getTitleInfoByCNKI(refText: string): Promise<ItemInfo | undefined> {
@@ -455,7 +459,7 @@ class API {
       return this.requests.cache[key]
     }
     console.log("parseRefText", refText, res)
-    let url = await this.getCNKIURL(res.title, res.authors[0])
+    let url = await this.getCNKIURL(res.title, true)
     if (!url) { return }
 
     let htmlString = await this.requests.get(url, "text")

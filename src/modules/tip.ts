@@ -103,6 +103,7 @@ export default class TipUI {
         top: "",
         bottom: "0px",
       })
+      this.container.style.flexDirection = "column-reverse"
     }
     if (rect.top < 0) {
       setStyles({
@@ -300,7 +301,7 @@ export default class TipUI {
             id: "tags",
             styles: {
               width: "100%",
-              margin: "0.5em 0",
+              // margin: "0.5em 0",
             },
             subElementOptions: ((tags) => {
               if (!tags) { return [] }
@@ -314,7 +315,8 @@ export default class TipUI {
                   styles: {
                     backgroundColor: tag.color,
                     borderRadius: "10px",
-                    marginRight: "1em",
+                    margin: "0.5em 1em 0.5em 0px",
+                    display: "inline-block",
                     padding: "0 8px",
                     color: "white",
                     cursor: "pointer",
