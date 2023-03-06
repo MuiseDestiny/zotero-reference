@@ -80,7 +80,7 @@ class API {
           let identifiers
           let url: string | undefined
           let text: string
-          let textInfo = {}
+          let textInfo: any = {}
           if (item.unstructured) {
             text = item.unstructured
             textInfo = this.utils.refText2Info(text)
@@ -360,10 +360,25 @@ class API {
   }
 
   // For CNKI
-  async getCNKIURL(title: string, author: string) {
+  async _getCNKIURL(title: string, author: string) {
     console.log("getCNKIURL", title, author)
     let cnkiURL
     let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
+    ztoolkit.patch(
+      Zotero.Jasminum.Scrape,
+      "createPostData",
+      config.addonRef,
+      (original) => 
+        (arg: any) => {
+          let text = original.call(Zotero.Jasminum.Scrape, arg)
+          console.log(text)
+          text = escape(unescape(text)
+            .replace(/SCDB/g, "CFLS")
+          )
+          console.log(text)
+          return text
+        }
+    )
     Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString: string) {
       try {
         let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/i) as any[]
@@ -385,6 +400,50 @@ class API {
       cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
       return cnkiURL
     }
+  }
+
+  async getCNKIURL(keywords: string) {
+    (new ztoolkit.ProgressWindow("[Pending] API", {closeOtherProgressWindows: true}))
+      .createLine({ text: `Get CNKI URL`, type: "default" })
+      .show()
+    const res = await Zotero.HTTP.request(
+      "POST",
+      "https://kns.cnki.net/kns8/Brief/GetGridTableHtml",
+      {
+        headers: {
+          Accept: "text/html, */*; q=0.01",
+          "Accept-Encoding": "gzip, deflate, br",
+          "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8,zh-TW;q=0.7",
+          Connection: "keep-alive",
+          "Content-Length": "2085",
+          "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+          Host: "kns.cnki.net",
+          Origin: "https://kns.cnki.net",
+          Referer:
+            "https://kns.cnki.net/kns8/AdvSearch?dbprefix=SCDB&&crossDbcodes=CJFQ%2CCDMD%2CCIPD%2CCCND%2CCISD%2CSNAD%2CBDZK%2CCJFN%2CCCJD",
+          "Sec-Fetch-Dest": "empty",
+          "Sec-Fetch-Mode": "cors",
+          "Sec-Fetch-Site": "same-origin",
+          "X-Requested-With": "XMLHttpRequest",
+        },
+        body: `IsSearch=true&QueryJson={"Platform":"","DBCode":"CFLS","KuaKuCode":"CJFQ,CDMD,CIPD,CCND,CISD,SNAD,BDZK,CCJD,CCVD,CJFN","QNode":{"QGroup":[{"Key":"Subject","Title":"","Logic":1,"Items":[{"Title":"主题","Name":"SU","Value":"${keywords}","Operate":"%=","BlurType":""}],"ChildItems":[]}]},"CodeLang":"ch"}&PageName=defaultresult&DBCode=CFLS&CurPage=1&RecordsCntPerPage=20&CurDisplayMode=listmode&CurrSortField=&CurrSortFieldType=desc&IsSentenceSearch=false&Subject=`
+      }
+    )
+    try {
+      if (res) {
+        let cnkiURL = res.responseText.match(/href='(.+FileName=.+?&DbName=.+?)'/i)
+        if (cnkiURL) {
+          let args = this.utils.parseCNKIURL(cnkiURL[1])
+          if (args) {
+            cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
+            return cnkiURL
+          }
+        }
+      }
+    } catch {}
+    (new ztoolkit.ProgressWindow("[Pending] API", { closeOtherProgressWindows: true }))
+      .createLine({ text: `Get CNKI URL Fail`, type: "fail" })
+      .show()
   }
 
   async getTitleInfoByCNKI(refText: string): Promise<ItemInfo | undefined> {
@@ -429,18 +488,37 @@ class API {
     return info
   }
 
-  async getCNKIFileInfo(fileName: string): Promise<ItemInfo | undefined> {
+  async getCNKIFileInfo(fileName: string, count: number=0): Promise<ItemInfo | undefined> {
     /**
      * 根据账号密码登录
      */
     const prefsKey = `${config.addonRef}.CNKI.token`
+    const username = Zotero.Prefs.get(`${config.addonRef}.CNKI.username`) as string;
+    const password = Zotero.Prefs.get(`${config.addonRef}.CNKI.password`) as string;
+    if (username.length * password.length == 0) {
+      (new ztoolkit.ProgressWindow("[Fail] API", { closeOtherProgressWindows: true }))
+        .createLine({ text: "请配置知网研学账号密码后重试", type: "fail" })
+        .show()
+    }
     let updateToken = async () => {
+      function getRandomIP() {
+        let ip: string = "";
+        for (var i = 0; i < 4; i++) {
+          //判断是否小于3，决定后面要不要拼接.
+          if (i < 3) {
+            ip = ip + String(Math.floor(Math.random() * 256)) + "."
+          } else {
+            ip = ip + String(Math.floor(Math.random() * 256))
+          }
+        }
+        return ip
+      }
       let res = await this.requests.post(
         "https://apix.cnki.net/databusapi/api/v1.0/credential/namepasswithcleartext/personalaccount",
         {
-          Username: Zotero.Prefs.get(`${config.addonRef}.CNKI.username`) as string,
-          Password: Zotero.Prefs.get(`${config.addonRef}.CNKI.password`) as string,
-          Clientip: "127.0.0.1"
+          Username: username,
+          Password: password,
+          Clientip: getRandomIP()
         }
       )
       const token = res.Content
@@ -448,12 +526,22 @@ class API {
     }
     const api = `https://x.cnki.net/readApi/api/v1/paperInfo?fileName=${fileName}&tableName=CJFDTOTAL&dbCode=CJFD&from=ReadingHistory&type=psmc&fsType=1&taskId=0`
     const data = await this.requests.get(api, "json", {
-      token: Zotero.Prefs.get(prefsKey) as string
+      token: Zotero.Prefs.get(prefsKey) as string,
+      "user-agent": "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36"
     })
     if (String(data.code) != "200") {
-      await updateToken()
-      return await this.getCNKIFileInfo(fileName)
-    }
+      if (count < 3) {
+        console.log(data)
+        await updateToken()
+        return await this.getCNKIFileInfo(fileName, count + 1)
+      } else {
+        (new ztoolkit.ProgressWindow("[Fail] API", {closeOtherProgressWindows: true}))
+          .createLine({ text: `code is ${data.code}`, type: "fail" })
+          .show()
+        return
+      }
+    } 
+
     let info: ItemInfo = {
       identifiers: { CNKI: "" },
       authors: [],
@@ -471,7 +559,7 @@ class API {
         }
       )
     })
-    console.log(info)
+    console.log(info, data.content.paper.bibliography)
     return info
   }
  }

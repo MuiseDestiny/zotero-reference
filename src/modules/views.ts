@@ -215,20 +215,6 @@ export default class Views {
       row.classList.add("only-title")
       totalNum += 1;
       let box = row.querySelector("box") as XUL.Box
-      // if (!row.querySelector(".zotero-clicky-minus")) {
-      //   window.setTimeout(async () => {        
-      //     box.style.opacity = ".5"
-      //     let item = (await this.utils.searchLibraryItem(info)) as Zotero.Item;
-      //     if (item) {
-      //       box.style.opacity = "1";
-      //       box.onclick = (event) => {
-      //         if (event.button == 0) {
-      //           this.utils.selectItemInLibrary(item)
-      //         }
-      //       }
-      //     }
-      //   })
-      // }
     })
     return totalNum
   }
@@ -415,7 +401,7 @@ export default class Views {
         else {
           if (!fileName) {
             try {
-              let url = await this.utils.API.getCNKIURL(title, "") as string
+              let url = await this.utils.API.getCNKIURL(title) as string
               if (url) {
                 fileName = this.utils.parseCNKIURL(url)?.fileName
                 item.setField("url", url)
@@ -434,7 +420,7 @@ export default class Views {
               return 
             }
           }
-          popupWin = new ztoolkit.ProgressWindow("[Pending] API", { closeTime: -1 })
+          popupWin = new ztoolkit.ProgressWindow("[Pending] API", { closeTime: -1, closeOtherProgressWindows: true})
           popupWin
             .createLine({ text: "Request CNKI references...", type: "default" })
             .show()
@@ -532,14 +518,35 @@ export default class Views {
     tipUI.onInit(refRect, position)
     const refText = reference.text!;
     let getDefalutInfoByReference = async () => {
-      let info: ItemInfo = {
-        identifiers: {},
-        authors: [],
-        type: "",
-        title: idText || "Reference",
-        tags: [],
-        text: refText,
-        abstract: refText
+      const localItem = await this.utils.searchLibraryItem(reference) 
+      let info: ItemInfo
+      if (localItem) {
+        info = {
+          identifiers: {},
+          authors: localItem.getCreators().map((i: any) => i.firstName + " " + i.lastName),
+          tags: localItem.getTags().map((i: any) => {
+            let ctag: any = localItem.getColoredTags().find(ci => ci.tag == i.tag)
+            if (ctag) {
+              return {text: i.tag, color: ctag.color}
+            } else {
+              return i.tag
+            }
+          }),
+          abstract: localItem.getField("abstractNote") as string,
+          title: localItem.getField("title") as string,
+          type: ""
+        }
+        console.log(info.tags)
+      } else {
+        info = {
+          identifiers: {},
+          authors: [],
+          type: "",
+          title: idText || "Reference",
+          tags: [],
+          text: refText,
+          abstract: refText
+        }
       }
       return info
     }
@@ -689,6 +696,11 @@ export default class Views {
                     window.clearTimeout(editTimer)
                     if (reference._item) {
                       return this.utils.selectItemInLibrary(reference._item)
+                    } else {
+                      let item = await this.utils.searchLibraryItem(reference)
+                      if (item) {
+                        return this.utils.selectItemInLibrary(item)
+                      }
                     }
                     let URL = reference.url
                     if (!URL) {
@@ -698,7 +710,7 @@ export default class Views {
                         .createLine({ text: refText, type: "default"})
                         .show()
                       if (this.utils.isChinese(refText)) {
-                        URL = await this.utils.API.getCNKIURL(info.title!, info.authors[0])
+                        URL = await this.utils.API.getCNKIURL(info.title!)
                       } else {
                         let DOI = await (await this.utils.API.getTitleInfoByCrossref(refText))?.identifiers.DOI
                         URL = this.utils.identifiers2URL({ DOI })
@@ -995,7 +1007,7 @@ export default class Views {
               `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
           }
         }
-      }, refIndex * 500)
+      }, refIndex * 0)
     }
     // 鼠标进入浮窗展示
     box.addEventListener("mouseenter", () => {

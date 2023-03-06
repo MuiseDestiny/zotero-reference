@@ -44,7 +44,7 @@ declare type ItemInfo = ItemBaseInfo & {
   abstract?: string | undefined;
   primaryVenue?: string
   source?: string;
-  tags?: string[] | { text: string, color: string, tip?: string }[];
+  tags?: (string[] | { text: string, color: string, tip?: string })[];
   references?: ItemBaseInfo[]
 }
 
