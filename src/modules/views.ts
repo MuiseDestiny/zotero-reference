@@ -518,7 +518,7 @@ export default class Views {
     tipUI.onInit(refRect, position)
     const refText = reference.text!;
     let getDefalutInfoByReference = async () => {
-      const localItem = reference._item || await this.utils.searchLibraryItem(reference)
+      const localItem = reference._item
       let info: ItemInfo
       if (localItem) {
         info = {
