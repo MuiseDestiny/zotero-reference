@@ -5,6 +5,7 @@ import PDF from "./pdf";
 class Utils {
   API: API;
   PDF: PDF;
+  private lock?: _ZoteroTypes.PromiseObject;
   private cache: { [key: string]: any } = {};
   public regex = {
     DOI: /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/,
@@ -194,8 +195,12 @@ class Utils {
    * @returns 
    */
   public async searchLibraryItem(info: ItemBaseInfo): Promise<Zotero.Item | undefined> {
+    await Zotero.Promise.delay(100)
+    if (this.lock) { await this.lock }
+    this.lock = Zotero.Promise.defer();
     const key = JSON.stringify(info.identifiers) + info.text + "library-item"
     if (key in this.cache) {
+      this.lock.resolve()
       return this.cache[key]
     } else {
       // 精确匹配，时间较快
@@ -208,9 +213,13 @@ class Utils {
       if (!item) {
         // 进行粗暴搜索，可能时间缓慢
         let items: Zotero.Item[] = await Zotero.Items.getAll(1);
-        item = items.filter(i => i.isRegularItem() && i.getField("title")).find((item: Zotero.Item) => {
+        item = items.filter(i => (
+          i.isRegularItem() &&
+          i.getField("title") &&
+          ["webpage"].indexOf(i.itemType) == -1
+        )).find((item: Zotero.Item) => {
           try {
-            let getPureText = (s: string) => s.toLowerCase().match(/[a-z\u4e00-\u9fa5]+/g)?.join("")!
+            let getPureText = (s: string) => s.toLowerCase().match(/[0-9a-z\u4e00-\u9fa5]+/g)?.join("")!
             const title = getPureText(item.getField("title") as string)
             const searchTitle = getPureText(info.title || info.text as string)
             if (!(title && searchTitle)) { return }
@@ -233,6 +242,7 @@ class Utils {
           info.identifiers = {DOI}
         }
       }
+      this.lock.resolve()
       return item
     }
   }

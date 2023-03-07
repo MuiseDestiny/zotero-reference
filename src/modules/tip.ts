@@ -210,8 +210,8 @@ export default class TipUI {
     tags: { source: string; text: string, color: string, tip?: string, url?: string, item?: Zotero.Item }[],
     descriptions: string[],
     content: string,
-    according?: string,
-    index?: number,
+    according: string,
+    index: number,
     prefIndex?: number
   ) {
     const translate = async (text: string) => {
@@ -425,11 +425,11 @@ export default class TipUI {
         ]
       }
     ) as HTMLDivElement
-
     const optionNode = ztoolkit.UI.createElement(
       document,
       "div",
       {
+        id: `option-${index}`,
         styles: {
           width: `${this.option.size}px`,
           height: `${this.option.size}px`,
@@ -474,7 +474,29 @@ export default class TipUI {
         ]
       }
     ) as HTMLDivElement
-    this.container.querySelector("#option-container")!.appendChild(optionNode)
+    const optionContainer = this.container.querySelector("#option-container")!;
+    const optionNodes = [...optionContainer.querySelectorAll("[id^=option]")] as HTMLElement[]
+    if (optionNodes.length == 0) {
+      optionContainer.appendChild(optionNode)
+    } else {
+      let getIndex = (node: HTMLElement) => Number(node.id.split("-")[1])
+      for (let i = 0; i < optionNodes.length; i++) {
+        if (index > getIndex(optionNodes[i])) {
+          if (i + 1 < optionNodes.length) {
+            if (index < getIndex(optionNodes[i + 1])) {
+              optionContainer.insertBefore(optionNode, optionNodes[i + 1])
+              break
+            }
+          } else {
+            optionContainer.appendChild(optionNode)
+            break
+          }
+        } else {
+          optionContainer.insertBefore(optionNode, optionNodes[i])
+          break
+        }
+      }
+    }
     this.container.querySelector("#content-container")!.appendChild(contentNode)
     this.place()
   }

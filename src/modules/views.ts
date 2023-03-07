@@ -518,14 +518,14 @@ export default class Views {
     tipUI.onInit(refRect, position)
     const refText = reference.text!;
     let getDefalutInfoByReference = async () => {
-      const localItem = await this.utils.searchLibraryItem(reference) 
+      const localItem = reference._item || await this.utils.searchLibraryItem(reference)
       let info: ItemInfo
       if (localItem) {
         info = {
           identifiers: {},
           authors: localItem.getCreators().map((i: any) => i.firstName + " " + i.lastName),
           tags: localItem.getTags().map((i: any) => {
-            let ctag: any = localItem.getColoredTags().find(ci => ci.tag == i.tag)
+            let ctag: any = localItem.getColoredTags().find((ci: any) => ci.tag == i.tag)
             if (ctag) {
               return {text: i.tag, color: ctag.color}
             } else {
@@ -979,6 +979,7 @@ export default class Views {
       popupWin.changeHeadline(`Added with ${source}`)
       popupWin.changeLine({ text: refItem.getField("title"), type: "success" })
       popupWin.startCloseTimer(3000)
+      updateRowByItem(refItem)
       return row
     }
 
@@ -996,18 +997,21 @@ export default class Views {
       return path.reverse().join("/")
     }
 
+    let updateRowByItem = (item: Zotero.Item) => {
+      box.style.opacity = "1"
+      let itemType = this.utils.getItemType(item)
+      if (itemType) {
+        (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
+          `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
+      }
+    }
     let timer: undefined | number, tipUI: TipUI;
     const box = row.querySelector("#reference-box") as XUL.Box
     if (notInLibarayOpacity < 1) {
       window.setTimeout(async () => {
         const item = await this.utils.searchLibraryItem(reference) as Zotero.Item
         if (item) {
-          box.style.opacity =  "1"
-          let itemType = this.utils.getItemType(item)
-          if (itemType) {
-            (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
-              `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
-          }
+          updateRowByItem(item)
         }
       }, refIndex * 0)
     }
@@ -1047,9 +1051,6 @@ export default class Views {
           let collection = ZoteroPane.getSelectedCollection();
           ztoolkit.log(collection)
           if (collection) {
-            (new ztoolkit.ProgressWindow("Adding to collection"))
-              .createLine({ text: `${await getCollectionPath(collection.id)}`, type: "default"})
-              .show()
             await add([collection.id])
           } else {
             (new ztoolkit.ProgressWindow("Error"))
