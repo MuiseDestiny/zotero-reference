@@ -145,8 +145,9 @@ class Utils {
     }))[0]
   }
 
-  async createItemByJasminum(title: string, author: string) {
-    let cnkiURL = await this.API.getCNKIURL(title, author)
+  async createItemByJasminum(title: string) {
+    let cnkiURL = await this.API.getCNKIURL(title, true)
+    console.log("cnkiURL", cnkiURL)
     // Jasminum
     let articleId = Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
     let postData = Zotero.Jasminum.Scrape.createRefPostData([articleId])
@@ -161,32 +162,36 @@ class Utils {
     }
   }
 
-  private async searchItem(condition: string, operator: Zotero.Search.Operator, value: string) {
-    if (!value) { return }
+  private async searchItem(info: ItemBaseInfo) {
+    if (!info) { return }
     let s = new Zotero.Search;
-    s.addCondition(condition, operator, value);
+    // @ts-ignore
+    s.addCondition("joinMode", "any");
+    if (info.title!.length > 8) {
+      s.addCondition("title", "contains", info.title!);
+    }
+    s.addCondition("DOI", "contains", info.identifiers.DOI!);
+    s.addCondition("url", "contains", info.identifiers.arXiv!);
+    s.addCondition("url", "contains", info.identifiers.CNKI!);
     var ids = await s.search();
-    let items = await Zotero.Items.getAsync(ids);
-    if (items) {
+    let items = (await Zotero.Items.getAsync(ids)).filter(i => {
+      return (
+        i.itemType !== "attachment" &&
+        i.isRegularItem && i.isRegularItem()
+      )
+    });
+    if (items.length) {
       return items[0]
     }
   }
 
-  public searchRelatedItem(item: Zotero.Item, reference: ItemBaseInfo): Zotero.Item | undefined | boolean {
-    if (!item) { return false }
+  public searchRelatedItem(item: Zotero.Item, refItem: Zotero.Item): Zotero.Item | undefined {
+    if (!item) { return }
     let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item)
-    let relatedItem = relatedItems.find((item: Zotero.Item) => {
-      if (!item) { return false }
-      let flag = (
-        reference.identifiers && (
-          item.getField("DOI") == reference.identifiers.DOI ||
-          (item.getField("url") as string).includes(reference.identifiers.arXiv as string)
-        ) ||
-        item.getField("title") == reference?.title
-      )
-      return flag
-    })
-    return relatedItem
+    if (refItem) {
+      let relatedItem = relatedItems.find((item: Zotero.Item) => refItem.id == item.id)
+      return relatedItem
+    }
   }
 
   /**
@@ -201,15 +206,12 @@ class Utils {
     const key = JSON.stringify(info.identifiers) + info.text + "library-item"
     if (key in this.cache) {
       this.lock.resolve()
+      info._item = this.cache[key]
       return this.cache[key]
     } else {
       // 精确匹配，时间较快
-      let item: Zotero.Item | undefined = (
-        await this.searchItem("title", "contains", info.title!) ||
-        await this.searchItem("DOI", "is", info.identifiers.DOI!) ||
-        await this.searchItem("url", "contains", info.identifiers.arXiv!)
-      )
-      // 此处肥肠耗时
+      let item: Zotero.Item | undefined = await  this.searchItem(info);
+      // 此处肥肠耗时，卡顿可能来源于此
       if (!item) {
         // 进行粗暴搜索，可能时间缓慢
         let items: Zotero.Item[] = await Zotero.Items.getAll(1);
@@ -222,9 +224,11 @@ class Utils {
             let getPureText = (s: string) => s.toLowerCase().match(/[0-9a-z\u4e00-\u9fa5]+/g)?.join("")!
             const title = getPureText(item.getField("title") as string)
             const searchTitle = getPureText(info.title || info.text as string)
+            const n = 10
+            if (searchTitle.length < n || title.length < n) { return }
             if (!(title && searchTitle)) { return }
             if (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1) {
-              console.log(item.getField("title"), info)
+              console.log("----\n\n\n\n", item.getField("title"), info, title, searchTitle)
               return item
             }
           } catch (e) {
@@ -260,7 +264,8 @@ class Utils {
   }
 
   public isChinese(text: string) {
-    return (text.match(/[^a-zA-Z]/g)?.length || 0) / text.length > .5
+    text = text.replace(/\s+/g, "")
+    return (text.match(/[\u4E00-\u9FA5]/g)?.length || 0) / text.length > .5
   }
 
   public isDOI(text: string) {

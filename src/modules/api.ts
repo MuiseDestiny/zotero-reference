@@ -535,12 +535,11 @@ class API {
     })
     if (String(data.code) != "200") {
       if (count < 3) {
-        console.log(data)
         await updateToken()
         return await this.getCNKIFileInfo(fileName, count + 1)
       } else {
         (new ztoolkit.ProgressWindow("[Fail] API", {closeOtherProgressWindows: true}))
-          .createLine({ text: `code is ${data.code}`, type: "fail" })
+          .createLine({ text: `${data.code}: ${data.promptMessage} `, type: "fail" })
           .show()
         return
       }

@@ -209,7 +209,7 @@ export default class Views {
   public refreshRelated(array: ItemBaseInfo[], node: XUL.Element) {
     let totalNum = 0
     ztoolkit.log("refreshRelated", array)
-    array.forEach(async (info: ItemBaseInfo, i: number) => {
+    array.forEach((info: ItemBaseInfo, i: number) => {
       let row = this.addRow(node, array, i, false, false) as XUL.Element
       if (!row) { return }
       row.classList.add("only-title")
@@ -445,7 +445,7 @@ export default class Views {
 
     const referenceNum = references.length
 
-    references.forEach(async (reference: ItemBaseInfo, refIndex: number) => {
+    references.forEach((reference: ItemBaseInfo, refIndex: number) => {
       let row = this.addRow(panel, references, refIndex)!;
       label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
     })
@@ -670,8 +670,6 @@ export default class Views {
     ) || "Reference"
     // 当前item
     let item = this.utils.getItem()!
-    let alreadyRelated = this.utils.searchRelatedItem(item, reference)
-    // TODO 可以设置
     let editTimer: number | undefined
     const row = ztoolkit.UI.createElement(
       document,
@@ -684,7 +682,7 @@ export default class Views {
             id: "reference-box",
             namespace: "xul",
             styles: {
-              opacity: alreadyRelated ? "1" : String(notInLibarayOpacity)
+              opacity: String(notInLibarayOpacity)
             },
             classList: ["zotero-clicky"],
             listeners: [
@@ -780,11 +778,11 @@ export default class Views {
             id: "add-remove",
             namespace: "xul",
             attributes: {
-              value: alreadyRelated ? "-" : "+"
+              value: "+"
             },
             classList: [
               "zotero-clicky",
-              alreadyRelated ? "zotero-clicky-minus" : "zotero-clicky-plus"
+              "zotero-clicky-plus"
             ]
           }
         ]
@@ -870,12 +868,12 @@ export default class Views {
 
     let remove = async () => {
       ztoolkit.log("removeRelatedItem");
-      const popunWin = new ztoolkit.ProgressWindow("Removing", {closeTime: -1})
+      const popunWin = new ztoolkit.ProgressWindow("Removing Item", {closeTime: -1})
         .createLine({ text: refText, type: "default" })
         .show()
       setState()
 
-      let relatedItem = this.utils.searchRelatedItem(item, reference) as Zotero.Item
+      let relatedItem = this.utils.searchRelatedItem(item, reference._item) as Zotero.Item
       if (!relatedItem) {
         popunWin.changeHeadline("Removed");
         (node.querySelector("#refresh-button") as XUL.Button).click()
@@ -887,79 +885,79 @@ export default class Views {
       await item.saveTx()
       await relatedItem.saveTx()
       setState("+")
-      popunWin.changeHeadline("Removed");
       popunWin.changeLine({ type: "success" })
       popunWin.startCloseTimer(3000)
     }
 
     let add = async (collections: undefined | number[] = undefined) => {
-      // check DOI
-      let refItem, source
-      let info: ItemBaseInfo = this.utils.refText2Info(reference.text!);
-      setState()
-      let popupWin
-      if (this.utils.isChinese(info.title!) && Zotero.Jasminum) {
-        popupWin = (new ztoolkit.ProgressWindow("CNKI", { closeTime: -1 }))
-          .createLine({ text: info.title, type: "default" })
-          .show()
-        // search DOI in local
-        refItem = await this.utils.searchLibraryItem(info)
-
-        if (refItem) {
-          source = "Local Item"
+      let collapseText = (text: string) => {
+        let n
+        if (this.utils.isChinese(text)) {
+          n = 15
         } else {
-          refItem = await this.utils.createItemByJasminum(info.title!, info.authors[0])
-          source = "Created Item"
+          n = 35
         }
-        ztoolkit.log("addToCollection")
-        for (let collectionID of (collections || item.getCollections())) {
-          refItem.addToCollection(collectionID)
-          await refItem.saveTx()
-        }
+        return text.length > n ? (text.slice(0, n) + "...") : text
       }
-      // DOI or arXiv
-      else {
-        if (Object.keys(reference.identifiers).length == 0) {
-          // 目前只能获取DOI
-          popupWin = (new ztoolkit.ProgressWindow("[Pending] Request DOI From API", { closeTime: -1 }))
-            .createLine({ text: info.title, type: "default" })
-            .show()
-          let DOI = await (await this.utils.API.getTitleInfoByCrossref(info.title!))?.identifiers.DOI as string
-          if (!this.utils.isDOI(DOI)) {
-            setState("+");
-            popupWin.changeHeadline("[Fail] Request DOI From API")
-            popupWin.changeLine({ text: "Error DOI", type: "fail" })
+      let popupWin = (new ztoolkit.ProgressWindow("Searching Item",
+        { closeTime: -1, closeOtherProgressWindows: true}))
+        .createLine({ text: collapseText(reference.text!), type: "default" })
+        .show()
+      // 检查本地
+      let refItem = reference._item || await this.utils.searchLibraryItem(reference)
+      // 禁用按钮
+      setState()
+      if (refItem) {
+        popupWin.changeHeadline("Existing Item")
+        popupWin.changeLine({ text: collapseText(refItem.getField("title"))})
+      } else {
+        let info: ItemBaseInfo = this.utils.refText2Info(reference.text!);
+        // 知网
+        if (this.utils.isChinese(reference.text!) && Zotero.Jasminum) {
+          popupWin.changeHeadline("Creating Item")
+          popupWin.changeLine({ text: collapseText(`CNKI: ${info.title}`) })
+          try {
+            refItem = await this.utils.createItemByJasminum(info.title!)
+          } catch (e) { 
+            console.log(e)
+          }
+          if (!refItem) {
+            popupWin.changeLine({ type: "fail" })
             popupWin.startCloseTimer(3000)
+            setState("+")
             return
           }
-          popupWin.changeHeadline("[Done] Request DOI From API")
-          reference.identifiers = { DOI }
         }
-        popupWin ??= (new ztoolkit.ProgressWindow("", {closeTime: -1})).createLine({ text: info.title, type: "default" }).show()
-        // done
-        if (this.utils.searchRelatedItem(item, reference)) {
-          popupWin.changeHeadline("Added")
-          popupWin.changeLine({ type: "success" });
-          popupWin.startCloseTimer(3000);
-          (node.querySelector("#refresh-button") as XUL.Button).click();
-          return
-        }
-        popupWin.changeHeadline("Adding")
-        setState()
-        // search DOI in local
-        refItem = await this.utils.searchLibraryItem(reference)
-        if (refItem) {
-          source = "Local Item"
-          for (let collectionID of (collections || item.getCollections())) {
-            refItem.addToCollection(collectionID)
-            await refItem.saveTx()
+        // DOI or arXiv
+        else {
+          // DOI信息补全
+          if (Object.keys(reference.identifiers).length == 0) {
+            popupWin.changeHeadline("Searching DOI")
+            popupWin.changeLine({ text: collapseText(`Crossref: ${info.title!}`) })
+
+            let DOI = await (await this.utils.API.getTitleInfoByCrossref(info.title!))?.identifiers.DOI as string
+            if (!this.utils.isDOI(DOI)) {
+              setState("+");
+              popupWin.changeLine({ type: "fail" })
+              popupWin.startCloseTimer(3000)
+              return
+            }
+            reference.identifiers = { DOI }
           }
-        } else {
-          source = "Created Item"
+          popupWin.changeHeadline("Creating Item")
+          popupWin.changeLine({ text: collapseText(`${Object.keys(reference.identifiers)}: ${Object.values(reference.identifiers)[0]}`) })
+          // done
+          if (await this.utils.searchRelatedItem(item, refItem)) {
+            popupWin.changeHeadline("Added Item")
+            popupWin.changeLine({ type: "success" });
+            popupWin.startCloseTimer(3000);
+            (node.querySelector("#refresh-button") as XUL.Button).click();
+            return
+          }
+          // search DOI in local
           try {
             refItem = await this.utils.createItemByZotero(reference.identifiers, (collections || item.getCollections()))
           } catch (e: any) {
-            popupWin.changeHeadline(`Add ${source}`)
             popupWin.changeLine({ type: "fail" })
             popupWin.startCloseTimer(3000)
             setState("+")
@@ -968,16 +966,22 @@ export default class Views {
           }
         }
       }
+      popupWin.changeHeadline("Adding Item")
+      popupWin.changeLine({ text: collapseText(refItem.getField("title")) })
+
+      for (let collectionID of (collections || item.getCollections())) {
+        refItem.addToCollection(collectionID)
+        await refItem.saveTx()
+      }
       // addRelatedItem
-      ztoolkit.log("addRelatedItem")
+      reference._item = refItem
       item.addRelatedItem(refItem)
       refItem.addRelatedItem(item)
       await item.saveTx()
       await refItem.saveTx()
       // button
       setState("-")
-      popupWin.changeHeadline(`Added with ${source}`)
-      popupWin.changeLine({ text: refItem.getField("title"), type: "success" })
+      popupWin.changeLine({ type: "success" })
       popupWin.startCloseTimer(3000)
       updateRowByItem(refItem)
       return row
@@ -997,21 +1001,25 @@ export default class Views {
       return path.reverse().join("/")
     }
 
-    let updateRowByItem = (item: Zotero.Item) => {
+    let updateRowByItem = (refItem: Zotero.Item) => {
       box.style.opacity = "1"
       let itemType = this.utils.getItemType(item)
       if (itemType) {
         (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
           `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
       }
+      let alreadyRelated = this.utils.searchRelatedItem(item, refItem)
+      if (alreadyRelated) {
+        setState("-")
+      }
     }
     let timer: undefined | number, tipUI: TipUI;
     const box = row.querySelector("#reference-box") as XUL.Box
     if (notInLibarayOpacity < 1) {
       window.setTimeout(async () => {
-        const item = await this.utils.searchLibraryItem(reference) as Zotero.Item
-        if (item) {
-          updateRowByItem(item)
+        const refItem = reference._item || await this.utils.searchLibraryItem(reference) as Zotero.Item
+        if (refItem) {
+          updateRowByItem(refItem)
         }
       }, refIndex * 0)
     }

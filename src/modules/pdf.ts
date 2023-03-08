@@ -504,7 +504,8 @@ class PDF {
       })
       let heightOverlap = (hh1: number[], hh2: number[]) => {
         return hh1.some(h1 => {
-          return hh2.some(h2=>h1==h2)
+          // 有容差
+          return hh2.some(h2=>h1-h2 < (h1>h2?h2:h1)*.5)
         })
       }
       const endLine = endLines.slice(-1)[0]
