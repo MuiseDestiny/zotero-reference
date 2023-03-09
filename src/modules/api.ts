@@ -528,41 +528,101 @@ class API {
       const token = res.Content
       Zotero.Prefs.set(prefsKey, token)
     }
-    const api = `https://x.cnki.net/readApi/api/v1/paperInfo?fileName=${fileName}&tableName=CJFDTOTAL&dbCode=CJFD&from=ReadingHistory&type=psmc&fsType=1&taskId=0`
-    const data = await this.requests.get(api, "json", {
-      token: Zotero.Prefs.get(prefsKey) as string,
-      "user-agent": "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36"
+    const infoApi = `https://x.cnki.net/readApi/api/v1/paperInfo?fileName=${fileName}&tableName=CJFDTOTAL&dbCode=CJFD&from=ReadingHistory&type=psmc&fsType=1&taskId=0`
+    const refApi = `https://x.cnki.net/readApi/api/v1/paperRefreNotes?appId=CRSP_BASIC_PSMC&dbcode=CJFD&tablename=CJFDTOTAL&filename=${fileName}&type=1&page=1`
+    const userAgent = "user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36"
+    const token = Zotero.Prefs.get(prefsKey) as string
+    const infoData = await this.requests.get(infoApi, "json", {
+      token: token,
+      "user-agent": userAgent
     })
-    if (String(data.code) != "200") {
+    // 这是最后一根救命稻草
+    const refData = await this.requests.get(refApi, "json", {
+      token: token,
+      "user-agent": userAgent
+    })
+    console.log(refData)
+    if (String(refData.code) != "200") {
       if (count < 3) {
         await updateToken()
         return await this.getCNKIFileInfo(fileName, count + 1)
       } else {
         (new ztoolkit.ProgressWindow("[Fail] API", {closeOtherProgressWindows: true}))
-          .createLine({ text: `${data.code}: ${data.promptMessage} `, type: "fail" })
+          .createLine({ text: `${refData.code}: ${refData.promptMessage}`, type: "fail" })
           .show()
         return
       }
     } 
 
     let info: ItemInfo = {
-      identifiers: { CNKI: "" },
+      identifiers: {},
       authors: [],
       type: "",
       references: []
     }
-    data.content.paper.bibliography.forEach((ref: { title: string }) => {
-      const text = ref.title.replace(/^\[\d+\]/, "")
-      info.references?.push(
-        {
-          identifiers: {},
-          authors: [],
-          type: "journalArticle",
-          text: text,
+    const typeMap: any = {
+      "journal": "journalArticle"
+    }
+    if (String(infoData.code)  == "200") {
+      infoData.content.paper.bibliography.forEach((ref: {title: string}) => {
+        let _ref = refData.content.refer.find((_ref: {title: string}) => {
+          return ref.title.indexOf(_ref.title) != -1
+        })
+        const refText = ref.title.replace(/^\[\d+\]/, "")
+        if (_ref) {
+          const cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${_ref.fileName}&DbName=${_ref.tableName}&DbCode=${_ref.dbSource.split("_")[0]}`
+          info.references?.push({
+            identifiers: {
+              CNKI: cnkiURL
+            },
+            text: refText,
+            title: _ref.title,
+            authors: [],
+            type: typeMap[_ref.type] || "journalArticle",
+            url: cnkiURL
+          })
+        } else {
+          info.references?.push({
+            identifiers: {},
+            text: refText,
+            authors: [],
+            type: "journalArticle",
+            title: refText
+          })
         }
-      )
-    })
-    console.log(info, data.content.paper.bibliography)
+      })
+    } else {
+      refData.content.refer.sort((a: any, b: any) => Number(a.citationNumber) - Number(b.citationNumber))
+        .forEach((ref: {
+        type: string; title: string; author: string;
+        fileName: string;
+        tableName: string;
+        dbSource: string;
+        year: string;
+        citationNumber: string;
+        volumn: string;
+        source: string;
+        pageNumber: string;
+      }) => {
+        const title = ref.title.replace(/^\[\d+\]/, "")
+        
+        const cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${ref.fileName}&DbName=${ref.tableName}&DbCode=${ref.dbSource.split("_")[0]}`
+        info.references?.push(
+          {
+            identifiers: {
+              CNKI: cnkiURL
+            },
+            authors: ref.author.split(";").filter(s=>s.length),
+            type: typeMap[ref.type] || "journalArticle",
+            text: `${ref.author}. ${title}[${ref.type[0]}]. ${ref.source}, ${ref.year}, ${ref.volumn}:${ref.pageNumber}.`,
+            title: ref.title,
+            year: ref.year,
+            url: cnkiURL,
+            number: Number(ref.citationNumber)
+          }
+        )
+      })
+    }
     return info
   }
  }

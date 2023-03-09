@@ -651,7 +651,7 @@ export default class Views {
     // 非阻塞搜索
     let refText: string
     if (addPrefix) {
-      refText = `[${refIndex + 1}] ${reference.text}`
+      refText = `[${reference?.number || (refIndex + 1)}] ${reference.text}`
     } else {
       refText = reference.text!
     }

@@ -37,6 +37,7 @@ declare type ItemBaseInfo = {
   title?: string;
   url?: string;
   _item?: _ZoteroItem;
+  number?: number
 }
 
 declare type ItemInfo = ItemBaseInfo & {
