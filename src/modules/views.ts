@@ -566,6 +566,7 @@ export default class Views {
         getDefalutInfoByReference(),
         this.utils.API.getDOIInfoBySemanticscholar(reference.identifiers.DOI),
         this.utils.API.getTitleInfoByReadpaper(refText, {}, reference.identifiers.DOI),
+        this.utils.API.getTitleInfoByConnectedpapers(reference.identifiers.DOI),
         this.utils.API.getDOIInfoByCrossref(reference.identifiers.DOI)
       ]
       prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
@@ -575,6 +576,7 @@ export default class Views {
         getDefalutInfoByReference(),
         this.utils.API.getTitleInfoByReadpaper(refText),
         this.utils.API.getTitleInfoByCrossref(refText),
+        this.utils.API.getTitleInfoByConnectedpapers(refText),
         this.utils.API.getTitleInfoByCNKI(refText)
       ]
       prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
@@ -585,6 +587,7 @@ export default class Views {
       readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
       semanticscholar: { color: "#1857b6", tip: "Semantic Scholar is an artificial intelligence–powered research tool for scientific literature developed at the Allen Institute for AI and publicly released in November 2015. It uses advances in natural language processing to provide summaries for scholarly papers. The Semantic Scholar team is actively researching the use of artificial-intelligence in natural language processing, machine learning, Human-Computer interaction, and information retrieval." },
       crossref: { color: "#89bf04", tip: "Crossref is a nonprofit association of approximately 2,000 voting member publishers who represent 4,300 societies and publishers, including both commercial and nonprofit organizations. Crossref includes publishers with varied business models, including those with both open access and subscription policies." },
+      connectedpapers: { color: "#35999a", tip: "Connected Papers is a visual tool to help researchers and applied scientists find academic papers relevant to their field of work."},
       DOI: { color: "#fcb426" },
       Zotero: { color: "#d63b3b", tip: "Zotero is a free, easy-to-use tool to help you collect, organize, cite, and share your research sources." },
       CNKI: { color: "#1b66e6", tip: "中国知网知识发现网络平台—面向海内外读者提供中国学术文献、外文文献、学位论文、报纸、会议、年鉴、工具书等各类资源统一检索、统一导航、在线阅读和下载服务。" }

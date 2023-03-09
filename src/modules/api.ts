@@ -63,7 +63,7 @@ class Requests {
 class API {
   public utils: Utils;
   public requests: Requests;
-  public Info: { crossref: Function, readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function };
+  public Info: { crossref: Function, connectedpapers: Function,readpaper: Function, semanticscholar: Function, unpaywall: Function, arXiv: Function };
   public BaseInfo: { readcube: Function };
   constructor(utils: Utils) {
     this.utils = utils
@@ -134,6 +134,26 @@ class API {
               color: "#2fb8cb",
               tip: "is-referenced-by-count"
             }] : []),
+          ]
+        }
+        return info
+      },
+      connectedpapers: (item: any) => {
+        let info: ItemInfo = {
+          identifiers: { DOI: item.doiInfo.doi },
+          authors: item?.authors?.map((i: any) => i[0].name),
+          title: item.title.text,
+          year: item.year.text,
+          type: "journalArticle",
+          text: item.title.text,
+          url: item.doiInfo.doiUrl,
+          abstract: item.paperAbstract.text,
+          source: "connectedpapers",
+          primaryVenue: item.venue.text,
+          references: [],
+          tags: [
+            { text: item.citationStats.numCitations, tip: "citationStats.numCitations", color: "rgba(53, 153, 154, 0.5)" },
+            { text: item.citationStats.numReferences, tip: "citationStats.numReferences", color: "rgba(53, 153, 154, 0.75)" }
           ]
         }
         return info
@@ -270,6 +290,19 @@ class API {
     let response = await this.requests.get(api)
     if (response) {
       response.DOI = DOI
+      if (!response.abstract) {
+        // 可能是摘要太长，打开网页版获取
+        let text = await this.requests.get(
+          `https://www.semanticscholar.org/paper/${response.paperId}`,
+          "text/html"
+        )
+        let parser = ztoolkit.getDOMParser()
+        let doc = parser.parseFromString(text, "text/html")
+        const abstract = doc.head.querySelector("meta[name=description]")?.getAttribute("content")
+        if (!abstract?.startsWith("Semantic Scholar")) {
+          response.abstract = abstract
+        }
+      }
       return this.Info.semanticscholar(response)
     }
   }
@@ -328,6 +361,26 @@ class API {
     }
   }
 
+  async getTitleInfoByConnectedpapers(text: string): Promise<ItemInfo | undefined> {
+    let title = text
+    if (this.utils.isDOI(text)) {
+      let DOI = text
+      let res = await this.requests.get(
+        `https://rest.connectedpapers.com/id_translator/doi/${DOI}`
+      )
+      title = res.title
+    }
+    const api = `https://rest.connectedpapers.com/search/${escape(title)}/1`
+    let response = await this.requests.post(api)
+    if (response) {
+      if (response.results.length) {
+        let item = response.results[0]
+        let info = this.Info.connectedpapers(item) as ItemInfo
+        return info
+      }
+    }
+  }
+  
   async getTitleInfoByReadpaper(title: string, body: object = {}, doi: string | undefined = undefined): Promise<ItemInfo|undefined> {
     const api = "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/search"
     let _body = {
