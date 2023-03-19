@@ -9,13 +9,7 @@
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
 
-🎉 我，一个Zotero插件，大名叫`ZOTERO-REFERENCE`，小名叫`zotero-reference`，每当你打开PDF，我会帮你看它的最后几页，并整理出一条条的参考文献放在侧边栏，供你查阅。
-
-🐇 虽然我的理解力有限，有时候会很慢🐌，但请你相信我，我总会，毫无保留地，告诉你我所知道的，关于参考文献的一切。
-
-👻 是的，我有两个小伙伴，一个叫`茉莉花/jasminum`，一个叫`zotero-pdf-translate`。还有两个小帮手，一个叫`crossref`，另一个叫`cnki`，一旦我理解不了便会向它们位求助，当然，毕竟是求助，结果可能并不理想。另外，如果你知道其它帮手，欢迎加入我们。
-
-👋 如果你发现了我的知识盲点，你认为这是我这个年纪应该可以参悟的，你可以把它提交到我的[米奇不妙屋](https://github.com/MuiseDestiny/zotero-reference/issues/6)，有了大家的奇思妙想，相信我会无限进步！
+Hi, [PDF解析失败反馈](https://github.com/MuiseDestiny/zotero-reference/issues/6)
 
 --- 
 
