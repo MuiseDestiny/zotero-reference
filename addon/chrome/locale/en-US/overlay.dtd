@@ -22,6 +22,8 @@
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.start "Finally disappears automatically after">
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.end "ms">
 
+<!ENTITY zotero.__addonRef__.tipBackgroundColor "Background Color">
+<!ENTITY zotero.__addonRef__.tipTitleColor "Title Color">
 
 
 <!ENTITY zotero.__addonRef__.caption.related "Related">

@@ -2,6 +2,7 @@ import { config } from "../package.json";
 import { getString, initLocale } from "./modules/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import Views from "./modules/views";
+import ConnectedPapers from "./modules/connectedpapers";
 
 async function onStartup() {
   await Promise.all([
@@ -36,7 +37,9 @@ async function onStartup() {
   // 界面
   const views = new Views()
   await views.onInit()
-  
+
+  // connected papers
+  // await (new ConnectedPapers(views)).init()
 }
 
 function onShutdown(): void {

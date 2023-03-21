@@ -23,6 +23,11 @@
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.start "最后，在">
 <!ENTITY zotero.__addonRef__.removeTipAfterMillisecond.end "毫秒后自动消失">
 
+<!ENTITY zotero.__addonRef__.tipBackgroundColor "背景色">
+<!ENTITY zotero.__addonRef__.tipTitleColor "标题色">
+
+
+
 
 <!ENTITY zotero.__addonRef__.caption.related "关联">
 <!ENTITY zotero.__addonRef__.loadingRelated "关联文献面板显示推荐关联文献">

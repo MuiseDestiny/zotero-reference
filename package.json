@@ -1,6 +1,6 @@
 {
   "name": "zotero-reference",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，双向关联...",
   "config": {
     "addonName": "Zotero Reference",
@@ -37,9 +37,16 @@
   },
   "homepage": "https://github.com/muisedestiny/zotero-reference#readme",
   "dependencies": {
+    "@progress/pako-esm": "^1.0.1",
+    "d3": "^7.8.2",
+    "d3-dispatch": "^3.0.1",
+    "d3-timer": "^3.0.1",
     "events": "^3.3.0",
+    "inflate": "^0.0.7",
+    "pako": "^2.1.0",
     "save": "^2.9.0",
     "timers": "^0.1.1",
+    "vue": "^3.2.47",
     "xml2js": "^0.4.23",
     "zotero-plugin-toolkit": "^2.0.6"
   },

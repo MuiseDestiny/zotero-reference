@@ -141,7 +141,7 @@ class Utils {
     return (await translate.translate({
       libraryID,
       collections,
-      saveAttachments: true
+      saveAttachments: false
     }))[0]
   }
 
@@ -162,17 +162,32 @@ class Utils {
     }
   }
 
-  private async searchItem(info: ItemBaseInfo) {
+
+
+  public searchRelatedItem(item: Zotero.Item, refItem: Zotero.Item): Zotero.Item | undefined {
+    if (!item) { return }
+    let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item)
+    if (refItem) {
+      let relatedItem = relatedItems.find((item: Zotero.Item) => refItem.id == item.id)
+      return relatedItem
+    }
+  }
+
+  public async searchItem(info: ItemBaseInfo) {
     if (!info) { return }
     let s = new Zotero.Search;
     // @ts-ignore
     s.addCondition("joinMode", "any");
-    if (info.title!.length > 8) {
-      s.addCondition("title", "contains", info.title!);
+    if (info.identifiers.DOI) {
+      s.addCondition("DOI", "is", info.identifiers.DOI.toLowerCase());
+      s.addCondition("DOI", "is", info.identifiers.DOI.toUpperCase());
+    } else {
+      if (info.title && info.title?.length > 8) {
+        s.addCondition("title", "contains", info.title!);
+      }
+      s.addCondition("url", "contains", info.identifiers.arXiv!);
+      s.addCondition("url", "contains", info.identifiers.CNKI!);
     }
-    s.addCondition("DOI", "contains", info.identifiers.DOI!);
-    s.addCondition("url", "contains", info.identifiers.arXiv!);
-    s.addCondition("url", "contains", info.identifiers.CNKI!);
     var ids = await s.search();
     let items = (await Zotero.Items.getAsync(ids)).filter(i => {
       return (
@@ -185,57 +200,34 @@ class Utils {
     }
   }
 
-  public searchRelatedItem(item: Zotero.Item, refItem: Zotero.Item): Zotero.Item | undefined {
-    if (!item) { return }
-    let relatedItems = item.relatedItems.map(key => Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item)
-    if (refItem) {
-      let relatedItem = relatedItems.find((item: Zotero.Item) => refItem.id == item.id)
-      return relatedItem
-    }
-  }
-
   /**
    * 搜索本地，获取参考文献的本地item引用
    * @param info 
    * @returns 
    */
   public async searchLibraryItem(info: ItemBaseInfo): Promise<Zotero.Item | undefined> {
-    await Zotero.Promise.delay(100)
-    if (this.lock) { await this.lock }
-    this.lock = Zotero.Promise.defer();
+    await Zotero.Promise.delay(0)
     const key = JSON.stringify(info.identifiers) + info.text + "library-item"
     if (key in this.cache) {
-      this.lock.resolve()
       info._item = this.cache[key]
       return this.cache[key]
     } else {
-      // 精确匹配，时间较快
-      let item: Zotero.Item | undefined = await  this.searchItem(info);
-      // 此处肥肠耗时，卡顿可能来源于此
-      if (!item) {
-        // 进行粗暴搜索，可能时间缓慢
-        let items: Zotero.Item[] = await Zotero.Items.getAll(1);
-        item = items.filter(i => (
-          i.isRegularItem() &&
-          i.getField("title") &&
-          ["webpage"].indexOf(i.itemType) == -1
-        )).find((item: Zotero.Item) => {
-          try {
-            let getPureText = (s: string) => s.toLowerCase().match(/[0-9a-z\u4e00-\u9fa5]+/g)?.join("")!
-            const title = getPureText(item.getField("title") as string)
-            const searchTitle = getPureText(info.title || info.text as string)
-            const n = 10
-            if (searchTitle.length < n || title.length < n) { return }
-            if (!(title && searchTitle)) { return }
-            if (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1) {
-              console.log("----\n\n\n\n", item.getField("title"), info, title, searchTitle)
-              return item
-            }
-          } catch (e) {
-            console.log("error in searchLibraryItem", e)
+      // 进行粗暴搜索，可能时间缓慢
+      let items: Zotero.Item[] = await Zotero.Items.getAll(1);
+      let getPureText = (s: string) => (this.cache["getPureText" + s] ??= s.toLowerCase().match(/[0-9a-z\u4e00-\u9fa5]+/g)?.join("")!)
+      let item = await this.searchItem(info) || items.filter(i => (
+        i.isRegularItem() &&
+        i.getField("title") &&
+        ["journalArtical", "preprint", "book"].indexOf(i.itemType) != -1
+      )).find((item: Zotero.Item) => {
+        try {
+          const title = getPureText(item.getField("title") as string)
+          const searchTitle = getPureText(info.title || info.text as string)
+          if (searchTitle.length > 10 && title && searchTitle && (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1)) {
+            return item;
           }
-        })
-      }
+        } catch (e) {}
+      })
       if (item) {
         info._item = item 
         this.cache[key] = item
@@ -246,7 +238,6 @@ class Utils {
           info.identifiers = {DOI}
         }
       }
-      this.lock.resolve()
       return item
     }
   }
@@ -287,7 +278,7 @@ class Utils {
     }
   }
 
-  public Html2Text(html: string): string | undefined {
+  public Html2Text(html: string): string | null {
     if (!html) { return "" }
     let text
     try {
@@ -296,13 +287,15 @@ class Utils {
       text = span.innerText || span.textContent
       span = null
     } catch (e) {
-      console.log(html)
       text = html
     }
     if (text) {
-      return text
+      text = text
         .replace(/<([\w:]+?)>([\s\S]+?)<\/\1>/g, (match, p1, p2) => p2)
+        .replace(/\n+/g, "")
     }
+    console.log(text)
+    return text
   }
 
   public getReader() {

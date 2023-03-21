@@ -1,60 +1,8 @@
 import Utils from "./utils"
 var xml2js = require('xml2js')
 import { config } from "../../package.json";
-
-
-class Requests {
-  /**
-   * Record api response
-   */
-  public cache: {[key: string]: any} = {}
-
-  async get(url: string, responseType: string = "json", headers: object = {}) {
-    const k = JSON.stringify(arguments)
-    if (this.cache[k]) {
-      return this.cache[k]
-    }
-    let res = await Zotero.HTTP.request(
-      "GET",
-      url,
-      {
-        responseType: responseType,
-        headers
-      }
-    )
-    if (res.status == 200) {
-      this.cache[k] = res.response
-      return res.response
-    } else {
-      console.log(`get ${url} error`, res)
-    }
-  }
-
-  async post(url: string, body: object = {}, responseType: string = "json") {
-    const k = JSON.stringify(arguments)
-    if (this.cache[k]) {
-      return this.cache[k]
-    }
-    let res = await Zotero.HTTP.request(
-      "POST",
-      url,
-      Object.assign({
-        responseType: responseType,
-      }, (Object.keys(body).length > 0 ? {
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(body)
-      } : {}))
-    )
-    if (res.status == 200) {
-      this.cache[k] = res.response
-      return res.response
-    } else {
-      console.log(`post ${url} error`, res)
-    }
-  }
-}
+import Requests from "./requests";
+import { inflate } from "zlib";
 
 /**
  * 放弃知网，默认PDF处理完全可以解析出中文参考文献
@@ -161,12 +109,12 @@ class API {
       readpaper: (data: any) => {
         let info: ItemInfo = {
           identifiers: {},
-          title: this.utils.Html2Text(data.title),
+          title: this.utils.Html2Text(data.title) as string,
           year: data.year,
           publishDate: data.publishDate,
           authors: data?.authorList.map((i: any) => this.utils.Html2Text(i.name)),
-          abstract: this.utils.Html2Text(data.summary),
-          primaryVenue: this.utils.Html2Text(data.primaryVenue),
+          abstract: this.utils.Html2Text(data.summary) as string,
+          primaryVenue: this.utils.Html2Text(data.primaryVenue) as string,
           tags: [
             ...(data.venueTags || []),
             ...(
@@ -196,7 +144,7 @@ class API {
           source: "semanticscholar",
           type: "journalArticle",
           tags: data.fieldsOfStudy || [],
-          primaryVenue: data.journal.name,
+          primaryVenue: data.journal?.name,
           url: data.DOI ? `http://doi.org/${data.DOI}` : undefined
         }
         return info
@@ -317,12 +265,63 @@ class API {
     }
   }
 
-  async getDOIRelatedArray(DOI: string): Promise<ItemBaseInfo[] | undefined> {
-    const api = `https://services.readcube.com/reader/related?doi=${DOI}`
-    let response = await this.requests.get(api)
+  // async getDOIRelatedArray(DOI: string): Promise<ItemBaseInfo[] | undefined> {
+  //   const api = `https://services.readcube.com/reader/related?doi=${DOI}`
+  //   let response = await this.requests.get(api)
+  //   if (response) {
+  //     let arr: ItemBaseInfo[] = response.map((i: any) => {
+  //       return this.BaseInfo.readcube(i) as ItemBaseInfo
+  //     })
+  //     return arr
+  //   }
+  // }
+
+  async getDOIRelatedArray(DOI: string, limit: number = 20): Promise<ItemBaseInfo[] | undefined> {
+    let res = await this.requests.get(
+      `https://rest.connectedpapers.com/id_translator/doi/${DOI}`,
+      "json",
+      {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 e/107.0.0.0 Safari/537.36"
+      }
+    )
+    const api = `https://www.semanticscholar.org/api/1/search/paper/${res.paperId}/citations`
+    let response = await this.requests.post(api, {
+      "page": 1,
+      "pageSize": 20,
+      "sort": "relevance",
+      "authors": [],
+      "coAuthors": [],
+      "venues": [],
+      "yearFilter": null,
+      "requireViewablePdf": false,
+      "fieldsOfStudy": [],
+      "useS2FosFields": true
+    })
+    console.log(response)
     if (response) {
-      let arr: ItemBaseInfo[] = response.map((i: any) => {
-        return this.BaseInfo.readcube(i) as ItemBaseInfo
+      let arr: ItemInfo[] = response.results.map((i: any) => {
+        let info: ItemInfo = {
+          title: i.title.text,
+          identifiers: {},
+          year: i.year,
+          text: i.title.text,
+          type: "journalArticle",
+          authors: i.authors.map((e: any) => e[1].text),
+        }
+        if (i.citationContexts?.length > 0) {
+          let descriptions: string[] = []
+          i.citationContexts.forEach((ctx: any) => {
+            try {
+              descriptions.push(
+                `${ctx.intents.length > 0 ? ctx.intents[0].id : "unknown"}: ${i.citationContexts[0].context.text}`
+              )
+            } catch {
+              console.log(ctx)
+            }
+          })
+          info.description = descriptions.join("\n")
+        }
+        return info
       })
       return arr
     }
@@ -678,7 +677,7 @@ class API {
     }
     return info
   }
- }
+}
 
-export default API
+export default  API
 

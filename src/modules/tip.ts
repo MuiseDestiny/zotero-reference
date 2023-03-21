@@ -5,7 +5,7 @@ export default class TipUI {
   private utils: Utils;
   private refRect!: Rect;
   private position!: string;
-  public container!: HTMLElement;
+  public container!: HTMLDivElement;
   public shadeMillisecond!: number;
   public removeTipAfterMillisecond!: number;
   private option = {
@@ -87,14 +87,15 @@ export default class TipUI {
         top: `${refRect.y}px`,
         width: `${refRect.x * .7}px`
       }
-    } else if (this.position == "bootom center") {
+    } else if (this.position == "top center") {
       let width = maxWidth * .7
       styles = {
         width: `${width}px`,
         left: `${refRect.x + refRect.width / 2 - width / 2}px`,
-        bottom: `${refRect.y + 50}px`,
+        bottom: `${refRect.y}px`,
         top: "",
       }
+      this.container.style.flexDirection = "column-reverse"
     }
     let rect = setStyles(styles)
     // 判断是否超届
@@ -131,7 +132,7 @@ export default class TipUI {
     // 位置计算
     this.container = ztoolkit.UI.createElement(
       document,
-      "box",
+      "div",
       {
         namespace: "html",
         classList: ["zotero-reference-tip-container"],
@@ -141,18 +142,21 @@ export default class TipUI {
           justifyContent: "center",
           position: "fixed",
           zIndex: "999",
-          "-moz-user-select": "text",
-          border: "2px solid #7a0000",
-          padding: ".5em",
-          backgroundColor: "#f0f0f0",
+          // border: "2px solid transparent",
+          padding: "1em",
+          backgroundColor: Zotero.Prefs.get(`${config.addonRef}.tipBackgroundColor`) as string,
           opacity: "0",
           transition: `opacity ${this.shadeMillisecond / 1000}s linear`,
-        },
+          "-moz-user-select": "text",
+          boxShadow: "0 4px 24px rgb(0 0 0 / 20%)",
+          borderRadius: "8px",
+
+        } as any,
         listeners: [
           {
             type: "DOMMouseScroll",
             listener: (event: any) => {
-              if (event.ctrlKey) { this.zoom(event) }
+              if (event.ctrlKey) { this.zoom(event); }
             }
           },
           {
@@ -165,8 +169,8 @@ export default class TipUI {
             type: "mouseleave",
             listener: () => {
               this.tipTimer = window.setTimeout(() => {
-                this.container.remove()
-              }, this.removeTipAfterMillisecond)
+                this.container.remove();
+              }, this.removeTipAfterMillisecond);
             }
           }
         ],
@@ -194,7 +198,7 @@ export default class TipUI {
           }
         ]
       }
-    ) as HTMLElement
+    ) as unknown as HTMLDivElement
     document.documentElement.appendChild(this.container)
   }
 
@@ -284,7 +288,9 @@ export default class TipUI {
             styles: {
               display: "block",
               fontWeight: "bold",
-              marginBottom: ".25em"
+              marginBottom: ".25em",
+              fontSize: "1.2em",
+              color: Zotero.Prefs.get(`${config.addonRef}.tipTitleColor`) as string
             },
             directAttributes: {
               innerText: title
@@ -384,7 +390,7 @@ export default class TipUI {
                     cursor: "pointer",
                     userSelect: "none"
                   },
-                  directAttributes: {
+                  properties: {
                     innerText: text
                   },
                   listeners: [
@@ -403,7 +409,7 @@ export default class TipUI {
           {
             tag: "span",
             id: "content",
-            directAttributes: {
+            properties: {
               innerText: content
             },
             styles: {

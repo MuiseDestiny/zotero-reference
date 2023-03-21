@@ -11,6 +11,8 @@ declare const _globalThis: {
 
 declare const ztoolkit: import("E:/Github/zotero-plugin-toolkit/dist/index").ZoteroToolkit;
 
+declare const d3 = require("../src/modules/d3");
+
 declare const rootURI: string;
 
 declare const addon: import("../src/addon").default;
@@ -31,13 +33,14 @@ declare type ItemBaseInfo = {
     CNKI?: string;
   };
   authors: string[];
-  type: "journalArticle" | "preprint" | string;
+  type?: "journalArticle" | "preprint" | string;
   text?: string;
   year?: string;
   title?: string;
   url?: string;
   _item?: _ZoteroItem;
-  number?: number
+  number?: number;
+  [key: string]: any;
 }
 
 declare type ItemInfo = ItemBaseInfo & {
@@ -46,7 +49,7 @@ declare type ItemInfo = ItemBaseInfo & {
   primaryVenue?: string
   source?: string;
   tags?: (string[] | { text: string, color: string, tip?: string })[];
-  references?: ItemBaseInfo[]
+  references?: ItemBaseInfo[];
 }
 
 declare type PDFLine = {

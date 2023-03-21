@@ -6,7 +6,7 @@ import LocalStorge from "E:/Github/zotero-style/src/modules/localStorage";
 const localStorage = new LocalStorge(config.addonRef);
 
 export default class Views {
-  private utils!: Utils;
+  public utils!: Utils;
   private iconStyles = {
     bacogroundColor: "none",
     backgroundSize: "16px 16px",
@@ -173,6 +173,7 @@ export default class Views {
         panel.append(relatedbox);
         window.setTimeout(async () => {
           if (Zotero.Prefs.get(`${config.addonRef}.loadingRelated`)) {
+            console.log("loadingRelated")
             await this.loadingRelated();
           };
           if (Zotero.Prefs.get(`${config.addonRef}.modifyLinks`)) {
@@ -239,23 +240,31 @@ export default class Views {
       await Zotero.Promise.delay(50);
     }
     while (!relatedbox.querySelector('#relatedRows'));
-
+    
     let node = relatedbox.querySelector('#relatedRows')!.parentNode as XUL.Element
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
+    console.log("getDOIRelatedArray")
     let relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[]
-    relatedArray = item.relatedItems.map((key: string) => {
-      let item = Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item
-      return {
-        identifiers: { DOI: item.getField("DOI") },
-        authors: [],
-        title: item.getField("title"),
-        text: item.getField("title"),
-        url: item.getField("url"),
-        type: item.itemType,
-        year: item.getField("year")
-      } as ItemBaseInfo
-    }).concat(relatedArray)
+    console.log(relatedArray)
+    relatedArray = (item.relatedItems.map((key: string) => {
+        try {
+          return Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item
+        } catch {}
+      })
+      .filter(i=>i) as Zotero.Item[])
+      .map((item: Zotero.Item) => {
+        return {
+          identifiers: { DOI: item.getField("DOI") },
+          authors: [],
+          title: item.getField("title"),
+          text: item.getField("title"),
+          url: item.getField("url"),
+          type: item.itemType,
+          year: item.getField("year")
+        } as ItemBaseInfo
+      }).concat(relatedArray)
+    console.log(relatedArray)
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
       func.call(relatedbox)
@@ -452,7 +461,7 @@ export default class Views {
 
     label.value = `${referenceNum} ${getString("relatedbox.number.label")}`;
     // 刷新参考文献后，检测阅读PDF选区事件
-    await this.listenSelection(references, panel)
+    // await this.listenSelection(references, panel)
   }
 
   public async listenSelection(references: ItemBaseInfo[], panel: XUL.TabPanel) {
@@ -495,20 +504,18 @@ export default class Views {
         window.setTimeout(() => {          
           let rect = doc.querySelector(".selection-menu").getBoundingClientRect()
           const winRect = document.documentElement.getBoundingClientRect()
-          rect.y = winRect.height - rect.y;
-          console.log(rect)
+          rect.y = winRect.height - rect.y + 50;
           const tipUI = this.showTipUI(
             rect,
             reference!,
-            "bootom center"
+            "top center"
           )
-          tipUI.container.style.flexDirection = "column-reverse"
         }, 500)
       }
     })
   }
 
-  private showTipUI(refRect: Rect, reference: ItemBaseInfo, position: string, idText?: string) {
+  public showTipUI(refRect: Rect, reference: ItemInfo, position: string, idText?: string) {
     let toTimeInfo = (t: string) => {
       if (!t) { return undefined }
       let info = (new Date(t)).toString().split(" ")
@@ -537,17 +544,20 @@ export default class Views {
           year: localItem.getField("year") as string,
           primaryVenue: localItem.getField("publicationTitle") as string,
           type: "",
+          source: reference.source || undefined
         }
         console.log(info.tags)
       } else {
         info = {
-          identifiers: {},
-          authors: [],
+          identifiers: reference.identifiers || {},
+          authors: reference.authors || [],
           type: "",
-          title: idText || "Reference",
-          tags: [],
-          text: refText,
-          abstract: refText
+          year: reference.year || undefined,
+          title: reference.title || idText || "Reference",
+          tags: reference.tags || [],
+          text: reference.text || refText,
+          abstract: reference.abstract || refText,
+          primaryVenue: reference.primaryVenue || undefined
         }
       }
       return info
@@ -631,8 +641,9 @@ export default class Views {
           [
             info.authors.slice(0, 3).join(" / "),
             [info?.primaryVenue, toTimeInfo(info.publishDate as string) || info.year]
-              .filter(e => e).join(" \u00b7 ")
-          ].filter(s => s != ""),
+              .filter(e => e).join(" \u00b7 "),
+            reference.description
+          ].filter(s => s && s != ""),
           this.utils.Html2Text(info.abstract!)!,
           according,
           i,

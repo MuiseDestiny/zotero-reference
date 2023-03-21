@@ -566,7 +566,8 @@ class PDF {
               (
                 line.pageNum == lines[i - 1].pageNum &&
                 line.column == lines[i - 1].column &&
-                this.abs(line.y - lines[i - 1].y) > line.height * 2.5
+                // 增大行间距阈值
+                this.abs(line.y - lines[i - 1].y) > line.height * 3
               )
             )
             // /^(\[1\]|1\.)/.test(line.text)
