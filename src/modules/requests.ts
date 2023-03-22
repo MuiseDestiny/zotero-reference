@@ -41,7 +41,7 @@ export default class Requests {
           "Content-Type": "application/json"
         },
         body: JSON.stringify(body),
-        credentials: "include"
+        // credentials: "include"
       } : {}))
     )
     if (res.status == 200) {

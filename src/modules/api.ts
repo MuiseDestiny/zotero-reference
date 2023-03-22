@@ -310,7 +310,7 @@ class API {
         }
         if (i.citationContexts?.length > 0) {
           let descriptions: string[] = []
-          i.citationContexts.forEach((ctx: any) => {
+          i.citationContexts.slice(0, 1).forEach((ctx: any) => {
             try {
               descriptions.push(
                 `${ctx.intents.length > 0 ? ctx.intents[0].id : "unknown"}: ${i.citationContexts[0].context.text}`
@@ -372,7 +372,7 @@ class API {
     const api = `https://rest.connectedpapers.com/search/${escape(title)}/1`
     let response = await this.requests.post(api)
     if (response) {
-      if (response.results.length) {
+      if (response?.results?.length) {
         let item = response.results[0]
         let info = this.Info.connectedpapers(item) as ItemInfo
         return info
@@ -506,7 +506,7 @@ class API {
     // 拒绝非中文请求，避免被封IP
     if (!this.utils.isChinese(refText)) { return }
     let res = this.utils.parseRefText(refText)
-    const key = `${res.title}${res.authors[0]}${refText}`
+    const key = `${res.title}${res.authors}${refText}`
     if (this.requests.cache[key]) {
       return this.requests.cache[key]
     }

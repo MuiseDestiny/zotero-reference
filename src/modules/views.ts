@@ -177,7 +177,7 @@ export default class Views {
             await this.loadingRelated();
           };
           if (Zotero.Prefs.get(`${config.addonRef}.modifyLinks`)) {
-            this.modifyLinks(reader)
+            this.modifyLinks(reader, panel)
           };
           if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
             let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
@@ -195,7 +195,7 @@ export default class Views {
         })
       },
       {
-        targetIndex: 3,
+        targetIndex: (Zotero.ZoteroPDFTranslate || Zotero.PDFTranslate) ? 3 : undefined,
         tabId: "zotero-reference",
       }
     )
@@ -292,7 +292,7 @@ export default class Views {
     relatedbox.refresh()
   }
 
-  public modifyLinks(reader: _ZoteroTypes.ReaderInstance) {
+  public modifyLinks(reader: _ZoteroTypes.ReaderInstance, panel: XUL.TabPanel) {
     let id = window.setInterval(() => {
       let _window: any
       try {
@@ -307,7 +307,7 @@ export default class Views {
           _a.setAttribute("modify", "")
           a.parentNode.appendChild(_a)
           a.remove()
-          _a.addEventListener("click", async (event: any) => {
+          _a.addEventListener("click", async (event: MouseEvent) => {
             event.preventDefault()
             let href = _a.getAttribute("href")
             if (_window.secondViewIframeWindow == null) {
@@ -327,9 +327,46 @@ export default class Views {
               dest = JSON.parse(dest)
             } catch { }
             // 有报错，#39 
-            _window.secondViewIframeWindow.PDFViewerApplication
-              .pdfViewer.linkService.goToDestination(dest)
+            // _window.secondViewIframeWindow.PDFViewerApplication
+            //   .pdfViewer.linkService.goToDestination(dest)
+            _window.secondViewIframeWindow.eval(`PDFViewerApplication
+              .pdfViewer.linkService.goToDestination(${JSON.stringify(dest)})`)
+
           })
+          // let timer: undefined | number
+          // _a.addEventListener("mouseenter", async (event: MouseEvent) => {
+          //   console.log("mouseenter")
+          //   let href = _a.href as string
+          //   if (/#bib\d+$/.test(_a.href)) {
+          //     let res = href.match(/\d+$/)
+          //     if (res) {
+          //       console.log(panel)
+          //       let row = panel.querySelector(`#referenceRows row:nth-child(${res[0]})`)
+          //       console.log(row)
+          //       // @ts-ignore
+          //       let reference = row?.reference
+          //       if (reference) {
+          //         timer = window.setTimeout(() => {
+          //           timer = undefined
+          //           let rect = _a.getBoundingClientRect()
+          //           const winRect = document.documentElement.getBoundingClientRect()
+          //           rect.y = winRect.height - rect.y - 25;
+          //           const tipUI = this.showTipUI(
+          //             rect,
+          //             reference,
+          //             "top center"
+          //           )
+          //         }, 1000)
+          //       }
+          //     }
+          //   }
+          // })
+          // _a.addEventListener("mouseleave", async () => {
+          //   if (timer) {
+          //     window.clearTimeout(timer)
+          //     timer = undefined
+          //   }
+          // })
         })
     }, 100)
   }
@@ -456,6 +493,7 @@ export default class Views {
 
     references.forEach((reference: ItemBaseInfo, refIndex: number) => {
       let row = this.addRow(panel, references, refIndex)!;
+      row.reference = reference
       label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
     })
 

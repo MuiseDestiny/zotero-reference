@@ -52,7 +52,7 @@ class PDF {
     }
     console.log("references", references)
     for (let i = 0; i < references.length; i++) {
-      let ref = references[i]
+      let ref = {...references[i]}
       ref.text = ref.text
         .trim()
         .replace(/^[^0-9a-zA-Z]\s*\d+\s*[^0-9a-zA-Z]/, "")
@@ -62,7 +62,7 @@ class PDF {
         text: ref.text,
         ...this.utils.refText2Info(ref.text),
       } as ItemInfo
-      references[i].url ??= ref.url
+      references[i].url = ref.url || references[i].url
     }
     return references as ItemInfo[]
   }

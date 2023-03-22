@@ -109,7 +109,7 @@ export default class ConnectedPapers {
   }
 
   private async getPaperID(item: Zotero.Item) {
-    const api = `https://rest.connectedpapers.com/search/${item.getField("title")}/1`
+    const api = `https://rest.connectedpapers.com/search/${item.getField("title") as string}/1`
     let response = await this.requests.post(api)
     try {
       return response.results[0].id
