@@ -17,11 +17,9 @@ Hi, [PDF解析失败反馈](https://github.com/MuiseDestiny/zotero-reference/iss
 
 > 浮窗顶部小圆点代表不同的数据源，点击切换源
 
-![image](https://user-images.githubusercontent.com/51939531/217991811-44d2e6f3-4f55-4517-9d18-0d0cf19e914e.png)
+![image](https://user-images.githubusercontent.com/51939531/226575476-3234f112-877a-4b6e-a110-ecc3aee72d26.png)
 
-![image](https://user-images.githubusercontent.com/51939531/217991894-b81f66f8-749c-478c-9012-62943145c1c7.png)
-
-![image](https://user-images.githubusercontent.com/51939531/217991933-2aa121ac-a98e-4dff-875f-d7d543283b05.png)
+![image](https://user-images.githubusercontent.com/51939531/226575477-ba25fc51-1a84-40f4-a36b-deae6f40d78e.png)
 
 
 ## 👋 使用
