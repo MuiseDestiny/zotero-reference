@@ -57,7 +57,6 @@ class Utils {
       // 匹配标题
       // 引号引起来，100%是标题
       let title: string, titleMatch: string
-
       if (/\u201c(.+)\u201d/.test(text)) {
         [titleMatch, title] = text.match(/\u201c(.+)\u201d/)!
         if (title.endsWith(",")) {

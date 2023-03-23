@@ -4,8 +4,7 @@ let text = `Müller,  D.,  Ansmann,  A.,  Mattis,  I.,  Tesche,  M.,  Wandinger,
 
 // text = `Liu  Zhao,  Xie  Meihui,  Tian   Kun,  et  al.  GIS-based   analysis of population exposure to PM 2.5  air pollution  — a  case  study  of  Beijing.  Journal  of  Environmental   Sciences, 2017, 9(3): 35–47`
 
-text = `M.S.Wong, K.- H.Lee, J.E.Nichol, and Z.Li, “Retrieval of aerosol optical thickness using MODIS 500 × 500 m 2, a Study in Hong Kong and the Pearl River Delta Region,” IEEE Trans.Geosci.Remote Sens. , vol. 48, no. 8, pp. 3318–3327, Aug. 2010.
-      `
+text = `Tang, J.K., Xue, Y., Yu, T., Guan, Y.N., 2005. Aerosol optical thickness determination by exploiting the synergy of Terra and Aqua MODIS (SYNTAM). Remote Sens. Environ. 94 (3), 327 – 334.`
 
 text = text.replace(/^\[\d+?\]/, "")
 text = text.replace(/\s+/g, " ")
@@ -73,13 +72,17 @@ authorInfo = authorInfo.replace(`${year}.`, "").replace(year, "").trim()
 console.log({ year, title, authors: [authorInfo], publicationVenue })
 
 
+let url: string
+// 海外下载连接
+url = "https://chn.oversea.cnki.net/kns/download?filename=aNHeqhkRDdzMvw2UTFnUQZTc1MkUFlTSwc0dYRVdjVTUrMTaGNXVqFDaQlDMxtSUJxWcFN1d0l3ZLFVbudTZ0cUM10UTxZ1MNJnQwgVMTt2LtRkRCdTdxgzNKh3LnV3a2t2LFd2M3Y2NwV0LDJ2NHZ1Q2Vldrs2Z&dflag=pdfdown&tablename=CMFD202301&uid=WEEvREcwSlJHSldSdmVqelcxWUtqSW5leXZkMlVEVmNvQkRLdzNrZlVlWT0=$9A4hF_YAuvQ5obgVAqNKPCYcEjKensW4IQMovwHtwkF4VYPoHbKxJw!!"
 
+// 国内
+url = "https://bar.cnki.net/bar/download/order?id=jBGETXBNdPImvx70aLAuJFo8d3crjALHLDOld0RphO1bXiEqLBxcsVRf8IXEghKYRsbAoyvB4t8pFeksLzfjVvLa1qBQDpNYd39QPsqTRck%2BAdZ3mr8KIdmg%2BFAvNJen2kxbbswKxAZ3OUWg%2FfUv0bmbWHgJC%2F%2FYG46PfNdNNrZWupFStSD8yjcf03O2VMLLls9vM69aHP0%2BxI6NJPhsdRjnnX8yi%2FIGEuzb3mrPMk8%3D"
 
-const katex = require('katex')
+url = "https://bar.cnki.net/bar/download/order?id=jBGETXBNdPImvx70aLAuJFo8d3crjALHLDOld0RphO1bXiEqLBxcsVRf8IXEghKYRsbAoyvB4t8pFeksLzfjVvLa1qBQDpNYd39QPsqTRck%2BAdZ3mr8KIdmg%2BFAvNJen2kxbbswKxAZ3OUWg%2FfUv0bmbWHgJC%2F%2FYG46PfNdNNrZWupFStSD8yjcf03O2VMLLls9vM69aHP0%2BxI6NJPhsdRjnnX8yi%2FIGEuzb3mrPMk8%3D"
 
-const latexString = `$\hbox{500} \times \hbox{500}\ \hbox{m}^{2}$
-`
+url = "https://bar.cnki.net/bar/download/order?id=jBGETXBNdPImvx70aLAuJFo8d3crjALHLDOld0RphO0KhyPF734saLzIB+EF6RKqRsbAoyvB4t8pFeksLzfjVsxwPp4K+66uDnLl3DLldtyWe2B4bzlShB9aiSprM3iHDDclC8kkzF6Zx/8reCznd6MyOKG6TRFsYxhPzREhEyjyAn7s65pJLGTvBiTAVoevX7NKt3gfqsfSLnNkOF24VwfJ7N/Wrhd6gC1DFIaoUog="
 
-const html = katex.renderToString(latexString)
+url = "https://bar.cnki.net/bar/download/order?id=jBGETXBNdPImvx70aLAuJFo8d3crjALHLDOld0RphO0M1VkagSb5x7GcASwxx0iiRsbAoyvB4t8pFeksLzfjVi5SM7s/86mTvAXHrnC8ed0+AdZ3mr8KIdmg+FAvNJen2kxbbswKxAZ3OUWg/fUv0bmbWHgJC//YG46PfNdNNrZWupFStSD8yjcf03O2VMLLfJb8xBGjujueyLqrZI1seNkmcPwzObtshd7+5QKKdUU="
 
-console.log(html)
+url = "https://bar.cnki.net/bar/download/order?id=jBGETXBNdPImvx70aLAuJFo8d3crjALHLDOld0RphO0KhyPF734saLzIB+EF6RKqRsbAoyvB4t8pFeksLzfjVsxwPp4K+66uDnLl3DLldtyWe2B4bzlShB9aiSprM3iHAbvcFAjVH/7AxWdCESGtoqMyOKG6TRFsYxhPzREhEyjyAn7s65pJLGTvBiTAVoevX7NKt3gfqsfSLnNkOF24VwfJ7N/Wrhd6gC1DFIaoUog="

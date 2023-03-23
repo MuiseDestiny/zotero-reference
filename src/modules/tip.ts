@@ -92,7 +92,7 @@ export default class TipUI {
       styles = {
         width: `${width}px`,
         left: `${refRect.x + refRect.width / 2 - width / 2}px`,
-        bottom: `${refRect.y}px`,
+        bottom: `${maxHeight - refRect.y}px`,
         top: "",
       }
       this.container.style.flexDirection = "column-reverse"

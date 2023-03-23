@@ -1,7 +1,7 @@
 {
   "name": "zotero-reference",
-  "version": "0.5.0",
-  "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，双向关联...",
+  "version": "0.5.2",
+  "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，推荐关联...",
   "config": {
     "addonName": "Zotero Reference",
     "addonID": "zoteroreference@polygon.org",
@@ -43,6 +43,7 @@
     "d3-timer": "^3.0.1",
     "events": "^3.3.0",
     "inflate": "^0.0.7",
+    "katex": "^0.16.4",
     "pako": "^2.1.0",
     "save": "^2.9.0",
     "timers": "^0.1.1",

@@ -371,8 +371,6 @@ export default class ConnectedPapers {
       .on("click", (event: any, it: any) => {
         const paperID = it.paperId
         const rect = this.frame.getBoundingClientRect()
-        const winRect = document.documentElement.getBoundingClientRect()
-        rect.y = winRect.height - rect.y - 10;
         const tipUI = this.views.showTipUI(
           rect,
           this.toItemInfo(graphData.nodes[paperID]),

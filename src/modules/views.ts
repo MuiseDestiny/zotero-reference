@@ -245,32 +245,32 @@ export default class Views {
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
     console.log("getDOIRelatedArray")
-    let relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[]
-    console.log(relatedArray)
-    relatedArray = (item.relatedItems.map((key: string) => {
-        try {
-          return Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item
-        } catch {}
-      })
-      .filter(i=>i) as Zotero.Item[])
-      .map((item: Zotero.Item) => {
-        return {
-          identifiers: { DOI: item.getField("DOI") },
-          authors: [],
-          title: item.getField("title"),
-          text: item.getField("title"),
-          url: item.getField("url"),
-          type: item.itemType,
-          year: item.getField("year")
-        } as ItemBaseInfo
-      }).concat(relatedArray)
-    console.log(relatedArray)
+    let _relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[]
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
       func.call(relatedbox)
       // #42，为Zotero相关条目添加悬浮提示
       // 把Zotero条目转化为Reference可识别形式
       node.querySelectorAll("rows row").forEach(e => e.remove())
+      console.log(_relatedArray)
+      let relatedArray = (item.relatedItems.map((key: string) => {
+        try {
+          return Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item
+        } catch { }
+      })
+        .filter(i => i) as Zotero.Item[])
+        .map((item: Zotero.Item) => {
+          return {
+            identifiers: { DOI: item.getField("DOI") },
+            authors: [],
+            title: item.getField("title"),
+            text: item.getField("title"),
+            url: item.getField("url"),
+            type: item.itemType,
+            year: item.getField("year"),
+            _item: item
+          } as ItemBaseInfo
+        }).concat(_relatedArray)
       console.log(relatedArray)
       this.refreshRelated(relatedArray, node)
       node.querySelectorAll("box image.zotero-box-icon")
@@ -498,59 +498,6 @@ export default class Views {
     })
 
     label.value = `${referenceNum} ${getString("relatedbox.number.label")}`;
-    // 刷新参考文献后，检测阅读PDF选区事件
-    // await this.listenSelection(references, panel)
-  }
-
-  public async listenSelection(references: ItemBaseInfo[], panel: XUL.TabPanel) {
-    const reader = await ztoolkit.Reader.getReader() as _ZoteroTypes.ReaderInstance;
-    if (!reader) { return }
-    // @ts-ignore
-    let win = reader._iframeWindow.wrappedJSObject;
-    let doc = win.document;
-    let isEmptySelection = false
-    doc.addEventListener("mousedown", () => {
-      const searchText = ztoolkit.Reader.getSelectedText(reader);
-      isEmptySelection = !searchText
-    })
-    doc.addEventListener("mouseup", (event: MouseEvent) => {
-      console.log(event)
-      if (!isEmptySelection) { return }
-      const searchText = ztoolkit.Reader.getSelectedText(reader);
-      if (!searchText) { return }
-      // 搜索匹配算法
-      let reference: ItemBaseInfo | undefined;
-      if (/\[\d+\]/.test(searchText)) {
-        let res = searchText.match(/\d+/)
-        if (res && res.length > 0) {
-          reference = references[Number(res[0]) - 1];
-        }
-      } else {
-        const keywords = searchText
-          .replace("et al", "")
-          .replace("and", "")
-          .replace(",", "")
-          .replace(".", "")
-          .split(/\s+/) as string[];
-        console.log(keywords)
-        reference = references.find(ref => {
-          return keywords.every(keyword=>ref.text?.indexOf(keyword) != -1)
-        })
-      }
-      console.log(reference)
-      if (reference) {
-        window.setTimeout(() => {          
-          let rect = doc.querySelector(".selection-menu").getBoundingClientRect()
-          const winRect = document.documentElement.getBoundingClientRect()
-          rect.y = winRect.height - rect.y + 50;
-          const tipUI = this.showTipUI(
-            rect,
-            reference!,
-            "top center"
-          )
-        }, 500)
-      }
-    })
   }
 
   public showTipUI(refRect: Rect, reference: ItemInfo, position: string, idText?: string) {
@@ -738,6 +685,13 @@ export default class Views {
             },
             classList: ["zotero-clicky"],
             listeners: [
+              {
+                type: "click",
+                listener: (event: any) => {
+                  event.preventDefault()
+                  event.stopPropagation()
+                }
+              },
               {
                 type: "mouseup",
                 listener: async (event: any) => {
@@ -1054,12 +1008,9 @@ export default class Views {
     }
 
     let updateRowByItem = (refItem: Zotero.Item) => {
-      box.style.opacity = "1"
-      let itemType = this.utils.getItemType(item)
-      if (itemType) {
-        (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
-          `url(chrome://zotero/skin/treeitem-${itemType}@2x.png)`
-      }
+      box.style.opacity = "1";
+      (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
+        `url(chrome://zotero/skin/treeitem-${refItem.itemType}@2x.png)`
       let alreadyRelated = this.utils.searchRelatedItem(item, refItem)
       if (alreadyRelated) {
         setState("-")
@@ -1080,8 +1031,9 @@ export default class Views {
       if (!Zotero.Prefs.get(`${config.addonRef}.isShowTip`)) { return }
       box.classList.add("active")
       let timeout = parseInt(Zotero.Prefs.get(`${config.addonRef}.showTipAfterMillisecond`) as string)
+      const position = Zotero.Prefs.get("extensions.zotero.layout", true) == "stacked" ? "top center" : "left"
       timer = window.setTimeout(async () => {
-        tipUI = this.showTipUI(box.getBoundingClientRect(), reference, "left", idText)
+        tipUI = this.showTipUI(box.getBoundingClientRect(), reference, position, idText)
         if (!box.classList.contains("active")) {
           tipUI.container.style.display = "none"
         }
@@ -1136,11 +1088,18 @@ export default class Views {
 
   public addSearch(node: XUL.Element) {
     ztoolkit.log("addSearch")
-    let textbox = document.createElement("textbox") as XUL.Textbox;
-    textbox.setAttribute("id", "zotero-reference-search");
-    textbox.setAttribute("type", "search");
-    textbox.setAttribute("placeholder", getString("relatedbox.search.placeholder"))
-    textbox.style.marginBottom = ".5em";
+    let textbox = ztoolkit.UI.createElement(document, "textbox", {
+      namespace: "xul",
+      id: "zotero-reference-search",
+      attributes: {
+        type: "search",
+        placeholder: getString("relatedbox.search.placeholder")
+      },
+      styles: {
+        marginBottom: ".5em",
+      }
+    })
+
     textbox.addEventListener("input", (event: any) => {
       let text = (event.target as any).value
       ztoolkit.log(
