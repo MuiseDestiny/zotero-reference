@@ -11,7 +11,7 @@ class PDF {
   constructor(utils: Utils) {
     this.utils = utils
     this.refRegex = [
-      [/^\(\d+\)/], // (1)
+      [/^\(\d+\)\s/], // (1)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
@@ -137,8 +137,13 @@ class PDF {
    */
   private getRefType(text: string): number {
     for (let i = 0; i < this.refRegex.length; i++) {
-      let flags = new Set(this.refRegex[i].map(regex => regex.test(text.replace(/\s+/g, ""))))
+      let flags = new Set(this.refRegex[i].map(regex => {
+        return regex.test(text.trim()) ||
+          regex.test(text.replace(/\s+/g, ""))
+      }))
+
       if (flags.has(true)) {
+        console.log(text, i)
         return i
       }
     }
@@ -317,14 +322,15 @@ class PDF {
     // 可能奇数页没有，偶数有
     let parts: any = []
     let part = []
-    let refPart = undefined
+    let refPart: any = []
+    let _refPart: any = {done: false, parts: []}
+    let sep = "\n\n===current page===\n\n"
     for (let pageNum = totalPageNum - 1; pageNum >= 1; pageNum--) {
-      let show = true
-      if (show) { console.log("\n\n---------------------", "current page", pageNum + 1) }
+      console.log(sep, pageNum + 1)
       let pdfPage = pages[pageNum].pdfPage
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
-      if (show) { console.log(maxWidth, maxHeight) }
+      console.log(`maxWidth=${maxWidth}, maxHeight=${maxHeight}`)
       let lines: any
       if (pageNum in pageLines) {
         lines = [...pageLines[pageNum]]
@@ -335,8 +341,6 @@ class PDF {
         popupWin.changeLine({ text: `[${p}/${p}] Read PDF` });
       }
       if (lines.length == 0) { continue }
-      console.log("lines", lines)
-
       // 移除PDF页面首尾关于期刊页码等信息
       // 正向匹配移除PDF顶部无效信息
       let removeLines = new Set()
@@ -349,6 +353,7 @@ class PDF {
         text = text.replace(/\s+/g, "").replace(/\d+/g, "")
         return text
       }
+      // 是否跨页同位置
       let isIntersectLines = (lineA: any, lineB: any) => {
         let rectA = {
           left: lineA.x / maxWidth,
@@ -364,6 +369,7 @@ class PDF {
         }
         return this.isIntersect(rectA, rectB)
       }
+      // 是否为重复
       let isRepeat = (line: PDFLine, _line: PDFLine) => {
         let text = removeNumber(line.text)
         let _text = removeNumber(_line.text)
@@ -418,19 +424,19 @@ class PDF {
       }
       lines = lines.filter((e: any) => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
       if (lines.length == 0) { continue }
-      if (show) { console.log("remove", [...removeLines]) }
+      console.log("remove", [...removeLines])
 
       // 分栏
       // 跳过图表影响正常分栏
       let isFigureOrTable = (text: string) => {
         text = text.replace(/\s+/g, "")
-        const flag = /^(Table|Tab|Fig|Figure).*\d/i.test(text)
+        const flag = /^(Table|Fig|Figure).*\d/i.test(text)
         if (flag) {
-          console.log("Skip", text)
+          console.log(`isFigureOrTable - skip - ${text}`)
         }
         return flag
       }
-      lines = lines.filter((e: PDFLine) => !isFigureOrTable(e.text))
+      lines = lines.filter((e: PDFLine) => isFigureOrTable(e.text) == false)
       let columns = [[lines[0]]]
       for (let i = 1; i < lines.length; i++) {
         let line = lines[i]
@@ -449,20 +455,19 @@ class PDF {
           column.push(line)
         }
       }
-      if (show) { console.log("columns", this.copy(columns)) }
+      console.log("columns", this.copy(columns))
       columns.forEach((column, columnIndex) => {
         column.forEach(line => {
           line["column"] = columnIndex
           line["pageNum"] = pageNum
         })
       })
-      if (show) { console.log("remove indent", this.copy(lines)) }
+      console.log("remove indent", this.copy(lines))
 
       // part
       let isStart = false
       let donePart = (part: any[]) => {
         part.reverse()
-        console.log("donePart", this.copy(part))
         // parts.push(part)
         // return
         // 去除缩进同一页同意栏的缩进
@@ -491,9 +496,19 @@ class PDF {
       }
       let isRefBreak = (text: string) => {
         text = text.replace(/\s+/g, "")
-        return /(\u53c2\u8003\u6587\u732e|reference)/i.test(text) && text.length < 20
+        return /(\u53c2\u8003\u6587\u732e|reference|bibliography)/i.test(text) && text.length < 20
       }
-
+      let doneRefPart = (part: any[]) => {
+        part = donePart(part)
+        _refPart.parts.push(part)
+        console.log("doneRefPart", part[0].text)
+        let res = part[0].text.trim().match(/^\d+/)
+        if (res && res[0] != "1") {
+          _refPart.done = false
+        } else {
+          _refPart.done = true
+        }
+      } 
       // 分析最右下角元素
       let endLines = lines.filter((line: PDFLine) => {
         return lines.every((_line: PDFLine) => {
@@ -505,11 +520,11 @@ class PDF {
       let heightOverlap = (hh1: number[], hh2: number[]) => {
         return hh1.some(h1 => {
           // 有容差
-          return hh2.some(h2=>h1-h2 < (h1>h2?h2:h1)*.5)
+          return hh2.some(h2=>h1-h2 < (h1>h2?h2:h1)*.3)
         })
       }
       const endLine = endLines.slice(-1)[0]
-      console.log(endLine)
+      console.log("endLine", endLine)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
@@ -525,7 +540,7 @@ class PDF {
             /(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
           )
         ) {
-          console.log("Not start, skip", line.text, line.y)
+          console.log("Not the endLine, skip", line.text)
           // 这里考虑到可能一开始就是图表需要打包扔掉之前的part
           // 10.1016/j.scitotenv.2018.03.202
           if (part.length && pageNum == totalPageNum - 1) {
@@ -550,7 +565,8 @@ class PDF {
         // push之前判断
         if (isRefBreak(line.text)) {
           console.log("isRefBreak", line.text)
-          refPart = donePart(part)
+          doneRefPart(part)
+          part = []
           break
         }
         part.push(line)
@@ -575,18 +591,20 @@ class PDF {
         ) {
           if (isRefBreak(lines[i - 1].text)) {
             console.log("isRefBreak", lines[i - 1].text)
-            refPart = donePart(part)
+            doneRefPart(part)
+            part = []
             break
           }
           donePart(part)
           part = []
-          if (show) {
-            console.log("break", line.text, " - ", lines[i - 1].text, this.copy(line), this.copy(lines[i - 1]))
-          }
+          console.log("break", line.text, " - ", lines[i - 1].text, this.copy(line), this.copy(lines[i - 1]))
         }
       }
-      if (refPart) {
-        console.log("\n\n\nBreak by reference keyword\n\n\n")
+      if (_refPart.done) {
+        console.log(_refPart)
+        _refPart.parts.reverse().forEach((part: any[]) => {
+          refPart = [...refPart, ...part]
+        })
         break
       }
     }

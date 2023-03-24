@@ -34,7 +34,14 @@
 
 
 <!ENTITY zotero.__addonRef__.caption.link "链接">
-<!ENTITY zotero.__addonRef__.modifyLinks "PDF内链接在分割窗口跳转">
+<!ENTITY zotero.__addonRef__.clickLink.start "点击链接跳转于">
+<!ENTITY zotero.__addonRef__.clickLink.splitHorizontally "横向">
+<!ENTITY zotero.__addonRef__.clickLink.splitVertically "竖向">
+<!ENTITY zotero.__addonRef__.clickLink.end "分割窗口">
+<!ENTITY zotero.__addonRef__.hoverLink "悬停链接显示浮窗">
+
+
+
 
 <!ENTITY zotero.__addonRef__.caption.save "储存">
 <!ENTITY zotero.__addonRef__.savePDFReferences "储存PDF源参考文献">

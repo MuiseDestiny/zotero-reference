@@ -15,7 +15,12 @@ pref("extensions.zotero.__addonRef__.tipTitleColor", "#2270d9");
 
 
 pref("extensions.zotero.__addonRef__.loadingRelated", true);
-pref("extensions.zotero.__addonRef__.modifyLinks", true);
+
+pref("extensions.zotero.__addonRef__.clickLink", true);
+pref("extensions.zotero.__addonRef__.clickLink.cmd", "splitHorizontally");
+pref("extensions.zotero.__addonRef__.hoverLink", true);
+
+
 pref("extensions.zotero.__addonRef__.arXivInfoIndex", 0);
 pref("extensions.zotero.__addonRef__.DOIInfoIndex", 0);
 pref("extensions.zotero.__addonRef__.TitleInfoIndex", 0);

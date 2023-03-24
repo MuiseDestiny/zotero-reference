@@ -176,9 +176,7 @@ export default class Views {
             console.log("loadingRelated")
             await this.loadingRelated();
           };
-          if (Zotero.Prefs.get(`${config.addonRef}.modifyLinks`)) {
-            this.modifyLinks(reader, panel)
-          };
+          await this.pdfLinks(reader, panel)
           if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
             let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
             if (panel.getAttribute("isAutoRefresh") != "true") { 
@@ -292,81 +290,124 @@ export default class Views {
     relatedbox.refresh()
   }
 
-  public modifyLinks(reader: _ZoteroTypes.ReaderInstance, panel: XUL.TabPanel) {
-    let id = window.setInterval(() => {
-      let _window: any
+  public async pdfLinks(reader: _ZoteroTypes.ReaderInstance, panel: XUL.TabPanel) {
+    let _window: any
+    // @ts-ignore
+    while (!(_window = reader?._iframeWindow?.wrappedJSObject)) {
+      await Zotero.Promise.delay(10)
+    }
+    let refKeys: any = []
+    let dests: any
+    window.setTimeout(async () => {
+      dests = await _window.PDFViewerApplication.pdfDocument._transport.getDestinations()
+      // 分析href与参考文献对应
+      // 统计与参考文献数量一致的引文
+      const statistics: any = {}
+      Object.keys(dests).forEach(key => {
+        let _key = key.replace(/\d/g, "")
+        statistics[_key] ??= 0
+        statistics[_key] += 1
+      })
+      // const totalNum = 36
+      // let refKey = Object.keys(statistics).find(k => statistics[k] == totalNum)
+      // 用最大值概率最大，但是有一定风险
+      let refKey = Object.keys(statistics).sort((k1, k2) => statistics[k2]- statistics[k1])[0]
+      Object.keys(dests).forEach(key => {
+        if (key.replace(/\d/g, "") == refKey) {
+          refKeys.push(key)
+        }
+      })
+      console.log(dests, refKeys)
+      // 根据匹配数字排序
+      refKeys = refKeys.sort((k1: string, k2: string) => {
+        let n1 = Number(k1.match(/\d+/)![0])
+        let n2 = Number(k2.match(/\d+/)![0])
+        return n1 - n2
+      })
+    })
+    let id = window.setInterval(async () => {
       try {
-        // @ts-ignore
-        _window = reader._iframeWindow.wrappedJSObject
+        _window.document
       } catch {
-        return window.clearInterval(id)
+        window.clearInterval(id)
+        return await this.pdfLinks(reader, panel)
       }
       _window.document
-        .querySelectorAll(".annotationLayer a[href^='#']:not([modify])").forEach((a: any) => {
-          let _a = a.cloneNode(true)
-          _a.setAttribute("modify", "")
-          a.parentNode.appendChild(_a)
-          a.remove()
-          _a.addEventListener("click", async (event: MouseEvent) => {
-            event.preventDefault()
-            let href = _a.getAttribute("href")
-            if (_window.secondViewIframeWindow == null) {
-              await reader.menuCmd("splitHorizontally")
-              while (
-                !(
-                  _window?.secondViewIframeWindow?.PDFViewerApplication?.pdfDocument
+        .querySelectorAll(`.annotationLayer a[href^='#']:not([${config.addonRef}])`).forEach(async (a: any) => {
+          const isClickLink = Zotero.Prefs.get(`${config.addonRef}.clickLink`) as boolean
+          console.log("isClickLink", isClickLink)
+          let _a: any = a
+          if (isClickLink) {
+            _a = a.cloneNode(true)
+            _a.setAttribute(config.addonRef, "")
+            a.parentNode.appendChild(_a)
+            a.remove()
+            _a.addEventListener("click", async (event: MouseEvent) => {
+              event.preventDefault()
+              let href = _a.getAttribute("href")
+              if (_window.secondViewIframeWindow == null) {
+                await reader.menuCmd(
+                  Zotero.Prefs.get(`${config.addonRef}.clickLink.cmd`) as any
                 )
-              ) {
-                await Zotero.Promise.delay(100)
+                while (
+                  !(
+                    _window?.secondViewIframeWindow?.PDFViewerApplication?.pdfDocument
+                  )
+                ) {
+                  await Zotero.Promise.delay(100)
+                }
+                await Zotero.Promise.delay(1000)
               }
-              await Zotero.Promise.delay(1000)
-            }
-            let dest = unescape(href.slice(1))
-            ztoolkit.log(dest)
-            try {
-              dest = JSON.parse(dest)
-            } catch { }
-            // 有报错，#39 
-            // _window.secondViewIframeWindow.PDFViewerApplication
-            //   .pdfViewer.linkService.goToDestination(dest)
-            _window.secondViewIframeWindow.eval(`PDFViewerApplication
-              .pdfViewer.linkService.goToDestination(${JSON.stringify(dest)})`)
+              let dest = unescape(href.slice(1))
+              try {
+                dest = JSON.parse(dest)
+              } catch { }
+              // 有报错，#39 
+              _window.secondViewIframeWindow.eval(`PDFViewerApplication
+                .pdfViewer.linkService.goToDestination(${JSON.stringify(dest)})`)
 
-          })
-          // let timer: undefined | number
-          // _a.addEventListener("mouseenter", async (event: MouseEvent) => {
-          //   console.log("mouseenter")
-          //   let href = _a.href as string
-          //   if (/#bib\d+$/.test(_a.href)) {
-          //     let res = href.match(/\d+$/)
-          //     if (res) {
-          //       console.log(panel)
-          //       let row = panel.querySelector(`#referenceRows row:nth-child(${res[0]})`)
-          //       console.log(row)
-          //       // @ts-ignore
-          //       let reference = row?.reference
-          //       if (reference) {
-          //         timer = window.setTimeout(() => {
-          //           timer = undefined
-          //           let rect = _a.getBoundingClientRect()
-          //           const winRect = document.documentElement.getBoundingClientRect()
-          //           rect.y = winRect.height - rect.y - 25;
-          //           const tipUI = this.showTipUI(
-          //             rect,
-          //             reference,
-          //             "top center"
-          //           )
-          //         }, 1000)
-          //       }
-          //     }
-          //   }
-          // })
-          // _a.addEventListener("mouseleave", async () => {
-          //   if (timer) {
-          //     window.clearTimeout(timer)
-          //     timer = undefined
-          //   }
-          // })
+            })
+          }
+          
+          let timer: undefined | number
+          const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`)
+          console.log("isHoverLink", isHoverLink)
+          if (isHoverLink) {
+            _a.addEventListener("mouseenter", async (event: MouseEvent) => {
+              console.log(
+                refKeys,
+                dests
+              )
+              console.log("mouseenter")
+              let refKey = (unescape(_a.href as string)).split("#").slice(-1)[0]
+              let refIndex
+              if ((refIndex = refKeys.indexOf(refKey))) {
+                console.log(dests, refIndex, refKeys)
+                let row = panel.querySelector(`#referenceRows row:nth-child(${refIndex+1})`)
+                // @ts-ignore
+                let reference = row?.reference
+                if (reference) {
+                  console.log(reference)
+                  timer = window.setTimeout(() => {
+                    timer = undefined
+                    let rect = _a.getBoundingClientRect()
+                    rect.y = rect.y + 20;
+                    const tipUI = this.showTipUI(
+                      rect,
+                      reference,
+                      "top center"
+                    )
+                  }, 1000)
+                }
+              }
+            })
+            _a.addEventListener("mouseleave", async () => {
+              if (timer) {
+                window.clearTimeout(timer)
+                timer = undefined
+              }
+            })
+          }
         })
     }, 100)
   }

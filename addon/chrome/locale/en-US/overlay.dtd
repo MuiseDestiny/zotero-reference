@@ -30,8 +30,14 @@
 <!ENTITY zotero.__addonRef__.loadingRelated "Related panel loads recommended related items">
 
 
+
 <!ENTITY zotero.__addonRef__.caption.link "Link">
-<!ENTITY zotero.__addonRef__.modifyLinks "Links within the PDF jump in the split window">
+<!ENTITY zotero.__addonRef__.clickLink.start "Click Link to jump in a split window">
+<!ENTITY zotero.__addonRef__.clickLink.splitHorizontally "Horizontally">
+<!ENTITY zotero.__addonRef__.clickLink.splitVertically "Vertically">
+<!ENTITY zotero.__addonRef__.clickLink.end "">
+<!ENTITY zotero.__addonRef__.hoverLink "Hover link to display a floating window">
+
 
 <!ENTITY zotero.__addonRef__.caption.save "Save">
 <!ENTITY zotero.__addonRef__.savePDFReferences "Save references from PDF">

@@ -26,7 +26,7 @@
       margin-left: .5em;
     ">
       <html:span style="margin: auto 0;">&zotero.__addonRef__.prioritySource.start;</html:span>
-      <html:select style="width: 4em; height: 1.5em; margin: auto .5em;" id="__addonRef__-priority-source"
+      <html:select style="height: 1.5em; margin: auto .5em;" id="__addonRef__-priority-source"
         preference="extensions.zotero.__addonRef__.prioritySource">
         <html:option value="PDF">PDF</html:option>
         <html:option value="API">API</html:option>
@@ -95,8 +95,18 @@
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.link;" />
-    <checkbox id="__addonRef__-modify-links" label="&zotero.__addonRef__.modifyLinks;"
-      preference="extensions.zotero.__addonRef__.modifyLinks" />
+    <hbox>
+      <checkbox id="__addonRef__-click-link" label="&zotero.__addonRef__.clickLink.start;"
+        preference="extensions.zotero.__addonRef__.clickLink" />
+      <html:select style="height: 1.5em;" id="__addonRef__-click-link-cmd"
+        preference="extensions.zotero.__addonRef__.clickLink.cmd">
+        <html:option value="splitHorizontally">&zotero.__addonRef__.clickLink.splitHorizontally;</html:option>
+        <html:option value="splitVertically">&zotero.__addonRef__.clickLink.splitVertically;</html:option>
+      </html:select>
+      <html:span style="margin: auto 0; margin-left: .5em">&zotero.__addonRef__.clickLink.end;</html:span>
+    </hbox>
+    <checkbox id="__addonRef__-hover-links" label="&zotero.__addonRef__.hoverLink;"
+      preference="extensions.zotero.__addonRef__.hoverLink" />
   </groupbox>
   <groupbox>
     <caption label="&zotero.__addonRef__.caption.save;" />
