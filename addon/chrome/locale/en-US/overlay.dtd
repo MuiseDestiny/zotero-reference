@@ -32,7 +32,7 @@
 
 
 <!ENTITY zotero.__addonRef__.caption.link "Link">
-<!ENTITY zotero.__addonRef__.clickLink.start "Click Link to jump in a split window">
+<!ENTITY zotero.__addonRef__.clickLink.start "Click link to jump in a split window">
 <!ENTITY zotero.__addonRef__.clickLink.splitHorizontally "Horizontally">
 <!ENTITY zotero.__addonRef__.clickLink.splitVertically "Vertically">
 <!ENTITY zotero.__addonRef__.clickLink.end "">
