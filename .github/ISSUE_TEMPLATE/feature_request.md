@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+**不礼貌不回复，直接关闭**
+
 此插件以功能为主，不做过于花哨的功能，如果你喜欢一些花哨功能请关注
 <https://github.com/MuiseDestiny/zotero-style>。
 

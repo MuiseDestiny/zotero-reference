@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+**不礼貌不回复，直接关闭**
+
 PDF解析失败，汇报到<https://github.com/MuiseDestiny/zotero-reference/issues/6>。
 
 请确保已安装最新版本插件。
