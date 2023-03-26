@@ -48,6 +48,7 @@ export default class Requests {
       this.cache[k] = res.response
       return res.response
     } else {
+      // window.alert("error" + res.status)
       console.log(`post ${url} error`, res)
     }
   }

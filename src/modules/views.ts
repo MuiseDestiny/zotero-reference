@@ -171,15 +171,15 @@ export default class Views {
           }
         );
         panel.append(relatedbox);
+        // 修改链接
         window.setTimeout(async () => {
-          if (Zotero.Prefs.get(`${config.addonRef}.loadingRelated`)) {
-            console.log("loadingRelated")
-            await this.loadingRelated();
-          };
           await this.pdfLinks(reader, panel)
+        })
+        // 自动刷新
+        window.setTimeout(async () => {
           if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
             let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
-            if (panel.getAttribute("isAutoRefresh") != "true") { 
+            if (panel.getAttribute("isAutoRefresh") != "true") {
               const item = Zotero.Items.get(reader._itemID).parentItem
               // @ts-ignore
               const id = item.getType()
@@ -190,6 +190,10 @@ export default class Views {
               }
             }
           }
+        })
+        // 推荐关联
+        window.setTimeout(async () => {
+          await this.loadingRelated();
         })
       },
       {
@@ -223,6 +227,7 @@ export default class Views {
  * @returns 
  */
   async loadingRelated() {
+    if (!Zotero.Prefs.get(`${config.addonRef}.loadingRelated`)) { return }
     ztoolkit.log("loadingRelated");
     let item = this.utils.getItem() as Zotero.Item
     if (!item) { return }
@@ -243,7 +248,7 @@ export default class Views {
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
     console.log("getDOIRelatedArray")
-    let _relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[]
+    let _relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[] || []
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
       func.call(relatedbox)
@@ -335,7 +340,6 @@ export default class Views {
       _window.document
         .querySelectorAll(`.annotationLayer a[href^='#']:not([${config.addonRef}])`).forEach(async (a: any) => {
           const isClickLink = Zotero.Prefs.get(`${config.addonRef}.clickLink`) as boolean
-          console.log("isClickLink", isClickLink)
           let _a: any = a
           if (isClickLink) {
             _a = a.cloneNode(true)
@@ -371,7 +375,6 @@ export default class Views {
           
           let timer: undefined | number
           const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`)
-          console.log("isHoverLink", isHoverLink)
           if (isHoverLink) {
             _a.addEventListener("mouseenter", async (event: MouseEvent) => {
               console.log(
@@ -458,7 +461,6 @@ export default class Views {
         references = await this.utils.PDF.getReferences(reader, fromCurrentPage)
         if (Zotero.Prefs.get(`${config.addonRef}.savePDFReferences`)) {
           window.setTimeout(async () => {
-            // await addonItem.set(item, key, references)
             await localStorage.set(item, key, references)
           })
         }
@@ -534,6 +536,7 @@ export default class Views {
 
     references.forEach((reference: ItemBaseInfo, refIndex: number) => {
       let row = this.addRow(panel, references, refIndex)!;
+      // @ts-ignore
       row.reference = reference
       label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
     })
@@ -610,10 +613,10 @@ export default class Views {
       according = "Title"
       coroutines = [
         getDefalutInfoByReference(),
-        this.utils.API.getTitleInfoByReadpaper(refText),
-        this.utils.API.getTitleInfoByCrossref(refText),
-        this.utils.API.getTitleInfoByConnectedpapers(refText),
-        this.utils.API.getTitleInfoByCNKI(refText)
+        this.utils.API.getTitleInfoByReadpaper(reference.title),
+        this.utils.API.getTitleInfoByCrossref(reference.title),
+        this.utils.API.getTitleInfoByConnectedpapers(reference.title),
+        this.utils.API.getTitleInfoByCNKI(reference.title)
       ]
       prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
     }
@@ -753,20 +756,19 @@ export default class Views {
                     if (!URL) {
                       const refText = reference.text!
                       let info: ItemBaseInfo = this.utils.refText2Info(refText);
-                      const popupWin = (new ztoolkit.ProgressWindow("[Pending] Request URL From API", {closeTime: -1}))
-                        .createLine({ text: refText, type: "default"})
+                      const popupWin = (new ztoolkit.ProgressWindow("Searching URL", {closeTime: -1}))
+                        .createLine({ text: `Title: ${reference.title}`, type: "default"})
                         .show()
                       if (this.utils.isChinese(refText)) {
-                        URL = await this.utils.API.getCNKIURL(info.title!)
+                        URL = await this.utils.API.getCNKIURL(info.title)
                       } else {
-                        let DOI = await (await this.utils.API.getTitleInfoByCrossref(refText))?.identifiers.DOI
+                        let DOI = (await this.utils.API.getTitleInfoByConnectedpapers(reference.title as string))?.identifiers.DOI
                         URL = this.utils.identifiers2URL({ DOI })
                       }
-                      popupWin.changeHeadline("[Done] Request URL From API")
-                      popupWin.startCloseTimer(3000)
+                      popupWin.close()
                     }
                     if (URL) {
-                      (new ztoolkit.ProgressWindow("Launching URL"))
+                      (new ztoolkit.ProgressWindow("Launching URL", {closeOtherProgressWindows: true}))
                         .createLine({ text: URL, type: "default"})
                         .show()
                       Zotero.launchURL(URL);
@@ -875,10 +877,15 @@ export default class Views {
         // 保存结果
         if (inputText == reference.text) { return }
         label.value = `[${refIndex + 1}] ${inputText}`;
-        references[refIndex] = { ...reference, ...{ identifiers: this.utils.getIdentifiers(inputText) }, ...{ text: inputText } }
+        references[refIndex] = {
+          ...reference,
+          ...{ identifiers: this.utils.getIdentifiers(inputText) },
+          ...this.utils.refText2Info(inputText),
+          ...{ text: inputText }
+        }
         reference = references[refIndex]
+        console.log(references[refIndex])
         const key = `References-${node.getAttribute("source")}`
-        // ztoolkit.Tool.setExtraField(item, key, JSON.stringify(references))
         window.setTimeout(async () => {
           await localStorage.set(item, key, references)
         })
@@ -980,9 +987,8 @@ export default class Views {
           // DOI信息补全
           if (Object.keys(reference.identifiers).length == 0) {
             popupWin.changeHeadline("Searching DOI")
-            popupWin.changeLine({ text: collapseText(`Crossref: ${info.title!}`) })
-
-            let DOI = await (await this.utils.API.getTitleInfoByCrossref(info.title!))?.identifiers.DOI as string
+            popupWin.changeLine({ text: collapseText(`Title: ${info.title!}`) })
+            let DOI = (await this.utils.API.getTitleInfoByConnectedpapers(info.title))?.identifiers.DOI as string
             if (!this.utils.isDOI(DOI)) {
               setState("+");
               popupWin.changeLine({ type: "fail" })
@@ -1101,15 +1107,44 @@ export default class Views {
       event.stopPropagation()
       if (label.value == "+") {
         if (event.ctrlKey) {
-          let collection = ZoteroPane.getSelectedCollection();
-          ztoolkit.log(collection)
-          if (collection) {
-            await add([collection.id])
-          } else {
-            (new ztoolkit.ProgressWindow("Error"))
-              .createLine({ text: "Please select your coolection and retry", type: "fail" })
-              .show()
+          let rect = box.getBoundingClientRect()
+          // 构建分类选择
+          let menuPopup = document.createElement('menupopup') as XUL.MenuPopup;
+          menuPopup.setAttribute('id', 'zotero-item-addTo-menu');
+          document.documentElement.appendChild(menuPopup);
+          let collections = Zotero.Collections.getByLibrary(1);
+          console.log(collections)
+          for (let col of collections) {
+            let menuItem = Zotero.Utilities.Internal.createMenuForTarget(
+              col,
+              menuPopup,
+              null,
+              async (event: any, collection: any) => {
+                if (event.target.tagName == 'menuitem') {
+                  // @ts-ignore
+                  menuPopup.openPopup(null, null, event.clientX, event.clientY);
+                  ztoolkit.log(collection)
+                  await add([collection.id])
+                  menuPopup.remove()
+                  event.stopPropagation();
+                }
+              }
+            );
+            menuPopup.append(menuItem);
           }
+          // @ts-ignore
+          menuPopup.openPopup(null, null, rect.left, rect.top + rect.height);
+          // // @ts-ignore
+          // menuPopup.openPopup(null, null, event.clientX, event.clientY);
+          // let collection = ZoteroPane.getSelectedCollection();
+          // ztoolkit.log(collection)
+          // if (collection) {
+          //   await add([collection.id])
+          // } else {
+          //   (new ztoolkit.ProgressWindow("Error"))
+          //     .createLine({ text: "Please select your coolection and retry", type: "fail" })
+          //     .show()
+          // }
         } else {
           await add()
         }

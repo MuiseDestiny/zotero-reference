@@ -32,11 +32,11 @@ declare type ItemBaseInfo = {
     arXiv?: string;
     CNKI?: string;
   };
+  title: string;
   authors: string[];
   type?: "journalArticle" | "preprint" | string;
   text?: string;
   year?: string;
-  title?: string;
   url?: string;
   _item?: _ZoteroItem;
   number?: number;

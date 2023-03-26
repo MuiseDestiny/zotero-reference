@@ -87,7 +87,7 @@ class Utils {
       let splitByTitle = text.split(titleMatch)
       let authorInfo = splitByTitle[0].trim()
 
-      console.log(splitByTitle[1])
+      // console.log(splitByTitle[1])
 
       let publicationVenue = splitByTitle[1].match(/[^.\s].+[^\.]/)![0].split(/[,\d]/)[0].trim()
       if (authorInfo.indexOf("et al.") != -1) {
@@ -282,7 +282,9 @@ class Utils {
         ["journalArtical", "preprint", "book"].indexOf(i.itemType) != -1
       )).find((item: Zotero.Item) => {
         try {
-          const title = getPureText(item.getField("title") as string)
+          let title = item.getField("title") as string
+          if (!this.isChinese(title) && title.split(" ").length < 4) { return false }
+          title = getPureText(title)
           const searchTitle = getPureText(info.title || info.text as string)
           if (searchTitle.length > 10 && title && searchTitle && (title?.indexOf(searchTitle) != -1 || searchTitle?.indexOf(title) != -1)) {
             return item;
@@ -355,7 +357,7 @@ class Utils {
         .replace(/<([\w:]+?)>([\s\S]+?)<\/\1>/g, (match, p1, p2) => p2)
         .replace(/\n+/g, "")
     }
-    console.log(text)
+    // console.log(text)
     return text
   }
 
