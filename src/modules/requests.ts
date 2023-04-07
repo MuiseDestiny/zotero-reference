@@ -15,7 +15,8 @@ export default class Requests {
       url,
       {
         responseType: responseType,
-        headers
+        headers,
+        credentials: "include"
       }
     )
     if (res.status == 200) {

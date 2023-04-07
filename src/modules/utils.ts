@@ -50,7 +50,6 @@ class Utils {
   }
 
   public parseRefText(text: string): { year?: string, authors?: string[], title: string, publicationVenue?: String } {
-    console.log("parseRefText -> ", text)
     try {
       text = text.replace(/^\[\d+?\]/, "")
       text = text.replace(/\s+/g, " ")
@@ -104,7 +103,7 @@ class Utils {
       return { year, title, authors: [authorInfo], publicationVenue }
     } catch {
       return {
-        title: "Reference"
+        title: text
       }
     }
 

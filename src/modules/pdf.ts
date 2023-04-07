@@ -8,8 +8,8 @@ import Utils from "./utils";
 class PDF {
   public refRegex: RegExp[][];
   public utils: Utils;
-  constructor(utils: Utils) {
-    this.utils = utils
+  constructor(utils?: Utils) {
+    this.utils = utils || new Utils()
     this.refRegex = [
       [/^\(\d+\)\s/], // (1)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
@@ -72,7 +72,7 @@ class PDF {
    * @param items 
    * @returns 
    */
-  private mergeSameLine(items: PDFItem[]) {
+  public mergeSameLine(items: PDFItem[]) {
     let toLine = (item: PDFItem) => {
       let line: PDFLine = {
         x: parseFloat(item.transform[4].toFixed(1)),
@@ -226,7 +226,7 @@ class PDF {
    * @param B 
    * @returns 
    */
-  private isIntersect(A: Box, B: Box): boolean {
+  public isIntersect(A: Box, B: Box): boolean {
     if (
       B.right < A.left ||
       B.left > A.right ||
@@ -280,7 +280,11 @@ class PDF {
     return lines
   }
 
-  private async getRefLines(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean) {
+  private async getRefLines(
+    reader: _ZoteroTypes.ReaderInstance,
+    fromCurrentPage: boolean,
+    fullText: boolean = false
+  ) {
     const PDFViewerApplication = (reader._iframeWindow as any).wrappedJSObject.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
@@ -496,7 +500,11 @@ class PDF {
       }
       let isRefBreak = (text: string) => {
         text = text.replace(/\s+/g, "")
-        return /(\u53c2\u8003\u6587\u732e|reference|bibliography)/i.test(text) && text.length < 20
+        if (fullText) {
+          return false
+        } else {
+          return /(\u53c2\u8003\u6587\u732e|reference|bibliography)/i.test(text) && text.length < 20
+        }
       }
       let doneRefPart = (part: any[]) => {
         part = donePart(part)
@@ -623,7 +631,9 @@ class PDF {
     popupWin.changeHeadline("[Done] PDF");
     popupWin.changeLine({progress: 100});
     popupWin.startCloseTimer(3000)
-    return refPart
+    if (fullText) { return parts }
+    else { return refPart }
+    
   }
 
   private copy(obj: object) {

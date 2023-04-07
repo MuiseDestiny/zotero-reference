@@ -37,7 +37,7 @@ async function onStartup() {
   // 界面
   const views = new Views()
   await views.onInit()
-
+  Zotero[config.addonInstance].views = views
   // connected papers
   // await (new ConnectedPapers(views)).init()
 }

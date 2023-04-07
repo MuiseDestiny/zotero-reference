@@ -451,8 +451,6 @@ export default class Views {
       const key = "References-PDF"
       // references = local && addonItem.get(item, key)
       references = local && localStorage.get(item, key)
-
-      localStorage
       if (references) {
         (new ztoolkit.ProgressWindow("[Local] PDF"))
           .createLine({ text: `${references.length} references`, type: "success"})
@@ -884,6 +882,10 @@ export default class Views {
           ...{ text: inputText }
         }
         reference = references[refIndex]
+        window.alert("搜索修改")
+        let i = this.utils.searchLibraryItem(reference)
+        window.alert(i.key)
+
         console.log(references[refIndex])
         const key = `References-${node.getAttribute("source")}`
         window.setTimeout(async () => {

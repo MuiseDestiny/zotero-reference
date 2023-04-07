@@ -276,7 +276,55 @@ class API {
   //   }
   // }
 
+
   async getDOIRelatedArray(DOI: string, limit: number = 20): Promise<ItemBaseInfo[] | undefined> {
+    let res = await this.requests.get(
+      `https://rest.connectedpapers.com/id_translator/doi/${DOI}`,
+      "json",
+      {
+        "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 e/107.0.0.0 Safari/537.36"
+      }
+    )
+    const api = `https://www.semanticscholar.org/api/1/paper/${res.paperId}/related-papers?limit=20&recommenderType=relatedPapers`
+    // const api = `https://www.semanticscholar.org/api/1/search/paper/${res.paperId}/citations`
+    let response = await this.requests.get(api, "json", {
+      cookie: "aws-waf-token=fcf9f43b-d494-44a8-8806-da20c50d9457:AQoAaIgZ+Q0AAAAA:z/ZtlDV2Oz/Ymw+RFbJ0vnEAl1/wBKTH6I4/INUou3Qqkm00bibIWkYKq0w3qq4yxB2EtdBTtRT7Q2MBPjx17WmPmcVznf7mTMTwFQjmJOB2VgQeoBzsmuzVlI/l/NBlyTFdH8xEKYYWbXB8R5oK9o7JxolugTzDKvLX4Pc57cdkbCA5A6AIExi/Wm16"
+    })
+    console.log(response)
+    if (response) {
+      let arr: ItemInfo[] = response.papers.map((i: any) => {
+        let info: ItemInfo = {
+          title: i.title.text,
+          identifiers: {},
+          year: i.year.text,
+          text: i.title.text,
+          type: "journalArticle",
+          authors: i.authors.map((e: any) => e[1].text),
+          abstract: i.paperAbstract?.text || i?.paperAbstractTruncated
+        }
+        if (i.citationContexts?.length > 0) {
+          let descriptions: string[] = []
+          i.citationContexts.slice(0, 1).forEach((ctx: any) => {
+            try {
+              descriptions.push(
+                `${ctx.intents.length > 0 ? ctx.intents[0].id : "unknown"}: ${i.citationContexts[0].context.text}`
+              )
+            } catch {
+              console.log(ctx)
+            }
+          })
+          info.description = descriptions.join("\n")
+        }
+        return info
+      })
+      return arr
+    }
+  }
+
+  /**
+   * API失效
+   */
+  async _getDOIRelatedArray(DOI: string, limit: number = 20): Promise<ItemBaseInfo[] | undefined> {
     let res = await this.requests.get(
       `https://rest.connectedpapers.com/id_translator/doi/${DOI}`,
       "json",
@@ -326,7 +374,6 @@ class API {
       return arr
     }
   }
-
   // For arXiv
   async getArXivInfo(arXiv: string) {
     const api = `https://export.arxiv.org/api/query?id_list=${arXiv}`
