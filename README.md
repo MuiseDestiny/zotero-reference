@@ -190,3 +190,7 @@ API：
 ## 赞助
 
 <img src="https://user-images.githubusercontent.com/51939531/227145474-ca165a93-fcf2-4b47-baf4-ea6b29f43d99.png" width="50%" height="50%">
+
+
+感谢[@leichaoL](https://github.com/leichaoL)、[@JOJOdioJosita](https://github.com/JOJOdioJosita)、@小陈以及一些匿名赞助的朋友们
+  
