@@ -618,12 +618,14 @@ class PDF {
     }
     popupWin.changeLine({ progress: 100});
     console.log("parts", this.copy(parts))
-    if (!refPart) {
+    console.log(refPart)
+    if (refPart.length == 0) {
       let partRefNum = []
       for (let i = 0; i < parts.length; i++) {
         let isRefs = parts[i].map((line: PDFLine) => Number(this.getRefType(line.text) != -1))
         partRefNum.push([i, isRefs.reduce((a: number, b: number) => a + b)])
       }
+      console.log(partRefNum)
       let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
       refPart = parts[i]
     }

@@ -532,7 +532,7 @@ export default class TipUI {
     if (event.detail > 0) {
       // 缩小
       scale = scale - step
-      this.container.style.transform = `scale(${scale < minScale ? 1 : scale})`;
+      this.container.style.transform = `scale(${scale < minScale ? minScale : scale})`;
     } else {
       // 放大
       scale = scale + step

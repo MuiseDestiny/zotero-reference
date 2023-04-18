@@ -26,7 +26,35 @@ export default class Views {
     this.utils = new Utils()
   }
 
+  /**
+   * 注册阅读侧边栏
+   */
   public async onInit() {
+    // Zotero.Notifier.registerObserver
+    // ztoolkit.patch(
+    //   Zotero.Notifier,
+    //   "registerObserver",
+    //   config.addonRef + "registerObserver",
+    //   (original) => 
+    //     function (ref: { notify: _ZoteroTypes.Notifier.Notify },
+    //       types?: _ZoteroTypes.Notifier.Type[],
+    //       id?: string,
+    //       priority?: number) {
+    //       ref.notify = async (
+    //         event: any,
+    //         type: any,
+    //         ids: any,
+    //         extraData: { [key: string]: any }
+    //       ) => {
+    //         console.log("delay(1000)")
+    //         await Zotero.Promise.delay(1000)
+    //         return await ref.notify(event, type, ids, extraData)
+    //       }
+    //       return original(ref, types, id, priority)
+    //     }
+    // )
+    // Zotero.Notifier.registerObserver
+
     ztoolkit.ReaderTabPanel.register(
       getString("tabpanel.reader.tab.label"),
       (
@@ -41,13 +69,13 @@ export default class Views {
           );
           return;
         }
-        ztoolkit.log(reader);
-        let timer: number|undefined
+        let timer: number | undefined
+        const id = `${config.addonRef}-${reader._instanceID}-extra-reader-tab-div`
         const relatedbox = ztoolkit.UI.createElement(
           document,
           "relatedbox",
           {
-            id: `${config.addonRef}-${reader._instanceID}-extra-reader-tab-div`,
+            id,
             classList: ["zotero-editpane-related"],
             namespace: "xul",
             ignoreIfExists: true,
@@ -322,7 +350,6 @@ export default class Views {
           refKeys.push(key)
         }
       })
-      console.log(dests, refKeys)
       // 根据匹配数字排序
       refKeys = refKeys.sort((k1: string, k2: string) => {
         let n1 = Number(k1.match(/\d+/)![0])
@@ -381,16 +408,13 @@ export default class Views {
                 refKeys,
                 dests
               )
-              console.log("mouseenter")
               let refKey = (unescape(_a.href as string)).split("#").slice(-1)[0]
               let refIndex
               if ((refIndex = refKeys.indexOf(refKey))) {
-                console.log(dests, refIndex, refKeys)
                 let row = panel.querySelector(`#referenceRows row:nth-child(${refIndex+1})`)
                 // @ts-ignore
                 let reference = row?.reference
                 if (reference) {
-                  console.log(reference)
                   timer = window.setTimeout(() => {
                     timer = undefined
                     let rect = _a.getBoundingClientRect()
@@ -573,7 +597,6 @@ export default class Views {
           type: "",
           source: reference.source || undefined
         }
-        console.log(info.tags)
       } else {
         info = {
           identifiers: reference.identifiers || {},
@@ -885,8 +908,6 @@ export default class Views {
         window.alert("搜索修改")
         let i = this.utils.searchLibraryItem(reference)
         window.alert(i.key)
-
-        console.log(references[refIndex])
         const key = `References-${node.getAttribute("source")}`
         window.setTimeout(async () => {
           await localStorage.set(item, key, references)
