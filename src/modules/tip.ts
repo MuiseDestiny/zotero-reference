@@ -82,7 +82,9 @@ export default class TipUI {
     let styles: any
     if (this.position == "left") {
       styles = {
-        right: `${maxWidth - refRect.x + maxWidth * .014}px`,
+        // right: `${maxWidth - refRect.x + maxWidth * .014}px`,
+        right: `${maxWidth - refRect.x}px`,
+
         bottom: "",
         top: `${refRect.y}px`,
         width: `${refRect.x * .7}px`

@@ -1103,7 +1103,10 @@ export default class Views {
       let timeout = parseInt(Zotero.Prefs.get(`${config.addonRef}.showTipAfterMillisecond`) as string)
       const position = Zotero.Prefs.get("extensions.zotero.layout", true) == "stacked" ? "top center" : "left"
       timer = window.setTimeout(async () => {
-        tipUI = this.showTipUI(box.getBoundingClientRect(), reference, position, idText)
+        const winRect: Rect = document.documentElement.getBoundingClientRect()
+        const rect = box.getBoundingClientRect()
+        rect.x -= winRect.width * .014
+        tipUI = this.showTipUI(rect, reference, position, idText)
         if (!box.classList.contains("active")) {
           tipUI.container.style.display = "none"
         }

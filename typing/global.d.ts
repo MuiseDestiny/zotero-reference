@@ -31,6 +31,7 @@ declare type ItemBaseInfo = {
     DOI?: string;
     arXiv?: string;
     CNKI?: string;
+    paperID?: string;
   };
   title: string;
   authors: string[];
@@ -39,6 +40,7 @@ declare type ItemBaseInfo = {
   year?: string;
   url?: string;
   _item?: _ZoteroItem;
+  _itemID?: number;
   number?: number;
   [key: string]: any;
 }

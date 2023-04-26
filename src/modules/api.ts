@@ -438,8 +438,8 @@ class API {
     body = { ..._body, ...body }
 
     let response = await this.requests.post(api, body)
-    if (response) {
-      let data = response?.data?.list[0]
+    if (response && response?.data?.list?.[0]) {
+      let data = response?.data?.list?.[0]
       // 验证DOI
       if (doi) {
         // 获取paperId的doi
