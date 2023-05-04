@@ -1,6 +1,6 @@
 {
   "name": "zotero-reference",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，推荐关联...",
   "config": {
     "addonName": "Zotero Reference",

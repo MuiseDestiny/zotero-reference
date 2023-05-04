@@ -175,7 +175,7 @@ export default class ConnectedPapers {
         relatedContainer.style.width = document.querySelector("relatedbox")?.getBoundingClientRect().width + "px"
       })
     const relatedContainer = ztoolkit.UI.appendElement({
-      namespace: "html",
+      namespace: "xul",
       id: `${config.addonRef}-related-container`,
       tag: "div",
       styles: {

@@ -30,31 +30,6 @@ export default class Views {
    * 注册阅读侧边栏
    */
   public async onInit() {
-    // Zotero.Notifier.registerObserver
-    // ztoolkit.patch(
-    //   Zotero.Notifier,
-    //   "registerObserver",
-    //   config.addonRef + "registerObserver",
-    //   (original) => 
-    //     function (ref: { notify: _ZoteroTypes.Notifier.Notify },
-    //       types?: _ZoteroTypes.Notifier.Type[],
-    //       id?: string,
-    //       priority?: number) {
-    //       ref.notify = async (
-    //         event: any,
-    //         type: any,
-    //         ids: any,
-    //         extraData: { [key: string]: any }
-    //       ) => {
-    //         console.log("delay(1000)")
-    //         await Zotero.Promise.delay(1000)
-    //         return await ref.notify(event, type, ids, extraData)
-    //       }
-    //       return original(ref, types, id, priority)
-    //     }
-    // )
-    // Zotero.Notifier.registerObserver
-
     ztoolkit.ReaderTabPanel.register(
       getString("tabpanel.reader.tab.label"),
       (
@@ -223,6 +198,10 @@ export default class Views {
         window.setTimeout(async () => {
           await this.loadingRelated();
         })
+        // 推荐关联
+        window.setTimeout(async () => {
+          await this.registerSplitButtons(reader);
+        })
       },
       {
         targetIndex: (Zotero.ZoteroPDFTranslate || Zotero.PDFTranslate) ? 3 : undefined,
@@ -231,6 +210,72 @@ export default class Views {
     )
   }
 
+  private async registerSplitButtons(reader: _ZoteroTypes.ReaderInstance) {
+    let _window: any
+    // @ts-ignore
+    while (!(_window = reader?._iframeWindow?.wrappedJSObject)) {
+      console.log("wait...")
+      await Zotero.Promise.delay(10)
+    }
+    const parent = _window.document.querySelector("#toolbarViewerLeft")!
+    const ref = parent.querySelector("#pageNumber") as HTMLDivElement
+    const styles = {
+      backgroundSize: "16px 16px",
+      backgroundPosition: "center",
+      backgroundRepeat: "no-repeat",
+      width: "32px"
+    }
+    ztoolkit.UI.insertElementBefore({
+      tag: "div",
+      classList: ["splitToolbarButton"],
+      children: [
+        {
+          tag: "button",
+          id: "split-horizontally",
+          classList: ["toolbarButton"],
+          styles: {
+            backgroundImage: `url(chrome://${config.addonRef}/content/icons/horizontally.png)`,
+            marginRight: "1px",
+            ...styles
+          },
+          attributes: {
+            title: "Split Horizontally",
+            tabindex: "-1",
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                reader.menuCmd("splitHorizontally")
+              }
+            }
+          ]
+        },
+        {
+          tag: "button",
+          id: "split-vertically",
+          classList: ["toolbarButton"],
+          styles: {
+            backgroundImage: `url(chrome://${config.addonRef}/content/icons/vertically.png)`,
+            marginLeft: "0",
+            ...styles
+          },
+          attributes: {
+            title: "Split Vertically",
+            tabindex: "-1",
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: () => {
+                reader.menuCmd("splitVertically")
+              }
+            }
+          ]
+        }
+      ]
+    }, ref)
+  }
   /**
    * 刷新推荐相关
    * @param array 
@@ -324,15 +369,15 @@ export default class Views {
   }
 
   public async pdfLinks(reader: _ZoteroTypes.ReaderInstance, panel: XUL.TabPanel) {
-    let _window: any
+    let _pdfDocument: any, _window: any
     // @ts-ignore
-    while (!(_window = reader?._iframeWindow?.wrappedJSObject)) {
+    while (!((_window = reader?._iframeWindow?.wrappedJSObject) && (_pdfDocument = _window.PDFViewerApplication?.pdfDocument))) {
       await Zotero.Promise.delay(10)
     }
     let refKeys: any = []
     let dests: any
     window.setTimeout(async () => {
-      dests = await _window.PDFViewerApplication.pdfDocument._transport.getDestinations()
+      dests = await _pdfDocument._transport.getDestinations()
       // 分析href与参考文献对应
       // 统计与参考文献数量一致的引文
       const statistics: any = {}

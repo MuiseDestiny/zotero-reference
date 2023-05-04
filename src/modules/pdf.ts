@@ -11,11 +11,11 @@ class PDF {
   constructor(utils?: Utils) {
     this.utils = utils || new Utils()
     this.refRegex = [
-      [/^\(\d+\)\s/], // (1)
+      [/^\(\d+\)\s?/], // (1)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
       [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
-      [/^\d+[^\d]+?[\,\.\uff0c\uff0e]?/], // 1. Polygon
+      [/^\d+[^\d\w]+?[\,\.\uff0c\uff0e]?/], // 1. Polygon
       [/^\d+\s+/], // 1 Polygon
       [/^[A-Z]\w.+?\(\d+[a-z]?\)/, /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],  // 中文
     ];
@@ -186,21 +186,20 @@ class PDF {
         (
           indent != 0 &&
           lineRefType == refType &&
-          _refLines.find(_line => {
-            let flag = (
+          _refLines.find(_line => (
               line != _line &&
               (line.x - _line.x) * indent > 0 &&
               this.abs(line.x - _line.x) >= this.abs(indent) &&
               this.abs(this.abs(line.x - _line.x) - this.abs(indent)) < 2 * line.height
             )
-            return flag
-          }) !== undefined
+          ) !== undefined
         )
       ) {
         ref = line
         console.log("->", line.text)
       } else if (ref) {
-        if (ref && this.abs(this.abs(ref.x - line.x) - this.abs(indent)) > 5 * line.height) {
+        // 是为了去除部分跟随refLines传入的噪声，一般发生在最后几行
+        if (ref && i / refLines.length > .9 && this.abs(this.abs(ref.x - line.x) - this.abs(indent)) > 5 * line.height) {
           refLines = refLines.slice(0, i)
           console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
           break
