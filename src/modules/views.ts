@@ -2,7 +2,7 @@ import { config } from "../../package.json";
 import { getString, initLocale } from "../modules/locale";
 import TipUI from "./tip";
 import Utils from "./utils";
-import LocalStorge from "E:/Github/zotero-style/src/modules/localStorage";
+import LocalStorge from "./localStorage";
 const localStorage = new LocalStorge(config.addonRef);
 
 export default class Views {
@@ -950,9 +950,7 @@ export default class Views {
           ...{ text: inputText }
         }
         reference = references[refIndex]
-        window.alert("搜索修改")
         let i = this.utils.searchLibraryItem(reference)
-        window.alert(i.key)
         const key = `References-${node.getAttribute("source")}`
         window.setTimeout(async () => {
           await localStorage.set(item, key, references)
@@ -1189,7 +1187,7 @@ export default class Views {
             let menuItem = Zotero.Utilities.Internal.createMenuForTarget(
               col,
               menuPopup,
-              null,
+              null as any,
               async (event: any, collection: any) => {
                 if (event.target.tagName == 'menuitem') {
                   // @ts-ignore

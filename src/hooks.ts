@@ -39,7 +39,7 @@ async function onStartup() {
   await views.onInit()
   Zotero[config.addonInstance].views = views
   // connected papers
-  // await (new ConnectedPapers(views)).init()
+  await (new ConnectedPapers(views)).init()
 }
 
 function onShutdown(): void {

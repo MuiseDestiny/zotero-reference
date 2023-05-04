@@ -657,7 +657,8 @@ class API {
       identifiers: {},
       authors: [],
       type: "",
-      references: []
+      references: [],
+      title: ""
     }
     const typeMap: any = {
       "journal": "journalArticle"
