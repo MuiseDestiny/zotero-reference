@@ -251,7 +251,7 @@ class Utils {
     var ids = await s.search();
     let items = (await Zotero.Items.getAsync(ids)).filter(i => {
       return (
-        i.itemType !== "attachment" &&
+        !i.itemType.startsWith("attachment") &&
         i.isRegularItem && i.isRegularItem()
       )
     });

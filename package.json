@@ -55,6 +55,7 @@
     "timers": "^0.1.1",
     "vue": "^3.2.47",
     "xml2js": "^0.4.23",
+    "zotero-adv-installer": "file:..",
     "zotero-plugin-toolkit": "^2.1.3"
   },
   "devDependencies": {

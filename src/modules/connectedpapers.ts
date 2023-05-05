@@ -244,6 +244,7 @@ export default class ConnectedPapers {
                       identifiers: { DOI: item.getField("DOI") as string, paperID: await this.getPaperID(item) },
                       authors: item.getCreators().map((i: any) => i.firstName + " " + i.lastName),
                       tags: item.getTags().map((i: any) => {
+                        // @ts-ignore
                         let ctag: any = item.getColoredTags().find((ci: any) => ci.tag == i.tag)
                         if (ctag) {
                           return { text: i.tag, color: ctag.color }
