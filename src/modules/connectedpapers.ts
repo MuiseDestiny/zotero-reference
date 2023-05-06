@@ -887,11 +887,25 @@ export default class ConnectedPapers {
   }
 
   private async getPaperID(item: Zotero.Item) {
-    const api = `https://rest.connectedpapers.com/search/${item.getField("title") as string}/1`
-    let response = await this.requests.post(api)
-    try {
-      return response.results[0].id
-    }catch{}
+    const DOI = item.getField("DOI") as string
+    const title = item.getField("title") as string
+    if (DOI) {
+      // 根据DOI精确确定id
+      let res = await this.requests.get(
+        `https://rest.connectedpapers.com/id_translator/doi/${DOI}`
+      )
+      return res.paperId
+    } else {
+      // 通过标题粗确定标题
+      const api = `https://rest.connectedpapers.com/search/${title}/1`
+      let response = await this.requests.post(api)
+      if (response) {
+        if (response?.results?.length) {
+          let item = response.results[0]
+          return item.id
+        }
+      }
+    }
   }
 
   public async buildGraphData(items: Zotero.Item[]) {
