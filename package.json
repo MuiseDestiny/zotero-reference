@@ -53,6 +53,7 @@
     "pako": "^2.1.0",
     "save": "^2.9.0",
     "timers": "^0.1.1",
+    "uglify-js": "^3.17.4",
     "vue": "^3.2.47",
     "xml2js": "^0.4.23",
     "zotero-adv-installer": "file:..",

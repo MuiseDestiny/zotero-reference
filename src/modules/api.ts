@@ -445,7 +445,7 @@ class API {
         // 获取paperId的doi
         let _res = await this.requests.post(
           "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/getPaperDetailInfo",
-          { paperId:data.id }
+          { paperId: data.id }
         )
         console.log(doi, _res.data.doi)
         if (_res.data.doi.toUpperCase() != doi.toUpperCase()) {
