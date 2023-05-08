@@ -7,8 +7,8 @@
     "addonID": "zoteroreference@polygon.org",
     "addonRef": "zoteroreference",
     "addonInstance": "ZoteroReference",
-    "releasepage": "https://github.com/muisedestiny/zotero-reference/releases/latest/download/zotero-reference.xpi",
-    "updaterdf": "https://raw.githubusercontent.com/muisedestiny/zotero-reference/bootstrap/update.json"
+    "releasepage": "",
+    "updaterdf": ""
   },
   "main": "src/index.ts",
   "scripts": {
@@ -35,7 +35,7 @@
   "bugs": {
     "url": "https://github.com/muisedestiny/zotero-reference/issues"
   },
-  "homepage": "https://github.com/muisedestiny/zotero-reference#readme",
+  "homepage": "",
   "dependencies": {
     "@progress/pako-esm": "^1.0.1",
     "compromise": "^14.8.2",
