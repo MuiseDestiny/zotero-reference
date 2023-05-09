@@ -4,7 +4,7 @@ const path = require("path");
 const fs = require("fs");
 const process = require("process");
 const replace = require("replace-in-file");
-const UglifyJS = require("./../node_modules/uglify-js");
+const UglifyJS = require("terser");
 const {
   name,
   author,
@@ -116,7 +116,7 @@ async function main() {
   console.log("[Build] Run esbuild OK");
 
   const indexJsContent = fs.readFileSync(outfile, "utf-8");
-  const result = UglifyJS.minify(indexJsContent, {
+  const result = await UglifyJS.minify(indexJsContent, {
     output: { ascii_only: true },
   });
   if (result.error) {
