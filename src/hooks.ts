@@ -3,10 +3,10 @@ import { getString, initLocale } from "./modules/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import Views from "./modules/views";
 import ConnectedPapers from "./modules/connectedpapers";
-import { Validation } from "../../validation/core";
+import { initValidation } from "../../validation/core";
 
 async function onStartup() {
-  new Validation(config.addonRef);
+  initValidation(config.addonRef);
   await Promise.all([
     Zotero.initializationPromise,
     Zotero.unlockPromise,
