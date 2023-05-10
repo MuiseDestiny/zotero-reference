@@ -3,28 +3,28 @@ import { getString, initLocale } from "./modules/locale";
 import { registerPrefsScripts } from "./modules/preferenceScript";
 import Views from "./modules/views";
 import ConnectedPapers from "./modules/connectedpapers";
-import { Validation } from "../../src/modules/validation";
+import { Validation } from "../../validation/core";
 
 async function onStartup() {
-  new Validation(config.addonRef)
+  new Validation(config.addonRef);
   await Promise.all([
     Zotero.initializationPromise,
     Zotero.unlockPromise,
     Zotero.uiReadyPromise,
   ]);
   initLocale();
-  ztoolkit.UI.basicOptions.ui.enableElementRecord = false
-  ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false
+  ztoolkit.UI.basicOptions.ui.enableElementRecord = false;
+  ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false;
   // 右下角提示
   ztoolkit.ProgressWindow.setIconURI(
     "default",
     `chrome://${config.addonRef}/content/icons/favicon.png`
   );
-  const show = ztoolkit.ProgressWindow.prototype.show
+  const show = ztoolkit.ProgressWindow.prototype.show;
   ztoolkit.ProgressWindow.prototype.show = function () {
-    Zotero.ProgressWindowSet.closeAll()
-    return show.call(this, ...arguments)
-  }
+    Zotero.ProgressWindowSet.closeAll();
+    return show.call(this, ...arguments);
+  };
   // 首选项
   const prefOptions = {
     pluginID: config.addonID,
@@ -37,11 +37,11 @@ async function onStartup() {
   ztoolkit.PreferencePane.register(prefOptions);
 
   // 界面
-  const views = new Views()
-  await views.onInit()
-  Zotero[config.addonInstance].views = views
+  const views = new Views();
+  await views.onInit();
+  Zotero[config.addonInstance].views = views;
   // connected papers
-  await (new ConnectedPapers(views)).init()
+  await new ConnectedPapers(views).init();
 }
 
 function onShutdown(): void {
