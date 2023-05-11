@@ -91,11 +91,19 @@ export default class ConnectedPapers {
     const removeNode = this.relatedContainer?.querySelector("#remove-origin") as HTMLDivElement
     const addNode = this.relatedContainer?.querySelector("#add-origin") as HTMLDivElement
     if (this.itemIDs.indexOf(ZoteroPane.getSelectedItems()[0]?.id as number) >= 0) {
-      removeNode.style.display = "flex"
-      addNode.style.display = "none"
+      if (removeNode) {
+        removeNode.style.display = "flex"
+      }
+      if (addNode) {
+        addNode.style.display = "none"
+      }
     } else {
-      removeNode.style.display = "none"
-      addNode.style.display = "flex"
+      if (removeNode) {
+        removeNode.style.display = "none"
+      }
+      if (addNode) {
+        addNode.style.display = "flex"
+      }
     }
   }
 
