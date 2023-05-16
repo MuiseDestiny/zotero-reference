@@ -198,7 +198,7 @@ export default class Views {
         window.setTimeout(async () => {
           await this.loadingRelated();
         })
-        // 推荐关联
+        // 分割按钮
         window.setTimeout(async () => {
           await this.registerSplitButtons(reader);
         })
@@ -276,6 +276,7 @@ export default class Views {
       ]
     }, ref)
   }
+
   /**
    * 刷新推荐相关
    * @param array 
