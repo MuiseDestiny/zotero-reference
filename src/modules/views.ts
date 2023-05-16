@@ -861,7 +861,8 @@ export default class Views {
                 namespace: "xul",
                 classList: [],
                 styles: {
-                  backgroundImage: `url(chrome://zotero/skin/treeitem-${reference.type}@2x.png)`,
+                  // backgroundImage: `url(chrome://zotero/skin/treeitem-${reference.type}@2x.png)`,
+                  backgroundImage: `url(${Zotero.ItemTypes.getImageSrc(reference.type as any) as string})`,
                   ...this.iconStyles
                 }
               },
@@ -1124,7 +1125,8 @@ export default class Views {
     let updateRowByItem = (refItem: Zotero.Item) => {
       box.style.opacity = "1";
       (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
-        `url(chrome://zotero/skin/treeitem-${refItem.itemType}@2x.png)`
+        `url(${refItem.getImageSrc()})`
+        // `url(chrome://zotero/skin/treeitem-${refItem.itemType}@2x.png)`
       let alreadyRelated = this.utils.searchRelatedItem(item, refItem)
       if (alreadyRelated) {
         setState("-")
