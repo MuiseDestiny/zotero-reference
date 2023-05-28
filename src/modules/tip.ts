@@ -249,7 +249,7 @@ export default class TipUI {
         let node = this as HTMLElement
         let sourceText = node.getAttribute("sourceText")
         let translatedText = node.getAttribute("translatedText")!
-        console.log(sourceText, translatedText)
+        ztoolkit.log(sourceText, translatedText)
         if (!sourceText) {
           sourceText = node.innerText;
           node.setAttribute("sourceText", sourceText)
@@ -260,11 +260,11 @@ export default class TipUI {
         }
 
         if (node.innerText == sourceText) {
-          console.log("-> translatedText")
+          ztoolkit.log("-> translatedText")
           node.innerText = translatedText
         } else if (node.innerText == translatedText) {
           node.innerText = sourceText
-          console.log("-> sourceText")
+          ztoolkit.log("-> sourceText")
         }
       }
     }

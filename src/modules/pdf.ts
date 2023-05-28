@@ -50,7 +50,7 @@ class PDF {
         })
         .show();
     }
-    console.log("references", references)
+    ztoolkit.log("references", references)
     for (let i = 0; i < references.length; i++) {
       let ref = {...references[i]}
       ref.text = ref.text
@@ -143,7 +143,7 @@ class PDF {
       }))
 
       if (flags.has(true)) {
-        console.log(text, i)
+        ztoolkit.log(text, i)
         return i
       }
     }
@@ -157,18 +157,18 @@ class PDF {
    */
   private mergeSameRef(refLines: any[]) {
     const _refLines = [...refLines]
-    console.log(this.copy(_refLines))
+    ztoolkit.log(this.copy(_refLines))
     let firstLine = refLines[0]
     // 已知新一行参考文献缩进
     let firstX = firstLine.x
     let secondLine = refLines.slice(1).find(line => {
       return line.x != firstX && this.abs(line.x - firstX) < 10 * firstLine.height
     })
-    console.log(secondLine)
+    ztoolkit.log(secondLine)
     let indent = secondLine ? firstX - secondLine.x : 0
-    console.log("indent", indent)
+    ztoolkit.log("indent", indent)
     let refType = this.getRefType(firstLine.text)
-    console.log(firstLine.text, refType)
+    ztoolkit.log(firstLine.text, refType)
     let ref
     for (let i = 0; i < refLines.length; i++) {
       let line = refLines[i] as PDFLine
@@ -196,15 +196,15 @@ class PDF {
         )
       ) {
         ref = line
-        console.log("->", line.text)
+        ztoolkit.log("->", line.text)
       } else if (ref) {
         // 是为了去除部分跟随refLines传入的噪声，一般发生在最后几行
         if (ref && i / refLines.length > .9 && this.abs(this.abs(ref.x - line.x) - this.abs(indent)) > 5 * line.height) {
           refLines = refLines.slice(0, i)
-          console.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
+          ztoolkit.log("x", line.text, this.abs(this.abs(ref.x - line.x) - this.abs(indent)), 5 * line.height)
           break
         }
-        console.log("+", text)
+        ztoolkit.log("+", text)
         // Poly-
         // gon
         // -> Polygon
@@ -270,7 +270,7 @@ class PDF {
     let items: PDFItem[] = textContent.items.filter((item: PDFItem) => item.str.trim().length)
     if (items.length == 0) { return [] }
     let annotations: PDFAnnotation[] = (await pdfPage.getAnnotations())
-    console.log("items", this.copy(items))
+    ztoolkit.log("items", this.copy(items))
     // add URL to item with annotation
     this.updateItemsAnnotions(items, annotations)
 
@@ -329,11 +329,11 @@ class PDF {
     let _refPart: any = {done: false, parts: []}
     let sep = "\n\n===current page===\n\n"
     for (let pageNum = totalPageNum - 1; pageNum >= 1; pageNum--) {
-      console.log(sep, pageNum + 1)
+      ztoolkit.log(sep, pageNum + 1)
       let pdfPage = pages[pageNum].pdfPage
       maxWidth = pdfPage._pageInfo.view[2];
       maxHeight = pdfPage._pageInfo.view[3];
-      console.log(`maxWidth=${maxWidth}, maxHeight=${maxHeight}`)
+      ztoolkit.log(`maxWidth=${maxWidth}, maxHeight=${maxHeight}`)
       let lines: any
       if (pageNum in pageLines) {
         lines = [...pageLines[pageNum]]
@@ -427,7 +427,7 @@ class PDF {
       }
       lines = lines.filter((e: any) => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
       if (lines.length == 0) { continue }
-      console.log("remove", [...removeLines])
+      ztoolkit.log("remove", [...removeLines])
 
       // 分栏
       // 跳过图表影响正常分栏
@@ -435,7 +435,7 @@ class PDF {
         text = text.replace(/\s+/g, "")
         const flag = /^(Table|Fig|Figure).*\d/i.test(text)
         if (flag) {
-          console.log(`isFigureOrTable - skip - ${text}`)
+          ztoolkit.log(`isFigureOrTable - skip - ${text}`)
         }
         return flag
       }
@@ -458,14 +458,14 @@ class PDF {
           column.push(line)
         }
       }
-      console.log("columns", this.copy(columns))
+      ztoolkit.log("columns", this.copy(columns))
       columns.forEach((column, columnIndex) => {
         column.forEach(line => {
           line["column"] = columnIndex
           line["pageNum"] = pageNum
         })
       })
-      console.log("remove indent", this.copy(lines))
+      ztoolkit.log("remove indent", this.copy(lines))
 
       // part
       let isStart = false
@@ -508,7 +508,7 @@ class PDF {
       let doneRefPart = (part: any[]) => {
         part = donePart(part)
         _refPart.parts.push(part)
-        console.log("doneRefPart", part[0].text)
+        ztoolkit.log("doneRefPart", part[0].text)
         let res = part[0].text.trim().match(/^\d+/)
         if (res && res[0] != "1") {
           _refPart.done = false
@@ -531,7 +531,7 @@ class PDF {
         })
       }
       const endLine = endLines.slice(-1)[0]
-      console.log("endLine", endLine)
+      ztoolkit.log("endLine", endLine)
       for (let i = lines.length - 1; i >= 0; i--) {
         let line = lines[i]
         // 刚开始就是图表，然后才是右下角文字，剔除图表
@@ -547,7 +547,7 @@ class PDF {
             /(图|fig|Fig|Figure).*\d+/.test(line.text.replace(/\s+/g, ""))
           )
         ) {
-          console.log("Not the endLine, skip", line.text)
+          ztoolkit.log("Not the endLine, skip", line.text)
           // 这里考虑到可能一开始就是图表需要打包扔掉之前的part
           // 10.1016/j.scitotenv.2018.03.202
           if (part.length && pageNum == totalPageNum - 1) {
@@ -571,7 +571,7 @@ class PDF {
         }
         // push之前判断
         if (isRefBreak(line.text)) {
-          console.log("isRefBreak", line.text)
+          ztoolkit.log("isRefBreak", line.text)
           doneRefPart(part)
           part = []
           break
@@ -597,18 +597,18 @@ class PDF {
           )
         ) {
           if (isRefBreak(lines[i - 1].text)) {
-            console.log("isRefBreak", lines[i - 1].text)
+            ztoolkit.log("isRefBreak", lines[i - 1].text)
             doneRefPart(part)
             part = []
             break
           }
           donePart(part)
           part = []
-          console.log("break", line.text, " - ", lines[i - 1].text, this.copy(line), this.copy(lines[i - 1]))
+          ztoolkit.log("break", line.text, " - ", lines[i - 1].text, this.copy(line), this.copy(lines[i - 1]))
         }
       }
       if (_refPart.done) {
-        console.log(_refPart)
+        ztoolkit.log(_refPart)
         _refPart.parts.reverse().forEach((part: any[]) => {
           refPart = [...refPart, ...part]
         })
@@ -616,19 +616,19 @@ class PDF {
       }
     }
     popupWin.changeLine({ progress: 100});
-    console.log("parts", this.copy(parts))
-    console.log(refPart)
+    ztoolkit.log("parts", this.copy(parts))
+    ztoolkit.log(refPart)
     if (refPart.length == 0) {
       let partRefNum = []
       for (let i = 0; i < parts.length; i++) {
         let isRefs = parts[i].map((line: PDFLine) => Number(this.getRefType(line.text) != -1))
         partRefNum.push([i, isRefs.reduce((a: number, b: number) => a + b)])
       }
-      console.log(partRefNum)
+      ztoolkit.log(partRefNum)
       let i = partRefNum.sort((a, b) => b[1] - a[1])[0][0]
       refPart = parts[i]
     }
-    console.log("refPart", this.copy(refPart))
+    ztoolkit.log("refPart", this.copy(refPart))
     popupWin.changeHeadline("[Done] PDF");
     popupWin.changeLine({progress: 100});
     popupWin.startCloseTimer(3000)
@@ -641,7 +641,7 @@ class PDF {
     try {
       return JSON.parse(JSON.stringify(obj))
     } catch (e) {
-      console.log("Error copy", e, obj)
+      ztoolkit.log("Error copy", e, obj)
     }
   }
 

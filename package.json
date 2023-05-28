@@ -7,8 +7,8 @@
     "addonID": "zoteroreference@polygon.org",
     "addonRef": "zoteroreference",
     "addonInstance": "ZoteroReference",
-    "releasepage": "",
-    "updaterdf": ""
+    "releasepage": "https://github.com/muisedestiny",
+    "updaterdf": "https://github.com/muisedestiny"
   },
   "main": "src/index.ts",
   "scripts": {

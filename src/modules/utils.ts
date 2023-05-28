@@ -82,11 +82,11 @@ class Utils {
         }
       }
       title = title.trim()
-      console.log("title", title)
+      ztoolkit.log("title", title)
       let splitByTitle = text.split(titleMatch)
       let authorInfo = splitByTitle[0].trim()
 
-      // console.log(splitByTitle[1])
+      // ztoolkit.log(splitByTitle[1])
 
       let publicationVenue = splitByTitle[1].match(/[^.\s].+[^\.]/)![0].split(/[,\d]/)[0].trim()
       if (authorInfo.indexOf("et al.") != -1) {
@@ -94,12 +94,12 @@ class Utils {
       }
       const currentYear = new Date().getFullYear();
       let res = text.match(/[^\d]\d{4}[^\d-]/g)?.map(s => s.match(/\d+/)![0])
-      console.log(res)
+      ztoolkit.log(res)
       let year = res?.find(s => {
         return Number(s) <= Number(currentYear) + 1
       })!
       authorInfo = authorInfo.replace(`${year}.`, "").replace(year, "").trim()
-      console.log({ year, title, authors: [authorInfo], publicationVenue })
+      ztoolkit.log({ year, title, authors: [authorInfo], publicationVenue })
       return { year, title, authors: [authorInfo], publicationVenue }
     } catch {
       return {
@@ -207,7 +207,7 @@ class Utils {
 
   async createItemByJasminum(title: string) {
     let cnkiURL = await this.API.getCNKIURL(title, true)
-    console.log("cnkiURL", cnkiURL)
+    ztoolkit.log("cnkiURL", cnkiURL)
     // Jasminum
     let articleId = Zotero.Jasminum.Scrape.getIDFromURL(cnkiURL);
     let postData = Zotero.Jasminum.Scrape.createRefPostData([articleId])
@@ -356,7 +356,7 @@ class Utils {
         .replace(/<([\w:]+?)>([\s\S]+?)<\/\1>/g, (match, p1, p2) => p2)
         .replace(/\n+/g, "")
     }
-    // console.log(text)
+    // ztoolkit.log(text)
     return text
   }
 

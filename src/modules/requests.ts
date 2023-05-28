@@ -23,7 +23,7 @@ export default class Requests {
       this.cache[k] = res.response
       return res.response
     } else {
-      console.log(`get ${url} error`, res)
+      ztoolkit.log(`get ${url} error`, res)
     }
   }
 
@@ -50,7 +50,7 @@ export default class Requests {
       return res.response
     } else {
       // window.alert("error" + res.status)
-      console.log(`post ${url} error`, res)
+      ztoolkit.log(`post ${url} error`, res)
     }
   }
 }

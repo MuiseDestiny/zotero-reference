@@ -31,7 +31,7 @@ class LocalStorage {
 
   get(item: Zotero.Item | { key: string }, key: string) {
     if (this.cache == undefined) {
-      console.log("cache is undefined")
+      ztoolkit.log("cache is undefined")
       return
     }
     return (this.cache[item.key] ??= {})[key]

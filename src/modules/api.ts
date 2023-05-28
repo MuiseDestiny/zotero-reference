@@ -290,7 +290,7 @@ class API {
     let response = await this.requests.get(api, "json", {
       cookie: "aws-waf-token=fcf9f43b-d494-44a8-8806-da20c50d9457:AQoAaIgZ+Q0AAAAA:z/ZtlDV2Oz/Ymw+RFbJ0vnEAl1/wBKTH6I4/INUou3Qqkm00bibIWkYKq0w3qq4yxB2EtdBTtRT7Q2MBPjx17WmPmcVznf7mTMTwFQjmJOB2VgQeoBzsmuzVlI/l/NBlyTFdH8xEKYYWbXB8R5oK9o7JxolugTzDKvLX4Pc57cdkbCA5A6AIExi/Wm16"
     })
-    console.log(response)
+    ztoolkit.log(response)
     if (response) {
       let arr: ItemInfo[] = response.papers.map((i: any) => {
         let info: ItemInfo = {
@@ -310,7 +310,7 @@ class API {
                 `${ctx.intents.length > 0 ? ctx.intents[0].id : "unknown"}: ${i.citationContexts[0].context.text}`
               )
             } catch {
-              console.log(ctx)
+              ztoolkit.log(ctx)
             }
           })
           info.description = descriptions.join("\n")
@@ -345,7 +345,7 @@ class API {
       "fieldsOfStudy": [],
       "useS2FosFields": true
     })
-    console.log(response)
+    ztoolkit.log(response)
     if (response) {
       let arr: ItemInfo[] = response.results.map((i: any) => {
         let info: ItemInfo = {
@@ -364,7 +364,7 @@ class API {
                 `${ctx.intents.length > 0 ? ctx.intents[0].id : "unknown"}: ${i.citationContexts[0].context.text}`
               )
             } catch {
-              console.log(ctx)
+              ztoolkit.log(ctx)
             }
           })
           info.description = descriptions.join("\n")
@@ -447,7 +447,7 @@ class API {
           "https://readpaper.com/api/microService-app-aiKnowledge/aiKnowledge/paper/getPaperDetailInfo",
           { paperId: data.id }
         )
-        console.log(doi, _res.data.doi)
+        ztoolkit.log(doi, _res.data.doi)
         if (_res.data.doi.toUpperCase() != doi.toUpperCase()) {
           return
         }
@@ -460,7 +460,7 @@ class API {
 
   // For CNKI
   async _getCNKIURL(title: string, author: string) {
-    console.log("getCNKIURL", title, author)
+    ztoolkit.log("getCNKIURL", title, author)
     let cnkiURL
     let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
     ztoolkit.patch(
@@ -470,11 +470,11 @@ class API {
       (original) => 
         (arg: any) => {
           let text = original.call(Zotero.Jasminum.Scrape, arg)
-          console.log(text)
+          ztoolkit.log(text)
           text = escape(unescape(text)
             .replace(/SCDB/g, "CFLS")
           )
-          console.log(text)
+          ztoolkit.log(text)
           return text
         }
     )
@@ -491,7 +491,7 @@ class API {
     cnkiURL = await Zotero.Jasminum.Scrape.search({ keyword: title })
     Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
     if (!cnkiURL) {
-      console.log("cnkiURL", cnkiURL)
+      ztoolkit.log("cnkiURL", cnkiURL)
       return
     }
     let args = this.utils.parseCNKIURL(cnkiURL)
@@ -557,12 +557,12 @@ class API {
     if (this.requests.cache[key]) {
       return this.requests.cache[key]
     }
-    console.log("parseRefText", refText, res)
+    ztoolkit.log("parseRefText", refText, res)
     let url = await this.getCNKIURL(res.title, true)
     if (!url) { return }
 
     let htmlString = await this.requests.get(url, "text")
-    console.log(url, htmlString)
+    ztoolkit.log(url, htmlString)
     const parser = ztoolkit.getDOMParser();
     let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
     let aTags = doc.querySelectorAll(".top-tip span a")
@@ -640,7 +640,7 @@ class API {
       token: token,
       "user-agent": userAgent
     })
-    console.log(refData)
+    ztoolkit.log(refData)
     if (String(refData.code) != "200") {
       if (count < 3) {
         await updateToken()

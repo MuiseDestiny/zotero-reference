@@ -75,7 +75,13 @@ export default class ConnectedPapers {
           #${id} .item.highlight.hover {
             background-color: #d0ecf0;
           }
-        `
+        `// 这里添加后会让Mac的图标变形，所以遇Mac不添
+        + (Zotero.isMac ? "" : `
+        #zotero-reference-show-hide-graph-view .toolbarbutton-icon {
+          width: 16px;
+          height: 16px;
+        }
+        `)
       },
       // #output-container div.streaming span:after,  
     }, document.documentElement);
@@ -164,7 +170,7 @@ export default class ConnectedPapers {
         e.stopPropagation()
         e.preventDefault()
       }else if  (currentHeight < minHeight) {
-        console.log("set collapsed")
+        ztoolkit.log("set collapsed")
         splitterAfter.setAttribute("state", "collapsed")
         grippyAfter.style.display = ""
         boxAfter.setAttribute("height", String(minHeight))
@@ -377,7 +383,7 @@ export default class ConnectedPapers {
                 relatedContainer.querySelectorAll(".prior-items .item")?.forEach(e => e.remove())
                 relatedContainer.querySelectorAll(".deriv-items .item")?.forEach(e => e.remove())
                 const graphdata = await this.refresh(items)
-                console.log("graphdata", graphdata)
+                ztoolkit.log("graphdata", graphdata)
                 // @ts-ignore
                 const app = this.frame.contentWindow.app
                 // app.graphdata = graphdata
@@ -924,7 +930,7 @@ export default class ConnectedPapers {
       .show()
     // 获取id
     let id = (await Promise.all(items.map(async (item) => await this.getPaperID(item)))).join("+")
-    console.log("id", id)
+    ztoolkit.log("id", id)
     if (id) {
       this.popupWin.changeLine({ progress: 1, text: "[1/100] Building" })
     } else{
@@ -936,7 +942,7 @@ export default class ConnectedPapers {
       `https://rest.connectedpapers.com/graph/${id}`,
     )
     let graphData = await this.getGraphData(id);
-    console.log(graphData)
+    ztoolkit.log(graphData)
     const totalNum = Object.keys(graphData.nodes).length  
     this.popupWin.changeLine({ text: `[1/${totalNum}] Indexing`, progress: 1, type: "default"})
     let search: any = {}

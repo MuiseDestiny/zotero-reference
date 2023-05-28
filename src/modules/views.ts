@@ -214,7 +214,7 @@ export default class Views {
     let _window: any
     // @ts-ignore
     while (!(_window = reader?._iframeWindow?.wrappedJSObject)) {
-      console.log("wait...")
+      ztoolkit.log("wait...")
       await Zotero.Promise.delay(10)
     }
     const parent = _window.document.querySelector("#toolbarViewerLeft")!
@@ -321,7 +321,7 @@ export default class Views {
     let node = relatedbox.querySelector('#relatedRows')!.parentNode as XUL.Element
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
-    console.log("getDOIRelatedArray")
+    ztoolkit.log("getDOIRelatedArray")
     let _relatedArray = (await this.utils.API.getDOIRelatedArray(itemDOI)) as ItemBaseInfo[] || []
     let func = relatedbox.refresh
     relatedbox.refresh = () => {
@@ -329,7 +329,7 @@ export default class Views {
       // #42，为Zotero相关条目添加悬浮提示
       // 把Zotero条目转化为Reference可识别形式
       node.querySelectorAll("rows row").forEach(e => e.remove())
-      console.log(_relatedArray)
+      ztoolkit.log(_relatedArray)
       let relatedArray = (item.relatedItems.map((key: string) => {
         try {
           return Zotero.Items.getByLibraryAndKey(1, key) as Zotero.Item
@@ -348,7 +348,7 @@ export default class Views {
             _item: item
           } as ItemBaseInfo
         }).concat(_relatedArray)
-      console.log(relatedArray)
+      ztoolkit.log(relatedArray)
       this.refreshRelated(relatedArray, node)
       node.querySelectorAll("box image.zotero-box-icon")
         .forEach((e: any) => {
@@ -450,7 +450,7 @@ export default class Views {
           const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`)
           if (isHoverLink) {
             _a.addEventListener("mouseenter", async (event: MouseEvent) => {
-              console.log(
+              ztoolkit.log(
                 refKeys,
                 dests
               )
@@ -1041,7 +1041,7 @@ export default class Views {
           try {
             refItem = await this.utils.createItemByJasminum(info.title!)
           } catch (e) { 
-            console.log(e)
+            ztoolkit.log(e)
           }
           if (!refItem) {
             popupWin.changeLine({ type: "fail" })
@@ -1185,7 +1185,7 @@ export default class Views {
           menuPopup.setAttribute('id', 'zotero-item-addTo-menu');
           document.documentElement.appendChild(menuPopup);
           let collections = Zotero.Collections.getByLibrary(1);
-          console.log(collections)
+          ztoolkit.log(collections)
           for (let col of collections) {
             let menuItem = Zotero.Utilities.Internal.createMenuForTarget(
               col,
