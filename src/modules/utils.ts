@@ -193,15 +193,13 @@ class Utils {
   async createItemByZotero(identifiers: ItemBaseInfo["identifiers"], collections: number[]) {
     var translate = new Zotero.Translate.Search();
     translate.setIdentifier(identifiers);
-
     let translators = await translate.getTranslators();
     translate.setTranslator(translators);
     let libraryID = ZoteroPane.getSelectedLibraryID();
-
     return (await translate.translate({
       libraryID,
       collections,
-      saveAttachments: false
+      saveAttachments: true
     }))[0]
   }
 

@@ -12,6 +12,8 @@ export default class ConnectedPapers {
   private views!: Views
   private graphContainer?: HTMLDivElement;
   private relatedContainer?: HTMLDivElement
+  private splitterAfter!: HTMLElement;
+  private boxAfter!: XUL.Box;
   private itemIDs: number[] = []
   private cache: any = {}
   private zoteroColor: boolean = true
@@ -125,10 +127,14 @@ export default class ConnectedPapers {
       let node = this.graphContainer;
       if (!node) {return }
       if (node.style.display == "none") {
+        this.splitterAfter.style.display = ""
         node.style.display = ""
+        this.boxAfter.style.display = ""
         Zotero.Prefs.set(`${config.addonRef}.graphView.enable`, true)
       } else {
+        this.splitterAfter.style.display = "none"
         node.style.display = "none"
+        this.boxAfter.style.display = "none"
         Zotero.Prefs.set(`${config.addonRef}.graphView.enable`, false)
       }
     })
@@ -142,16 +148,21 @@ export default class ConnectedPapers {
    * 注册右侧面板
    */
   private initEditPane() {
-    let relatedbox = (document.querySelector("#zotero-editpane-related") as Element);
-    relatedbox.parentElement?.setAttribute("orient", "vertical");
-    const boxAfter = document.createElement("box") as XUL.Box;
+    const isEnable = Zotero.Prefs.get(`${config.addonRef}.graphView.enable`)
+    // let relatedbox = (document.querySelector("#zotero-editpane-related") as Element);
+    let beforeBox = (document.querySelector("#zotero-item-pane-content") as Element);
+    beforeBox.parentElement?.setAttribute("orient", "vertical");
+    const boxAfter = this.boxAfter = document.createElement("box") as XUL.Box;
     boxAfter.id = "connected-papers-relatedsplit-after";
     boxAfter.style.overflow = "hidden"
-    relatedbox.after(boxAfter);
-    const splitterAfter = document.createElement("splitter") as Element;
+    boxAfter.style.backgroundColor = "#fff"
+    beforeBox.after(boxAfter);
+    const splitterAfter = this.splitterAfter =  document.createElement("splitter") as HTMLElement;
     // splitterAfter.id = "connected-papers-relatedsplit-splitter-after";
     splitterAfter.id = "zotero-tags-splitter";
     splitterAfter.setAttribute("collapse", "after");
+    splitterAfter.style.display = isEnable ? "" : "none";
+    boxAfter.style.display = isEnable ? "" : "none",
     boxAfter.setAttribute("height", "400")
     const grippyAfter = document.createElement("grippy");
     splitterAfter.append(grippyAfter);
@@ -159,25 +170,35 @@ export default class ConnectedPapers {
     splitterAfter.style["padding-top"] = "0"
     // @ts-ignore
     boxAfter.style["padding-top"] = "0"
+    boxAfter.style.maxHeight = "500px"
     const minHeight = 300
     splitterAfter.addEventListener("mousemove", (e) => {
       if (splitterAfter.getAttribute("state") != "dragging") { return }
       const currentHeight = Number(boxAfter.getAttribute("height"))
+      const parentBox = beforeBox.parentNode as XUL.Box
+      const totalHeight = parentBox.getBoundingClientRect().height
+      const beforeHeight = Number(beforeBox.getAttribute("height"))
+      ztoolkit.log(currentHeight, totalHeight, beforeHeight, totalHeight - beforeHeight)
       if (currentHeight == 0) {
         boxAfter.setAttribute("state", "")
         grippyAfter.style.display = "none"
         boxAfter.setAttribute("height", String(minHeight))
         e.stopPropagation()
         e.preventDefault()
-      }else if  (currentHeight < minHeight) {
+      } else if  (currentHeight < minHeight) {
         ztoolkit.log("set collapsed")
         splitterAfter.setAttribute("state", "collapsed")
         grippyAfter.style.display = ""
         boxAfter.setAttribute("height", String(minHeight))
         e.stopPropagation()
         e.preventDefault()
+      } 
+      else if (currentHeight > (totalHeight - beforeHeight)) {
+        boxAfter.setAttribute("state", "")
+        boxAfter.setAttribute("height", String(totalHeight - beforeHeight))
+        e.stopPropagation()
+        e.preventDefault()
       }
-      
     })
     boxAfter.before(splitterAfter);
     this.buildRelatedPanel(boxAfter)
@@ -427,7 +448,7 @@ export default class ConnectedPapers {
             display: "flex",
             flexDirection: "row"
           },
-          classList: ["normal-items-container"],
+          classList: ["items-container"],
           children: [
             {
               tag: "div",
@@ -541,11 +562,12 @@ export default class ConnectedPapers {
     if (arg.state == "selected") {
       let selectedItemNode: HTMLDivElement
       Array.prototype.forEach.call(
-        this.relatedContainer?.querySelectorAll(".normal-items-container .item"),
+        this.relatedContainer?.querySelectorAll(".items-container .item"),
         (itemNode) => {
           if (itemNode._ref.identifiers.paperID == arg.paperID) {
             itemNode.classList.add("selected")
             selectedItemNode = itemNode
+            
           } else {
             itemNode.classList.remove("selected")
           }
@@ -824,13 +846,15 @@ export default class ConnectedPapers {
               originItems.forEach(async (item) => {
                 newItem.addRelatedItem(item)
                 item.addRelatedItem(newItem)
-                await item.saveTx({skipSelect: true})
-                await newItem.saveTx({ skipSelect: true });
+                await item.saveTx({ skipSelect: true, skipNotifier: true})
+                await newItem.saveTx({ skipSelect: true, skipNotifier: true });
+                // ZoteroPane.selectItem(item.id);
+                // (document.querySelector("#zotero-editpane-related-tab") as HTMLDivElement).click()
               })
               popupWin.changeHeadline("[Done] Adding")
               popupWin.changeLine({ type: "success" })
               popupWin.startCloseTimer(3000)
-              return await this.refresh(originItems)
+              return (document.querySelector("#build-graph") as HTMLDivElement).click()
             }
           }
         }
@@ -923,8 +947,8 @@ export default class ConnectedPapers {
   }
 
   public async buildGraphData(items: Zotero.Item[]) {
-    const cacheKey = items.map(i => i.id).join("+")
-    if (this.cache[cacheKey]) { return this.cache[cacheKey] }
+    // const cacheKey = items.map(i => i.id).join("+")
+    // if (this.cache[cacheKey]) { return this.cache[cacheKey] }
     this.popupWin = new ztoolkit.ProgressWindow("[Pending] Connected Papers", { closeOtherProgressWindows: true, closeTime: -1 })
       .createLine({ text: "Initializing", type: "default" })
       .show()
@@ -964,7 +988,7 @@ export default class ConnectedPapers {
     this.popupWin.changeLine({ text: `[${totalNum}/${totalNum}] Indexing`, type: "success" })
     this.popupWin.startCloseTimer(3000)
     this.popupWin = undefined
-    this.cache[cacheKey] = graphData
+    // this.cache[cacheKey] = graphData
     return graphData
   }
 
@@ -992,28 +1016,6 @@ export default class ConnectedPapers {
     frame.style.backgroundColor = "#ffffff"
     graphContainer.append(frame)
     mainNode.append(graphContainer)
-    // let isFocus = true
-    // mainNode.addEventListener("blur", () => {
-    //   isFocus = false
-    // })
-    // mainNode.addEventListener("focus", () => {
-    //   isFocus = true
-    // })
-    // let isClick = false
-    // document.addEventListener("mousedown", (event: any) => {
-    //   isClick = true
-    // })
-    // document.addEventListener("mouseup", (event: any) => {
-    //   isClick = false
-    // })
-    // document.addEventListener("keyup", async (event: any) => {
-    //   ztoolkit.log(event)
-    //   if (!(Zotero_Tabs.selectedIndex == 0 && event.key == "Control" && isFocus && !isClick)) { return }
-    //   let items = ZoteroPane.getSelectedItems()
-    //   const item = items[0]
-    //   if (items.length != 1) { return }
-    //   await this.refresh([item])
-    // })
 
     const resizer = ztoolkit.UI.createElement(document, "div", {
       styles: {
@@ -1088,16 +1090,25 @@ export default class ConnectedPapers {
       return res_color
     }
     app.refresh_graph()
+    // scrollToSelected
+    let scrollToNode = (className: "selected" | "hover") => {
+      const parent = document.querySelector(".normal-items") as HTMLDivElement
+      const target = parent.querySelector(`.${className}`) as HTMLDivElement
+      const firstChild = parent.firstChild as HTMLDivElement
+      parent.scrollTo(0, target!.offsetTop - firstChild.offsetTop)
+    }
     // 下面绑定是覆盖
     app.graphdata.sim_node_circles
       // 从图谱节点反向定位到列表
       .on("click", (event: any, it: any) => {
         const paperID = it.paperId
-        this.setNodeState({state: "selected", paperID })
+        this.setNodeState({ state: "selected", paperID })
+        scrollToNode("selected")
       })
       .on("mouseover", (event: any, it: any) => {
         const paperID = it.paperId
         this.setNodeState({ state: "hover", paperID })
+        scrollToNode("hover")
       })
       .on("mouseout", (event: any, it: any) => {
         this.setNodeState({ state: "hover", paperID: "" })
