@@ -1,14 +1,14 @@
 {
   "name": "zotero-reference",
-  "version": "0.5.8",
+  "version": "0.5.9",
   "description": "侧边栏展示阅读文献的所有参考文献，多源浮窗，推荐关联...",
   "config": {
     "addonName": "Zotero Reference",
     "addonID": "zoteroreference@polygon.org",
     "addonRef": "zoteroreference",
     "addonInstance": "ZoteroReference",
-    "releasepage": "https://github.com/muisedestiny",
-    "updaterdf": "https://github.com/muisedestiny"
+    "releasepage": "https://github.com/MuiseDestiny/zotero-reference",
+    "updaterdf": "https://raw.githubusercontent.com/MuiseDestinyn"
   },
   "main": "src/index.ts",
   "scripts": {
@@ -23,6 +23,7 @@
     "restart-dev": "npm run build-dev && npm run stop && npm run start",
     "restart-prod": "npm run build-prod && npm run stop && npm run start",
     "restart": "npm run restart-dev",
+    "restart-z7": "npm run build-dev && npm run stop && npm run start-z7",
     "release": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

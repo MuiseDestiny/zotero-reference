@@ -82,7 +82,6 @@ class Utils {
         }
       }
       title = title.trim()
-      ztoolkit.log("title", title)
       let splitByTitle = text.split(titleMatch)
       let authorInfo = splitByTitle[0].trim()
 
@@ -94,12 +93,10 @@ class Utils {
       }
       const currentYear = new Date().getFullYear();
       let res = text.match(/[^\d]\d{4}[^\d-]/g)?.map(s => s.match(/\d+/)![0])
-      ztoolkit.log(res)
       let year = res?.find(s => {
         return Number(s) <= Number(currentYear) + 1
       })!
       authorInfo = authorInfo.replace(`${year}.`, "").replace(year, "").trim()
-      ztoolkit.log({ year, title, authors: [authorInfo], publicationVenue })
       return { year, title, authors: [authorInfo], publicationVenue }
     } catch {
       return {

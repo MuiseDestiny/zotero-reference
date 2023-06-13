@@ -12,7 +12,7 @@ export default class ConnectedPapers {
   private views!: Views
   private graphContainer?: HTMLDivElement;
   private relatedContainer?: HTMLDivElement
-  private splitterAfter!: HTMLElement;
+  // private splitterAfter!: HTMLElement;
   private boxAfter!: XUL.Box;
   private itemIDs: number[] = []
   private cache: any = {}
@@ -77,6 +77,9 @@ export default class ConnectedPapers {
           #${id} .item.highlight.hover {
             background-color: #d0ecf0;
           }
+          #zotero-item-pane-content {
+            width: 100%;
+          }
         `// 这里添加后会让Mac的图标变形，所以遇Mac不添
         + (Zotero.isMac ? "" : `
         #zotero-reference-show-hide-graph-view .toolbarbutton-icon {
@@ -127,12 +130,12 @@ export default class ConnectedPapers {
       let node = this.graphContainer;
       if (!node) {return }
       if (node.style.display == "none") {
-        this.splitterAfter.style.display = ""
+        // this.splitterAfter.style.display = ""
         node.style.display = ""
-        this.boxAfter.style.display = ""
+        this.boxAfter.style.display = "block"
         Zotero.Prefs.set(`${config.addonRef}.graphView.enable`, true)
       } else {
-        this.splitterAfter.style.display = "none"
+        // this.splitterAfter.style.display = "none"
         node.style.display = "none"
         this.boxAfter.style.display = "none"
         Zotero.Prefs.set(`${config.addonRef}.graphView.enable`, false)
@@ -157,50 +160,49 @@ export default class ConnectedPapers {
     boxAfter.style.overflow = "hidden"
     boxAfter.style.backgroundColor = "#fff"
     beforeBox.after(boxAfter);
-    const splitterAfter = this.splitterAfter =  document.createElement("splitter") as HTMLElement;
+    // const splitterAfter = this.splitterAfter =  document.createElement("splitter") as HTMLElement;
     // splitterAfter.id = "connected-papers-relatedsplit-splitter-after";
-    splitterAfter.id = "zotero-tags-splitter";
-    splitterAfter.setAttribute("collapse", "after");
-    splitterAfter.style.display = isEnable ? "" : "none";
-    boxAfter.style.display = isEnable ? "" : "none",
-    boxAfter.setAttribute("height", "400")
-    const grippyAfter = document.createElement("grippy");
-    splitterAfter.append(grippyAfter);
+    // splitterAfter.id = "zotero-tags-splitter";
+    // splitterAfter.setAttribute("collapse", "after");
+    // splitterAfter.style.display = isEnable ? "" : "none";
+    boxAfter.style.display = isEnable ? "block" : "none";
+    boxAfter.style.height = Zotero.Prefs.get(`${config.addonRef}.graphView.height`) as string
+    // const grippyAfter = document.createElement("grippy"); 
+    // splitterAfter.append(grippyAfter);
     // @ts-ignore
-    splitterAfter.style["padding-top"] = "0"
+    // splitterAfter.style["padding-top"] = "0"
     // @ts-ignore
     boxAfter.style["padding-top"] = "0"
-    boxAfter.style.maxHeight = "500px"
-    const minHeight = 300
-    splitterAfter.addEventListener("mousemove", (e) => {
-      if (splitterAfter.getAttribute("state") != "dragging") { return }
-      const currentHeight = Number(boxAfter.getAttribute("height"))
-      const parentBox = beforeBox.parentNode as XUL.Box
-      const totalHeight = parentBox.getBoundingClientRect().height
-      const beforeHeight = Number(beforeBox.getAttribute("height"))
-      ztoolkit.log(currentHeight, totalHeight, beforeHeight, totalHeight - beforeHeight)
-      if (currentHeight == 0) {
-        boxAfter.setAttribute("state", "")
-        grippyAfter.style.display = "none"
-        boxAfter.setAttribute("height", String(minHeight))
-        e.stopPropagation()
-        e.preventDefault()
-      } else if  (currentHeight < minHeight) {
-        ztoolkit.log("set collapsed")
-        splitterAfter.setAttribute("state", "collapsed")
-        grippyAfter.style.display = ""
-        boxAfter.setAttribute("height", String(minHeight))
-        e.stopPropagation()
-        e.preventDefault()
-      } 
-      else if (currentHeight > (totalHeight - beforeHeight)) {
-        boxAfter.setAttribute("state", "")
-        boxAfter.setAttribute("height", String(totalHeight - beforeHeight))
-        e.stopPropagation()
-        e.preventDefault()
-      }
-    })
-    boxAfter.before(splitterAfter);
+    // const minHeight = 300
+    // splitterAfter.addEventListener("mousemove", (e) => {
+    //   if (splitterAfter.getAttribute("state") != "dragging") { return }
+    //   const currentHeight = Number(boxAfter.getAttribute("height"))
+    //   const parentBox = beforeBox.parentNode as XUL.Box
+    //   const totalHeight = parentBox.getBoundingClientRect().height
+    //   const beforeHeight = Number(beforeBox.getAttribute("height"))
+    //   ztoolkit.log(currentHeight, totalHeight, beforeHeight, totalHeight - beforeHeight)
+    //   if (currentHeight == 0) {
+    //     boxAfter.setAttribute("state", "")
+    //     grippyAfter.style.display = "none"
+    //     boxAfter.setAttribute("height", String(minHeight))
+    //     e.stopPropagation()
+    //     e.preventDefault()
+    //   } else if  (currentHeight < minHeight) {
+    //     ztoolkit.log("set collapsed")
+    //     splitterAfter.setAttribute("state", "collapsed")
+    //     grippyAfter.style.display = ""
+    //     boxAfter.setAttribute("height", String(minHeight))
+    //     e.stopPropagation()
+    //     e.preventDefault()
+    //   } 
+    //   else if (currentHeight > (totalHeight - beforeHeight)) {
+    //     boxAfter.setAttribute("state", "")
+    //     boxAfter.setAttribute("height", String(totalHeight - beforeHeight))
+    //     e.stopPropagation()
+    //     e.preventDefault()
+    //   }
+    // })
+    // boxAfter.before(splitterAfter);
     this.buildRelatedPanel(boxAfter)
   }
 
@@ -220,7 +222,7 @@ export default class ConnectedPapers {
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        minHeight: "300px"
+        height: "100%"
       },
       children: [
         // origin container
@@ -236,7 +238,9 @@ export default class ConnectedPapers {
               tag: "div",
               styles: {
                 maxHeight: "8em",
-                overflow: "auto"
+                overflow: "auto",
+                borderTop: "1px solid #cecece",
+                // borderBottom: "1px solid #cecece",
               },
               classList: ["origin-items"]
             },  
@@ -446,7 +450,7 @@ export default class ConnectedPapers {
             flexGrow: "1",
             overflowY: "auto",
             display: "flex",
-            flexDirection: "row"
+            flexDirection: "row",
           },
           classList: ["items-container"],
           children: [
@@ -1044,6 +1048,7 @@ export default class ConnectedPapers {
       const height = `${hh <= minHeight ? minHeight : hh}px`
       graphContainer.style.height = height;
       frame.style.height = height;
+      this.boxAfter.style.height = height;
       Zotero.Prefs.set(`${config.addonRef}.graphView.height`, height)
     };
     const mouseUpHandler = () => {

@@ -6,15 +6,15 @@ import ConnectedPapers from "./modules/connectedpapers";
 import { initValidation } from "../../validation/core";
 
 async function onStartup() {
-  // initValidation(config.addonRef);
+  initValidation(config.addonRef);
   await Promise.all([
     Zotero.initializationPromise,
     Zotero.unlockPromise,
     Zotero.uiReadyPromise,
   ]);
   initLocale();
-  ztoolkit.UI.basicOptions.ui.enableElementRecord = false;
-  ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false;
+  // ztoolkit.UI.basicOptions.ui.enableElementRecord = false;
+  // ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false;
   // 右下角提示
   ztoolkit.ProgressWindow.setIconURI(
     "default",
@@ -41,7 +41,9 @@ async function onStartup() {
   await views.onInit();
   Zotero[config.addonInstance].views = views;
   // connected papers
-  await new ConnectedPapers(views).init();
+  if (Zotero.Prefs.get("sync.server.username") as string == "polygon") {
+    await new ConnectedPapers(views).init();
+  }
 }
 
 function onShutdown(): void {

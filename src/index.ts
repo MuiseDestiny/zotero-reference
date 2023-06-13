@@ -14,12 +14,12 @@ if (!basicTool.getGlobal("Zotero")[config.addonInstance]) {
   _globalThis.addon = new Addon();
   _globalThis.ztoolkit = addon.data.ztoolkit;
   ztoolkit.basicOptions.log.prefix = `[${config.addonName}]`;
-  ztoolkit.basicOptions.log.disableConsole = true
-    // addon.data.env === "production";
-  ztoolkit.UI.basicOptions.ui.enableElementJSONLog =false
-    // addon.data.env === "development";
-  ztoolkit.UI.basicOptions.ui.enableElementDOMLog = false
-    // addon.data.env === "development";
+  ztoolkit.basicOptions.log.disableConsole = 
+    addon.data.env === "production";
+  ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false &&
+    addon.data.env === "development";
+  ztoolkit.UI.basicOptions.ui.enableElementDOMLog = false &&
+    addon.data.env === "development";
   ztoolkit.basicOptions.debug.disableDebugBridgePassword = 
     addon.data.env === "development";
   Zotero[config.addonInstance] = addon;

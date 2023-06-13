@@ -14,8 +14,9 @@ class PDF {
       [/^\(\d+\)\s?/], // (1)
       [/^\[\d{0,3}\].+?[\,\.\uff0c\uff0e]?/], // [10] Polygon
       [/^\uff3b\d{0,3}\uff3d.+?[\,\.\uff0c\uff0e]?/],  // ［1］
-      [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
+      [/^\d+[\,\.\uff0c\uff0e]/], // 1. Polygon
       [/^\d+[^\d\w]+?[\,\.\uff0c\uff0e]?/], // 1. Polygon
+      [/^\[.+?\].+?[\,\.\uff0c\uff0e]?/], // [RCK + 20] 
       [/^\d+\s+/], // 1 Polygon
       [/^[A-Z]\w.+?\(\d+[a-z]?\)/, /^[A-Z][A-Za-z]+[\,\.\uff0c\uff0e]?/, /^.+?,.+.,/, /^[\u4e00-\u9fa5]{1,4}[\,\.\uff0c\uff0e]?/],  // 中文
     ];
@@ -23,6 +24,7 @@ class PDF {
 
   async getReferences(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean): Promise<ItemInfo[]> {
     let refLines = await this.getRefLines(reader, fromCurrentPage)
+    const maxHeight = (reader._iframeWindow as any).wrappedJSObject.PDFViewerApplication.pdfViewer._pages[0].viewport.viewBox[3]
     Zotero.ProgressWindowSet.closeAll();
     if (refLines.length == 0) {
       (new ztoolkit.ProgressWindow("[Fail] PDF"))
@@ -52,7 +54,7 @@ class PDF {
     }
     ztoolkit.log("references", references)
     for (let i = 0; i < references.length; i++) {
-      let ref = {...references[i]}
+      let ref = {...references[i]} as PDFLine
       ref.text = ref.text
         .trim()
         .replace(/^[^0-9a-zA-Z]\s*\d+\s*[^0-9a-zA-Z]/, "")
@@ -61,6 +63,8 @@ class PDF {
       references[i] = {
         text: ref.text,
         ...this.utils.refText2Info(ref.text),
+        x: ref._x,
+        y: ref.y + ref.height
       } as ItemInfo
       references[i].url = ref.url || references[i].url
     }
@@ -176,7 +180,8 @@ class PDF {
       let lineRefType = this.getRefType(text)
       if (
         // this.abs(line.x - firstX) < line.height * 1.2 &&
-        (lineRefType == refType && refType <= 3) ||
+        // 跳过验证其它，特别小心
+        (lineRefType == refType && refType <= 2) ||
         (
           indent == 0 &&
           lineRefType != -1 &&

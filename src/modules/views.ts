@@ -24,8 +24,28 @@ export default class Views {
   constructor() {
     initLocale();
     this.utils = new Utils()
+    this.addStyle()
   }
 
+  private addStyle() {
+    const styles = ztoolkit.UI.createElement(document, "style", {
+      id: "reference-style",
+      properties: {
+        innerHTML: `
+          .reference-search-box .icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.8;
+          }
+          .reference-search-box .icon:hover {
+            opacity: 1
+          }
+        `
+      },
+    });
+    document.documentElement.appendChild(styles);
+  }
   /**
    * 注册阅读侧边栏
    */
@@ -48,7 +68,7 @@ export default class Views {
         const id = `${config.addonRef}-${reader._instanceID}-extra-reader-tab-div`
         const relatedbox = ztoolkit.UI.createElement(
           document,
-          "relatedbox",
+          "related-box",
           {
             id,
             classList: ["zotero-editpane-related"],
@@ -57,123 +77,116 @@ export default class Views {
             attributes: {
               flex: "1",
             },
+            styles: {
+              alignItems: "center"
+            },
             children: [
               {
-                tag: "vbox",
+                tag: "box",
                 namespace: "xul",
-                classList: ["zotero-box"],
+                classList: ["reference"],
                 attributes: {
                   flex: "1",
                 },
                 styles: {
-                  paddingLeft: "0px",
-                  paddingRight: "0px"
+                  display: "flex",
+                  // paddingLeft: "0px",
+                  // paddingRight: "0px"
                 },
                 children: [
                   {
-                    tag: "hbox",
-                    namespace: "xul",
-                    attributes: {
-                      align: "center"
+                    tag: "div",
+                    namespace: "html",
+                    styles: {
+                      flexGrow: "1",
                     },
                     children: [
                       {
-                        tag: "label",
-                        namespace: "xul",
-                        id: "referenceNum",
-                        attributes: {
-                          value: `0 ${getString("relatedbox.number.label")}`
-                        },
-                        listeners: [
+                        tag: "div",
+                        classList: ["header"],
+                        namespace: "html",
+                        children: [
                           {
-                            type: "dblclick",
-                            listener: () => {
-                              ztoolkit.log("dblclick: Copy all references")
-                              let textArray: string[] = []
-                              let labels = relatedbox.querySelectorAll("rows row box label")
-                              labels.forEach((e: any) => {
-                                textArray.push(e.value)
-                              });
-                              (new ztoolkit.ProgressWindow("Reference"))
-                                .createLine({text: "Copy all references", type: "success"})
-                                .show();
-                              (new ztoolkit.Clipboard())
-                                .addText(textArray.join("\n"), "text/unicode")
-                                .copy();
-                            }
+                            tag: "label",
+                            id: "reference-num",
+                            properties: {
+                              innerText: `0 ${getString("relatedbox.number.label")}`
+                            },
+                            listeners: [
+                              {
+                                type: "dblclick",
+                                listener: () => {
+                                  ztoolkit.log("dblclick: Copy all references")
+                                  let textArray: string[] = []
+                                  let labels = relatedbox.querySelectorAll("#related-grid .box #reference-label")
+                                  ztoolkit.log(labels)
+                                  labels.forEach((e: any) => {
+                                    textArray.push(e.textContent)
+                                  });
+                                  ztoolkit.log(textArray);
+                                  (new ztoolkit.ProgressWindow("Reference"))
+                                    .createLine({text: "Copy all references", type: "success"})
+                                    .show();
+                                  (new ztoolkit.Clipboard())
+                                    .addText(textArray.join("\n"), "text/unicode")
+                                    .copy();
+                                }
+                              }
+                            ]
+                          },
+                          {
+                            tag: "button",
+                            id: "refresh-button",
+                            properties: {
+                              innerText: getString("relatedbox.refresh.label")
+                            },
+                            listeners: [
+                              {
+                                type: "mousedown",
+                                listener: (event: any) => {
+                                  timer = window.setTimeout(async () => {
+                                    timer = undefined
+                                    // 不从本地储存读取
+                                    await this.refreshReferences(panel, false, event.ctrlKey || event.metaKey)
+                                  }, 1000)
+                                }
+                              },
+                              {
+                                type: "mouseup",
+                                listener: async (event: any) => {
+                                  if (timer) {
+                                    window.clearTimeout(timer) 
+                                    timer = undefined
+                                    // 本地储存读取
+                                    await this.refreshReferences(panel, true, event.ctrlKey || event.metaKey)
+                                  }
+                                }
+                              }
+                            ]
                           }
                         ]
                       },
                       {
-                        tag: "button",
-                        namespace: "xul",
-                        id: "refresh-button",
-                        attributes: {
-                          label: getString("relatedbox.refresh.label")
-                        },
-                        listeners: [
-                          {
-                            type: "mousedown",
-                            listener: (event: any) => {
-                              timer = window.setTimeout(async () => {
-                                timer = undefined
-                                // 不从本地储存读取
-                                await this.refreshReferences(panel, false, event.ctrlKey)
-                              }, 1000)
-                            }
-                          },
-                          {
-                            type: "mouseup",
-                            listener: async (event: any) => {
-                              if (timer) {
-                                window.clearTimeout(timer) 
-                                timer = undefined
-                                // 本地储存读取
-                                await this.refreshReferences(panel, true, event.ctrlKey)
-                              }
-                            }
-                          }
-                        ]
+                        tag: "div",
+                        namespace: "html",
+                        id: "related-grid",
+                        classList: ["grid"],
+                        styles: {
+                          overflowY: "auto",
+                          alignItems: "center",
+                          display: "grid"
+                        }
                       }
                     ]
                   },
-                  {
-                    tag: "grid",
-                    namespace: "xul",
-                    attributes: {
-                      flex: "1"
-                    },
-                    children: [
-                      {
-                        tag: "columns",
-                        namespace: "xul",
-                        children: [
-                          {
-                            tag: "column",
-                            namespace: "xul",
-                            attributes: {
-                              flex: "1"
-                            }
-                          },
-                          {
-                            tag: "column",
-                            namespace: "xul",
-                          },
-                        ]
-                      },
-                      {
-                        tag: "rows",
-                        namespace: "xul",
-                        id: "referenceRows"
-                      }
-                    ]
-                  }
                 ]
               }
-            ]
+            ],
           }
         );
+
         panel.append(relatedbox);
+        relatedbox.querySelector("box:not(.reference)")?.remove()
         // 修改链接
         window.setTimeout(async () => {
           await this.pdfLinks(reader, panel)
@@ -199,13 +212,14 @@ export default class Views {
           await this.loadingRelated();
         })
         // 分割按钮
-        window.setTimeout(async () => {
-          await this.registerSplitButtons(reader);
-        })
+        // window.setTimeout(async () => {
+        //   await this.registerSplitButtons(reader);
+        // })
       },
       {
-        targetIndex: (Zotero.ZoteroPDFTranslate || Zotero.PDFTranslate) ? 3 : undefined,
+        // targetIndex: 3,
         tabId: "zotero-reference",
+        selectPanel: false,
       }
     )
   }
@@ -223,18 +237,23 @@ export default class Views {
       backgroundSize: "16px 16px",
       backgroundPosition: "center",
       backgroundRepeat: "no-repeat",
-      width: "32px"
+      width: "16px"
     }
+    
     ztoolkit.UI.insertElementBefore({
       tag: "div",
       classList: ["splitToolbarButton"],
       children: [
         {
           tag: "button",
+          namespace: "html",
           id: "split-horizontally",
           classList: ["toolbarButton"],
           styles: {
             backgroundImage: `url(chrome://${config.addonRef}/content/icons/horizontally.png)`,
+            // backgroundImage: await Zotero.File.generateDataURI(
+            //   `chrome://${config.addonRef}/content/icons/horizontally.png`, 'image/png'
+            // ),
             marginRight: "1px",
             ...styles
           },
@@ -253,10 +272,14 @@ export default class Views {
         },
         {
           tag: "button",
+          namespace: "html",
           id: "split-vertically",
           classList: ["toolbarButton"],
           styles: {
-            backgroundImage: `url(chrome://${config.addonRef}/content/icons/vertically.png)`,
+            backgroundImage: `url(chrome://${config.addonRef}/content/icons/split.png)`,
+            // backgroundImage: await Zotero.File.generateDataURI(
+            //   `chrome://${config.addonRef}/content/icons/vertically.png`, 'image/png'
+            // ),
             marginLeft: "0",
             ...styles
           },
@@ -275,6 +298,21 @@ export default class Views {
         }
       ]
     }, ref)
+
+    // ztoolkit.UI.appendElement({
+    //   tag: "style",
+    //   id: "reference-style",
+    //   properties: {
+    //     innerHTML: `
+    //       #split-horizontally.toolbarButton::before {
+    //         background-image: url("chrome://${config.addonRef}/content/icons/horizontally.png");
+    //       }
+    //       #split-vertically.toolbarButton::before {
+    //         background-image: url("chrome://${config.addonRef}/content/icons/vertically.png");
+    //       }
+    //     `
+    //   },
+    // }, ((_window.document as Document).documentElement));
   }
 
   /**
@@ -283,15 +321,15 @@ export default class Views {
    * @param node 
    * @returns 
    */
-  public refreshRelated(array: ItemBaseInfo[], node: XUL.Element) {
+  public refreshRelated(array: ItemBaseInfo[], node: HTMLDivElement) {
     let totalNum = 0
-    ztoolkit.log("refreshRelated", array)
+    // @ts-ignore
     array.forEach((info: ItemBaseInfo, i: number) => {
-      let row = this.addRow(node, array, i, false, false) as XUL.Element
-      if (!row) { return }
-      row.classList.add("only-title")
+      let {box, label} = this.addRow(node, array, i, false, false) as any
+      if (!box) { return }
+      box.classList.add("only-title")
       totalNum += 1;
-      let box = row.querySelector("box") as XUL.Box
+      // let box = row.querySelector("box") as XUL.Box
     })
     return totalNum
   }
@@ -312,13 +350,13 @@ export default class Views {
     }
     let relatedbox = document
       .querySelector(`#${Zotero_Tabs.selectedID}-context`)!
-      .querySelector("tabpanel:nth-child(3) relatedbox")! as any
+      .querySelector("tabpanel:nth-child(3) related-box")! as any
     do {
       await Zotero.Promise.delay(50);
     }
-    while (!relatedbox.querySelector('#relatedRows'));
+    while (!relatedbox.querySelector('#related-grid'));
     
-    let node = relatedbox.querySelector('#relatedRows')!.parentNode as XUL.Element
+    let node = relatedbox.querySelector('#related-grid').parentNode! as HTMLDivElement
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
     ztoolkit.log("getDOIRelatedArray")
@@ -328,7 +366,7 @@ export default class Views {
       func.call(relatedbox)
       // #42，为Zotero相关条目添加悬浮提示
       // 把Zotero条目转化为Reference可识别形式
-      node.querySelectorAll("rows row").forEach(e => e.remove())
+      node.querySelectorAll(".box").forEach((e: any) => { e.nextElementSibling?.remove(); e.remove();  })
       ztoolkit.log(_relatedArray)
       let relatedArray = (item.relatedItems.map((key: string) => {
         try {
@@ -350,21 +388,22 @@ export default class Views {
         }).concat(_relatedArray)
       ztoolkit.log(relatedArray)
       this.refreshRelated(relatedArray, node)
-      node.querySelectorAll("box image.zotero-box-icon")
-        .forEach((e: any) => {
-          let label = ztoolkit.UI.createElement(
-            document,
-            "label",
-            {
-              namespace: "xul",
-              styles: {
-                backgroundImage: `url(${e.src})`,
-                ...this.iconStyles
-              }
-            }
-          )
-          e.parentNode.replaceChild(label, e)
-        })
+
+      // node.querySelectorAll(".box image.zotero-box-icon")
+      //   .forEach((e: any) => {
+      //     let label = ztoolkit.UI.createElement(
+      //       document,
+      //       "label",
+      //       {
+      //         namespace: "xul",
+      //         styles: {
+      //           backgroundImage: `url(${e.src})`,
+      //           ...this.iconStyles
+      //         }
+      //       }
+      //     )
+      //     e.parentNode.replaceChild(label, e)
+      //   })
     }
     relatedbox.refresh()
   }
@@ -375,53 +414,59 @@ export default class Views {
     while (!((_window = reader?._iframeWindow?.wrappedJSObject) && (_pdfDocument = _window.PDFViewerApplication?.pdfDocument))) {
       await Zotero.Promise.delay(10)
     }
-    let refKeys: any = []
-    let dests: any
-    window.setTimeout(async () => {
-      dests = await _pdfDocument._transport.getDestinations()
-      // 分析href与参考文献对应
-      // 统计与参考文献数量一致的引文
-      const statistics: any = {}
-      Object.keys(dests).forEach(key => {
-        let _key = key.replace(/\d/g, "")
-        statistics[_key] ??= 0
-        statistics[_key] += 1
-      })
-      // const totalNum = 36
-      // let refKey = Object.keys(statistics).find(k => statistics[k] == totalNum)
-      // 用最大值概率最大，但是有一定风险
-      let refKey = Object.keys(statistics).sort((k1, k2) => statistics[k2]- statistics[k1])[0]
-      Object.keys(dests).forEach(key => {
-        if (key.replace(/\d/g, "") == refKey) {
-          refKeys.push(key)
-        }
-      })
-      // 根据匹配数字排序
-      refKeys = refKeys.sort((k1: string, k2: string) => {
-        let n1 = Number(k1.match(/\d+/)![0])
-        let n2 = Number(k2.match(/\d+/)![0])
-        return n1 - n2
-      })
-    })
+    // let refKeys: any = []
+    const dests = await _pdfDocument._transport.getDestinations()
+    // window.setTimeout(async () => {
+    //   dests = await _pdfDocument._transport.getDestinations()
+    //   // 分析href与参考文献对应
+    //   // 统计与参考文献数量一致的引文
+    //   const statistics: any = {}
+    //   Object.keys(dests).forEach(key => {
+    //     let _key = key.replace(/\d/g, "")
+    //     statistics[_key] ??= 0
+    //     statistics[_key] += 1
+    //   })
+    //   // const totalNum = 36
+    //   // let refKey = Object.keys(statistics).find(k => statistics[k] == totalNum)
+    //   // 用最大值概率最大，但是有一定风险
+    //   let refKey = Object.keys(statistics).sort((k1, k2) => statistics[k2]- statistics[k1])[0]
+    //   Object.keys(dests).forEach(key => {
+    //     if (key.replace(/\d/g, "") == refKey) {
+    //       refKeys.push(key)
+    //     }
+    //   })
+    //   // 根据匹配数字排序
+    //   refKeys = refKeys.sort((k1: string, k2: string) => {
+    //     let n1 = Number(k1.match(/\d+/)![0])
+    //     let n2 = Number(k2.match(/\d+/)![0])
+    //     return n1 - n2
+    //   })
+    // })
     let id = window.setInterval(async () => {
       try {
         _window.document
-      } catch {
+      } catch (e) {
+        ztoolkit.log(e)
         window.clearInterval(id)
         return await this.pdfLinks(reader, panel)
       }
+      
       _window.document
-        .querySelectorAll(`.annotationLayer a[href^='#']:not([${config.addonRef}])`).forEach(async (a: any) => {
+        .querySelectorAll(`section.linkAnnotation a[href^='#']:not([${config.addonRef}])`).forEach(async (a: any) => {
           const isClickLink = Zotero.Prefs.get(`${config.addonRef}.clickLink`) as boolean
-          let _a: any = a
+          const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`) as boolean
+          let _a: any, href = a.getAttribute("href")
           if (isClickLink) {
-            _a = a.cloneNode(true)
-            _a.setAttribute(config.addonRef, "")
-            a.parentNode.appendChild(_a)
+            _a = ztoolkit.UI.appendElement({
+              tag: "a",
+              namespace: "html"
+            }, a.parentNode) as HTMLDivElement
+            _a.setAttribute(config.addonRef, href);
+            _a.setAttribute("style", "cursor: pointer;")
             a.remove()
             _a.addEventListener("click", async (event: MouseEvent) => {
-              event.preventDefault()
-              let href = _a.getAttribute("href")
+              event.stopPropagation();
+              event.preventDefault();
               if (_window.secondViewIframeWindow == null) {
                 await reader.menuCmd(
                   Zotero.Prefs.get(`${config.addonRef}.clickLink.cmd`) as any
@@ -435,49 +480,48 @@ export default class Views {
                 }
                 await Zotero.Promise.delay(1000)
               }
-              let dest = unescape(href.slice(1))
-              try {
-                dest = JSON.parse(dest)
-              } catch { }
+              // let dest = unescape()
               // 有报错，#39 
               _window.secondViewIframeWindow.eval(`PDFViewerApplication
-                .pdfViewer.linkService.goToDestination(${JSON.stringify(dest)})`)
+                .pdfViewer.linkService.goToDestination("${href.slice(1) }")`)
 
             })
           }
           
           let timer: undefined | number
-          const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`)
+          _a = _a || a
           if (isHoverLink) {
+            let tipUI: TipUI
             _a.addEventListener("mouseenter", async (event: MouseEvent) => {
-              ztoolkit.log(
-                refKeys,
-                dests
-              )
-              let refKey = (unescape(_a.href as string)).split("#").slice(-1)[0]
-              let refIndex
-              if ((refIndex = refKeys.indexOf(refKey))) {
-                let row = panel.querySelector(`#referenceRows row:nth-child(${refIndex+1})`)
-                // @ts-ignore
-                let reference = row?.reference
-                if (reference) {
-                  timer = window.setTimeout(() => {
-                    timer = undefined
-                    let rect = _a.getBoundingClientRect()
-                    rect.y = rect.y + 20;
-                    const tipUI = this.showTipUI(
-                      rect,
-                      reference,
-                      "top center"
-                    )
-                  }, 1000)
-                }
+              // @ts-ignore
+              const references = panel.references
+              if (!references) { return }
+              const [x, y] = dests[href.slice(1)].slice(2, 4)
+              // 确定 refIndex
+              const distances = references.map((ref: { x: number; y: number }) => (x - ref.x) ** 2 + (y - ref.y) ** 2)
+              const minDistance = [...distances].sort((a: number, b: number) => a-b)[0]
+              const refIndex = distances.indexOf(minDistance)
+              let reference = references[refIndex]
+              if (reference) {
+                timer = window.setTimeout(() => {
+                  timer = undefined
+                  let rect = _a.getBoundingClientRect()
+                  rect.y = rect.y + 40;
+                  tipUI = this.showTipUI(
+                    rect,
+                    reference,
+                    "top center"
+                  )
+                }, 233)
               }
             })
             _a.addEventListener("mouseleave", async () => {
-              if (timer) {
-                window.clearTimeout(timer)
-                timer = undefined
+              window.clearTimeout(timer)
+              if (tipUI) {
+                const timeout = tipUI.removeTipAfterMillisecond
+                tipUI.tipTimer = window.setTimeout(async () => {
+                  tipUI && tipUI.container.remove()
+                }, timeout)
               }
             })
           }
@@ -493,8 +537,8 @@ export default class Views {
    */
   public async refreshReferences(panel: XUL.TabPanel, local: boolean = true, fromCurrentPage: boolean = false) {
     Zotero.ProgressWindowSet.closeAll();
-    let label = panel.querySelector("label#referenceNum") as XUL.Label;
-    label.value = `${0} ${getString("relatedbox.number.label")}`;
+    let label = panel.querySelector("label#reference-num") as XUL.Label;
+    label.innerText = `${0} ${getString("relatedbox.number.label")}`;
     let source = panel.getAttribute("source")
     if (source) {
       if (local) {
@@ -510,7 +554,7 @@ export default class Views {
     }
 
     // clear 
-    panel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
+    panel.querySelectorAll("#related-grid *").forEach(e => e.remove());
     panel.querySelectorAll("#zotero-reference-search").forEach(e => e.remove());
 
     let references: ItemBaseInfo[]
@@ -601,15 +645,16 @@ export default class Views {
     }
 
     const referenceNum = references.length
-
+    // @ts-ignore
+    panel.references = references
     references.forEach((reference: ItemBaseInfo, refIndex: number) => {
-      let row = this.addRow(panel, references, refIndex)!;
+      let { box } = this.addRow(panel, references, refIndex)!;
       // @ts-ignore
-      row.reference = reference
-      label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
+      box.reference = reference
+      label.innerText = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
     })
 
-    label.value = `${referenceNum} ${getString("relatedbox.number.label")}`;
+    label.innerText = `${referenceNum} ${getString("relatedbox.number.label")}`;
   }
 
   public showTipUI(refRect: Rect, reference: ItemInfo, position: string, idText?: string) {
@@ -654,6 +699,11 @@ export default class Views {
           text: reference.text || refText,
           abstract: reference.abstract || refText,
           primaryVenue: reference.primaryVenue || undefined
+          
+        }
+        let url = this.utils.identifiers2URL(info.identifiers)
+        if (url) {
+          info.url = url
         }
       }
       return info
@@ -687,7 +737,6 @@ export default class Views {
       ]
       prefIndex = parseInt(Zotero.Prefs.get(`${config.addonRef}.${according}InfoIndex`) as string)
     }
-    ztoolkit.log("prefIndex", prefIndex)
     const sourceConfig = {
       arXiv: { color: "#b31b1b", tip: "arXiv is a free distribution service and an open-access archive for 2,186,475 scholarly articles in the fields of physics, mathematics, computer science, quantitative biology, quantitative finance, statistics, electrical engineering and systems science, and economics. Materials on this site are not peer-reviewed by arXiv." },
       readpaper: { color: "#1f71e0", tip: "论文阅读平台ReadPaper共收录近2亿篇论文、2.7亿位作者、近3万所高校及研究机构，几乎涵盖了全人类所有学科。科研工作离不开论文的帮助，如何读懂论文，读好论文，这本身就是一个很大的命题，我们的使命是：“让天下没有难读的论文”" },
@@ -735,7 +784,7 @@ export default class Views {
           this.utils.Html2Text(info.title!)!,
           tags,
           [
-            info.authors.slice(0, 3).join(" / "),
+            info.authors?.slice(0, 3).join(" / "),
             [info?.primaryVenue, toTimeInfo(info.publishDate as string) || info.year]
               .filter(e => e).join(" \u00b7 "),
             reference.description
@@ -750,7 +799,7 @@ export default class Views {
     return tipUI
   }
 
-  public addRow(node: XUL.Element, references: ItemBaseInfo[], refIndex: number, addPrefix: boolean = true, addSearch: boolean = true) {
+  public addRow(node: HTMLDivElement, references: ItemBaseInfo[], refIndex: number, addPrefix: boolean = true, addSearch: boolean = true) {
     let notInLibarayOpacity: string|number = Zotero.Prefs.get(`${config.addonRef}.notInLibarayOpacity`) as string
     if (/[\d\.]+/.test(notInLibarayOpacity)) {
       notInLibarayOpacity = Number(notInLibarayOpacity);
@@ -768,7 +817,7 @@ export default class Views {
     // 避免重复添加
     let toText = (s: string) => s.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "") 
     if (
-      [...node.querySelectorAll("row label")].find((e: any) => toText(e.value) == toText(refText))
+      [...node.querySelectorAll(".box label")].find((e: any) => toText(e.innerText) == toText(refText))
     ) {
       return
     }
@@ -781,146 +830,141 @@ export default class Views {
     // 当前item
     let item = this.utils.getItem()!
     let editTimer: number | undefined
-    const row = ztoolkit.UI.createElement(
+    const box = ztoolkit.UI.createElement(
       document,
-      "row",
+      "div",
       {
-        namespace: "xul",
+        namespace: "html",
+        classList: ["box", "zotero-clicky"],
+        listeners: [
+          {
+            type: "click",
+            listener: (event: any) => {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+          },
+          {
+            type: "mouseup",
+            listener: async (event: any) => {
+              event.preventDefault()
+              event.stopPropagation()
+              // ctrl点击跳转本地item/url
+              if (event.ctrlKey || event.metaKey) {
+                window.clearTimeout(editTimer)
+                if (reference._item) {
+                  return this.utils.selectItemInLibrary(reference._item)
+                } else {
+                  let item = await this.utils.searchLibraryItem(reference)
+                  if (item) {
+                    return this.utils.selectItemInLibrary(item)
+                  }
+                }
+                let URL = reference.url
+                if (!URL) {
+                  const refText = reference.text!
+                  let info: ItemBaseInfo = this.utils.refText2Info(refText);
+                  const popupWin = (new ztoolkit.ProgressWindow("Searching URL", { closeTime: -1 }))
+                    .createLine({ text: `Title: ${reference.title}`, type: "default" })
+                    .show()
+                  if (this.utils.isChinese(refText)) {
+                    URL = await this.utils.API.getCNKIURL(info.title)
+                  } else {
+                    let DOI = (await this.utils.API.getTitleInfoByConnectedpapers(reference.title as string))?.identifiers.DOI
+                    URL = this.utils.identifiers2URL({ DOI })
+                  }
+                  popupWin.close()
+                }
+                if (URL) {
+                  (new ztoolkit.ProgressWindow("Launching URL", { closeOtherProgressWindows: true }))
+                    .createLine({ text: URL, type: "default" })
+                    .show()
+                  Zotero.launchURL(URL);
+                }
+              } else {
+                if (rows.querySelector("#reference-edit")) { return }
+                if (editTimer) {
+                  window.clearTimeout(editTimer)
+                  Zotero.ProgressWindowSet.closeAll()
+                  this.utils.copyText((idText ? idText + "\n" : "") + refText, false);
+                  (new ztoolkit.ProgressWindow("Reference"))
+                    .createLine({ text: refText, type: "success" })
+                    .show()
+                }
+              }
+            }
+          },
+        ],
+        styles: {
+          alignItems: "center",
+          opacity: String(notInLibarayOpacity)
+        },
         children: [
           {
-            tag: "box",
-            id: "reference-box",
-            namespace: "xul",
-            styles: {
-              opacity: String(notInLibarayOpacity)
-            },
-            classList: ["zotero-clicky"],
-            listeners: [
-              {
-                type: "click",
-                listener: (event: any) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                }
-              },
-              {
-                type: "mouseup",
-                listener: async (event: any) => {
-                  event.preventDefault()
-                  event.stopPropagation()
-                  // ctrl点击跳转本地item/url
-                  if (event.ctrlKey) {
-                    window.clearTimeout(editTimer)
-                    if (reference._item) {
-                      return this.utils.selectItemInLibrary(reference._item)
-                    } else {
-                      let item = await this.utils.searchLibraryItem(reference)
-                      if (item) {
-                        return this.utils.selectItemInLibrary(item)
-                      }
-                    }
-                    let URL = reference.url
-                    if (!URL) {
-                      const refText = reference.text!
-                      let info: ItemBaseInfo = this.utils.refText2Info(refText);
-                      const popupWin = (new ztoolkit.ProgressWindow("Searching URL", {closeTime: -1}))
-                        .createLine({ text: `Title: ${reference.title}`, type: "default"})
-                        .show()
-                      if (this.utils.isChinese(refText)) {
-                        URL = await this.utils.API.getCNKIURL(info.title)
-                      } else {
-                        let DOI = (await this.utils.API.getTitleInfoByConnectedpapers(reference.title as string))?.identifiers.DOI
-                        URL = this.utils.identifiers2URL({ DOI })
-                      }
-                      popupWin.close()
-                    }
-                    if (URL) {
-                      (new ztoolkit.ProgressWindow("Launching URL", {closeOtherProgressWindows: true}))
-                        .createLine({ text: URL, type: "default"})
-                        .show()
-                      Zotero.launchURL(URL);
-                    }
-                  } else {
-                    if (rows.querySelector("#reference-edit")) {return}
-                    if (editTimer) {
-                      window.clearTimeout(editTimer)
-                      Zotero.ProgressWindowSet.closeAll()
-                      this.utils.copyText((idText ? idText + "\n" : "") + refText, false);
-                      (new ztoolkit.ProgressWindow("Reference"))
-                        .createLine({ text: refText, type: "success" })
-                        .show()
-                    }
-                  }
-                }
-              },
-            ],
-            children: [
-              {
-                tag: "label",
-                id: "item-type-icon",
-                namespace: "xul",
-                classList: [],
-                styles: {
-                  // backgroundImage: `url(chrome://zotero/skin/treeitem-${reference.type}@2x.png)`,
-                  backgroundImage: `url(${Zotero.ItemTypes.getImageSrc(reference.type as any) as string})`,
-                  ...this.iconStyles
-                }
-              },
-              {
-                tag: "label",
-                namespace: "xul",
-                id: "reference-label",
-                classList: ["zotero-box-label"],
-                attributes: {
-                  value: refText,
-                  crop: "end",
-                  flex: "1"
-                },
-                listeners: [
-                  {
-                    type: "mousedown",
-                    listener: () => {
-                      editTimer = window.setTimeout(() => {
-                        editTimer = undefined
-                        enterEdit()
-                      }, 500);
-                    }
-                  }
-                ]
-              },
-            ]
+            tag: "img",
+            attributes: {
+              src: Zotero.ItemTypes.getImageSrc(reference.type as any) as string
+            }
           },
           {
             tag: "label",
-            id: "add-remove",
-            namespace: "xul",
-            attributes: {
-              value: "+"
+            id: "reference-label",
+            properties: {
+              innerText: refText
             },
-            classList: [
-              "zotero-clicky",
-              "zotero-clicky-plus"
+            styles: {
+              width: "100%"
+            },
+            listeners: [
+              {
+                type: "mousedown",
+                listener: () => {
+                  editTimer = window.setTimeout(() => {
+                    editTimer = undefined
+                    enterEdit()
+                  }, 500);
+                }
+              }
             ]
           }
         ]
       }
     ) as XUL.Element
+    const label = ztoolkit.UI.createElement(
+      document, 
+      "label",
+      {
+        id: "add-remove",
+        namespace: "xul",
+        attributes: {
+          value: "+"
+        },
+        classList: [
+          "zotero-clicky",
+          "zotero-clicky-plus"
+        ]
+      }
+    )
 
     let enterEdit = () => {
-      let box = row.querySelector("#reference-box")! as XUL.Label
-      let label = row.querySelector("#reference-label")! as XUL.Label
+      let label = box.querySelector("#reference-label")! as XUL.Label
       label.style.display = "none"
-      let textbox = ztoolkit.UI.createElement(
+      let textarea = ztoolkit.UI.createElement(
         document,
-        "textbox",
+        "textarea",
         {
           id: "reference-edit",
-          namespace: "xul",
+          namespace: "html",
           attributes: {
-            value: addPrefix ? label.value.replace(/^\[\d+\]\s+/, "") : label.value,
             flex: "1",
             multiline: "true",
             rows: "4"
+          },
+          properties: {
+            value: addPrefix ? label.innerText.replace(/^\[\d+\]\s+/, "") : label.innerText,
+          },
+          styles: {
+            width: "100%"
           },
           listeners: [
             {
@@ -931,20 +975,19 @@ export default class Views {
             }
           ]
         }
-      ) as XUL.Textbox
-      textbox.focus()
-      label.parentNode!.insertBefore(textbox, label)
-
+      ) as HTMLTextAreaElement
+      textarea.focus()
+      label.parentNode!.insertBefore(textarea, label)
       let exitEdit = async () => {
         // 界面恢复
-        let inputText = textbox.value
+        let inputText = textarea.value
         if (!inputText) { return }
         label.style.display = ""
         // textbox.style.display = "none"
-        textbox.remove()
+        textarea.remove()
         // 保存结果
         if (inputText == reference.text) { return }
-        label.value = `[${refIndex + 1}] ${inputText}`;
+        label.innerText = `[${refIndex + 1}] ${inputText}`;
         references[refIndex] = {
           ...reference,
           ...{ identifiers: this.utils.getIdentifiers(inputText) },
@@ -968,7 +1011,6 @@ export default class Views {
       }, 100)
     }
 
-    const label = row.querySelector("label#add-remove")! as XUL.Label
     let setState = (state: string = "") => {
       switch (state) {
         case "+":
@@ -1105,35 +1147,18 @@ export default class Views {
       popupWin.changeLine({ type: "success" })
       popupWin.startCloseTimer(3000)
       updateRowByItem(refItem)
-      return row
-    }
-
-    let getCollectionPath = async (id: number) => {
-      let path = []
-      while (true) {
-        let collection = await Zotero.Collections.getAsync(id) as any
-        path.push(collection._name)
-        if (collection._parentID) {
-          id = collection._parentID
-        } else {
-          break
-        }
-      }
-      return path.reverse().join("/")
     }
 
     let updateRowByItem = (refItem: Zotero.Item) => {
       box.style.opacity = "1";
-      (row.querySelector("#item-type-icon") as XUL.Label).style.backgroundImage =
-        `url(${refItem.getImageSrc()})`
-        // `url(chrome://zotero/skin/treeitem-${refItem.itemType}@2x.png)`
+      box.querySelector("img")?.setAttribute("src", refItem.getImageSrc())
       let alreadyRelated = this.utils.searchRelatedItem(item, refItem)
       if (alreadyRelated) {
         setState("-")
       }
     }
+
     let timer: undefined | number, tipUI: TipUI;
-    const box = row.querySelector("#reference-box") as XUL.Box
     if (notInLibarayOpacity < 1) {
       window.setTimeout(async () => {
         const refItem = reference._item || await this.utils.searchLibraryItem(reference) as Zotero.Item
@@ -1151,7 +1176,7 @@ export default class Views {
       timer = window.setTimeout(async () => {
         const winRect: Rect = document.documentElement.getBoundingClientRect()
         const rect = box.getBoundingClientRect()
-        rect.x -= winRect.width * .014
+        rect.x -= 5
         tipUI = this.showTipUI(rect, reference, position, idText)
         if (!box.classList.contains("active")) {
           tipUI.container.style.display = "none"
@@ -1177,15 +1202,14 @@ export default class Views {
     label.addEventListener("click", async (event) => {
       event.preventDefault()
       event.stopPropagation()
-      if (label.value == "+") {
-        if (event.ctrlKey) {
+      const value = label.getAttribute("value")
+      if (value == "+") {
+        if (event.ctrlKey || event.metaKey) {
           let rect = box.getBoundingClientRect()
           // 构建分类选择
-          let menuPopup = document.createElement('menupopup') as XUL.MenuPopup;
-          menuPopup.setAttribute('id', 'zotero-item-addTo-menu');
-          document.documentElement.appendChild(menuPopup);
+          let menuPopup = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", 'menupopup') as XUL.MenuPopup;
+          document.querySelector("#browser")!.append(menuPopup);
           let collections = Zotero.Collections.getByLibrary(1);
-          ztoolkit.log(collections)
           for (let col of collections) {
             let menuItem = Zotero.Utilities.Internal.createMenuForTarget(
               col,
@@ -1193,11 +1217,9 @@ export default class Views {
               null as any,
               async (event: any, collection: any) => {
                 if (event.target.tagName == 'menuitem') {
-                  // @ts-ignore
-                  menuPopup.openPopup(null, null, event.clientX, event.clientY);
                   ztoolkit.log(collection)
-                  await add([collection.id])
                   menuPopup.remove()
+                  await add([collection.id])
                   event.stopPropagation();
                 }
               }
@@ -1205,82 +1227,142 @@ export default class Views {
             menuPopup.append(menuItem);
           }
           // @ts-ignore
-          menuPopup.openPopup(null, null, rect.left, rect.top + rect.height);
-          // // @ts-ignore
-          // menuPopup.openPopup(null, null, event.clientX, event.clientY);
-          // let collection = ZoteroPane.getSelectedCollection();
-          // ztoolkit.log(collection)
-          // if (collection) {
-          //   await add([collection.id])
-          // } else {
-          //   (new ztoolkit.ProgressWindow("Error"))
-          //     .createLine({ text: "Please select your coolection and retry", type: "fail" })
-          //     .show()
-          // }
+          menuPopup.openPopupAtScreen(rect.left, rect.top + rect.height, true);
         } else {
           await add()
         }
-      } else if (label.value == "-") {
+      } else if (value == "-") {
         await remove()
       }
     })
 
-    row.append(box, label);
-    const rows = node.querySelector("rows[id$=Rows]")!
+    const rows = node.querySelector("#related-grid")!
 
-    rows.appendChild(row);
+    rows.append(box, label);
     let referenceNum = rows.childNodes.length
     if (addSearch && referenceNum && !node.querySelector("#zotero-reference-search")) { this.addSearch(node) }
-    return row
+    // 高度
+    const relatedGrid = node.querySelector("#related-grid") as HTMLDivElement
+      relatedGrid.style.maxHeight = `${document.documentElement.getBoundingClientRect().height - relatedGrid.getBoundingClientRect().top
+    }px`
+    return {box, label}
   }
 
-  public addSearch(node: XUL.Element) {
-    ztoolkit.log("addSearch")
-    let textbox = ztoolkit.UI.createElement(document, "textbox", {
-      namespace: "xul",
+  public addSearch(node: HTMLDivElement) {
+    const searchBoxHeight = 10
+    const searchBox = ztoolkit.UI.insertElementBefore({
+      tag: "div",
       id: "zotero-reference-search",
-      attributes: {
-        type: "search",
-        placeholder: getString("relatedbox.search.placeholder")
-      },
+      classList: ["reference-search-box"],
       styles: {
-        marginBottom: ".5em",
-      }
-    })
-
-    textbox.addEventListener("input", (event: any) => {
-      let text = (event.target as any).value
-      ztoolkit.log(
-        `ZoteroReference: source text modified to ${text}`
-      );
-
-      let keywords = text.split(/[ ,，]/).filter((e: any) => e)
-      if (keywords.length == 0) {
-        node.querySelectorAll("row").forEach((row: any) => row.style.display = "")
-        return
-      }
-      node.querySelectorAll("row").forEach((row: any) => {
-        let content = (row.querySelector("#reference-label") as any).value
-        let isAllMatched = true;
-        for (let i = 0; i < keywords.length; i++) {
-          isAllMatched = isAllMatched && content.toLowerCase().includes(keywords[i].toLowerCase())
-        }
-        if (!isAllMatched) {
-          row.style.display = "none"
-        } else {
-          row.style.display = ""
-        }
-      })
-
-    });
-    // @ts-ignore
-    textbox._clearSearch = () => {
-      textbox.value = "";
-      node.querySelectorAll("row").forEach((row: any) => row.style.display = "")
-    }
-    node.querySelector("vbox")!.insertBefore(
-      textbox,
-      node.querySelector("vbox grid")
-    )
+        // width: "calc(100% - 35px)",
+        height: `${searchBoxHeight}px`,
+        padding: "5px",
+        borderRadius: "5px",
+        border: "1px solid #e0e0e0",
+        display: "flex",
+        flexDirection: "row",
+        alignItems: "center",
+        margin: ".5em 1em",
+        opacity: "0.8"
+      },
+      children: [
+        {
+          tag: "div",
+          styles: {
+            width: `${searchBoxHeight}px`,
+            height: `${searchBoxHeight}px`,
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+          },
+          properties: {
+            innerHTML: `<svg viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="${searchBoxHeight}" height="${searchBoxHeight}"><path d="M1005.312 914.752l-198.528-198.464A448 448 0 1 0 0 448a448 448 0 0 0 716.288 358.784l198.4 198.4a64 64 0 1 0 90.624-90.432zM448 767.936A320 320 0 1 1 448 128a320 320 0 0 1 0 640z" fill="#5a5a5a"></path></svg>`
+          }
+        },
+        {
+          tag: "input",
+          styles: {
+            outline: "none",
+            border: "none",
+            width: "100%",
+            margin: "0 5px"
+          },
+          listeners: [
+            {
+              type: "focus",
+              listener: () => {
+                searchBox.style.opacity = "1"
+                searchBox.style.boxShadow = `0 0 0 1px rgba(0,0,0,0.5)`
+              }
+            },
+            {
+              type: "blur",
+              listener: () => {
+                searchBox.style.opacity = "0.8"
+                searchBox.style.boxShadow = ``
+              }
+            },
+            {
+              type: "keyup",
+              listener: async () => {
+                const keyword = inputNode.value as string
+                if (keyword.length > 0) {
+                  clearNode.style.display = ""
+                } else {
+                  clearNode.style.display = "none"
+                }
+                //   let text = (event.target as any).value
+                let keywords = keyword.split(/[ ,，]/).filter((e: any) => e)
+                ztoolkit.log(keywords)
+                node.querySelectorAll("#related-grid *").forEach((e: any) => e.style.display = "")
+                if (keywords.length == 0) {
+                  return
+                }
+                node.querySelectorAll("#related-grid .box").forEach((box: any) => {
+                  let content = (box.querySelector("#reference-label") as any).textContent
+                  let isAllMatched = true;
+                  for (let i = 0; i < keywords.length; i++) {
+                    isAllMatched = isAllMatched && content.toLowerCase().indexOf(keywords[i].toLowerCase()) >= 0
+                  }
+                  if (isAllMatched) {
+                    ztoolkit.log(content)
+                    box.style.display = ""
+                    box.nextElementSibling.style.display = ""
+                  } else {
+                    box.style.display = "none"
+                    box.nextElementSibling.style.display = "none"
+                  }
+                })
+              }
+            }
+          ]
+        },
+        {
+          tag: "div",
+          classList: ["icon", "clear"],
+          styles: {
+            width: `${searchBoxHeight}px`,
+            height: `${searchBoxHeight}px`,
+            display: "none"
+          },
+          properties: {
+            innerHTML: `<svg class="icon" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" width="${searchBoxHeight}" height="${searchBoxHeight}"><path d="M512.288 1009.984c-274.912 0-497.76-222.848-497.76-497.76s222.848-497.76 497.76-497.76c274.912 0 497.76 222.848 497.76 497.76s-222.848 497.76-497.76 497.76zM700.288 368.768c12.16-12.16 12.16-31.872 0-44s-31.872-12.16-44.032 0l-154.08 154.08-154.08-154.08c-12.16-12.16-31.872-12.16-44.032 0s-12.16 31.84 0 44l154.08 154.08-154.08 154.08c-12.16 12.16-12.16 31.84 0 44s31.872 12.16 44.032 0l154.08-154.08 154.08 154.08c12.16 12.16 31.872 12.16 44.032 0s12.16-31.872 0-44l-154.08-154.08 154.08-154.08z" fill="#5a5a5a" p-id="5698"></path></svg>`
+          },
+          listeners: [
+            {
+              type: "click",
+              listener: async () => {
+                inputNode.value = ""
+                clearNode.style.display = "none"
+                node.querySelectorAll("#related-grid *").forEach((e: any) => e.style.display = "")
+              }
+            }
+          ]
+        },
+      ]
+    }, node.querySelector(".grid")!) as HTMLDivElement;
+    const inputNode = searchBox.querySelector("input") as HTMLInputElement
+    const clearNode = searchBox.querySelector(".clear") as HTMLInputElement
   }
 }

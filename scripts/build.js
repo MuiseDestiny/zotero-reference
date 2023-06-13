@@ -123,7 +123,7 @@ async function main() {
     console.log("UglifyJS error", result.error);
     process.exit(1);
   }
-  fs.writeFileSync(outfile, result.code, "utf-8");
+  // fs.writeFileSync(outfile, result.code, "utf-8");
 
   const replaceFrom = [
     /__author__/g,
