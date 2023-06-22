@@ -1,12 +1,13 @@
 import { config } from "../package.json";
-import { getString, initLocale } from "./modules/locale";
-import { registerPrefsScripts } from "./modules/preferenceScript";
+import {initLocale } from "./modules/locale";
+import { registerPrefsScripts, registerPrefs } from "./modules/prefs";
 import Views from "./modules/views";
 import ConnectedPapers from "./modules/connectedpapers";
 import { initValidation } from "../../validation/core";
 
 async function onStartup() {
-  initValidation(config.addonRef);
+  // initValidation(config.addonRef);
+  registerPrefs();
   await Promise.all([
     Zotero.initializationPromise,
     Zotero.unlockPromise,
@@ -25,17 +26,6 @@ async function onStartup() {
     Zotero.ProgressWindowSet.closeAll();
     return show.call(this, ...arguments);
   };
-  // 首选项
-  const prefOptions = {
-    pluginID: config.addonID,
-    src: rootURI + "chrome/content/preferences.xhtml",
-    label: getString("prefs.label"),
-    image: `chrome://${config.addonRef}/content/icons/favicon.png`,
-    extraDTD: [`chrome://${config.addonRef}/locale/overlay.dtd`],
-    defaultXUL: true,
-  };
-  ztoolkit.PreferencePane.register(prefOptions);
-
   // 界面
   const views = new Views();
   await views.onInit();
@@ -48,6 +38,7 @@ async function onStartup() {
 
 function onShutdown(): void {
   ztoolkit.unregisterAll();
+  document.querySelectorAll("#zotero-reference-show-hide-graph-view").forEach(e=>e.remove())
   // Remove addon object
   addon.data.alive = false;
   delete Zotero[config.addonInstance];

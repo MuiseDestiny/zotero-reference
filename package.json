@@ -12,20 +12,22 @@
   },
   "main": "src/index.ts",
   "scripts": {
-    "build-dev": "cross-env NODE_ENV=development node scripts/build.js",
-    "build-prod": "cross-env NODE_ENV=production node scripts/build.js",
+    "build-dev": "cross-env NODE_ENV=development node scripts/build.mjs",
+    "build-prod": "cross-env NODE_ENV=production node scripts/build.mjs",
     "build": "concurrently -c auto npm:build-prod npm:tsc",
     "tsc": "tsc --noEmit",
-    "start-z6": "node scripts/start.js --z 6",
-    "start-z7": "node scripts/start.js --z 7",
-    "start": "node scripts/start.js",
-    "stop": "node scripts/stop.js",
+    "start": "node scripts/start.mjs",
+    "start-watch": "concurrently -c auto npm:start npm:watch",
+    "stop": "node scripts/stop.mjs",
     "restart-dev": "npm run build-dev && npm run stop && npm run start",
     "restart-prod": "npm run build-prod && npm run stop && npm run start",
     "restart": "npm run restart-dev",
-    "restart-z7": "npm run build-dev && npm run stop && npm run start-z7",
+    "reload": "npm run build-dev && node scripts/reload.mjs",
+    "watch": "chokidar \"src/**\" \"addon/**\" -c \"npm run reload\"",
     "release": "release-it",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "prettier --write . && eslint . --ext .ts --fix",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "update-deps": "npm update --save"
   },
   "repository": {
     "type": "git",
@@ -39,6 +41,7 @@
   "homepage": "",
   "dependencies": {
     "@progress/pako-esm": "^1.0.1",
+    "chokidar": "^3.5.3",
     "compromise": "^14.8.2",
     "compromise-numbers": "^1.4.0",
     "d3": "^7.8.2",
@@ -62,6 +65,7 @@
   },
   "devDependencies": {
     "@types/node": "^18.13.0",
+    "chokidar-cli": "^3.0.0",
     "compressing": "^1.7.0",
     "concurrently": "^7.6.0",
     "cross-env": "^7.0.3",

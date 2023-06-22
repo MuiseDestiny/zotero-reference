@@ -51,7 +51,7 @@ export default class Views {
    */
   public async onInit() {
     ztoolkit.ReaderTabPanel.register(
-      getString("tabpanel.reader.tab.label"),
+      getString("tabpanel-reader-tab-label"),
       (
         panel: XUL.TabPanel | undefined,
         deck: XUL.Deck,
@@ -66,155 +66,157 @@ export default class Views {
         }
         let timer: number | undefined
         const id = `${config.addonRef}-${reader._instanceID}-extra-reader-tab-div`
-        const relatedbox = ztoolkit.UI.createElement(
-          document,
-          "related-box",
-          {
-            id,
-            classList: ["zotero-editpane-related"],
-            namespace: "xul",
-            ignoreIfExists: true,
-            attributes: {
-              flex: "1",
-            },
-            styles: {
-              alignItems: "center"
-            },
-            children: [
-              {
-                tag: "box",
-                namespace: "xul",
-                classList: ["reference"],
-                attributes: {
-                  flex: "1",
-                },
-                styles: {
-                  display: "flex",
-                  // paddingLeft: "0px",
-                  // paddingRight: "0px"
-                },
-                children: [
-                  {
-                    tag: "div",
-                    namespace: "html",
-                    styles: {
-                      flexGrow: "1",
-                    },
-                    children: [
-                      {
-                        tag: "div",
-                        classList: ["header"],
-                        namespace: "html",
-                        children: [
-                          {
-                            tag: "label",
-                            id: "reference-num",
-                            properties: {
-                              innerText: `0 ${getString("relatedbox.number.label")}`
-                            },
-                            listeners: [
-                              {
-                                type: "dblclick",
-                                listener: () => {
-                                  ztoolkit.log("dblclick: Copy all references")
-                                  let textArray: string[] = []
-                                  let labels = relatedbox.querySelectorAll("#related-grid .box #reference-label")
-                                  ztoolkit.log(labels)
-                                  labels.forEach((e: any) => {
-                                    textArray.push(e.textContent)
-                                  });
-                                  ztoolkit.log(textArray);
-                                  (new ztoolkit.ProgressWindow("Reference"))
-                                    .createLine({text: "Copy all references", type: "success"})
-                                    .show();
-                                  (new ztoolkit.Clipboard())
-                                    .addText(textArray.join("\n"), "text/unicode")
-                                    .copy();
-                                }
-                              }
-                            ]
-                          },
-                          {
-                            tag: "button",
-                            id: "refresh-button",
-                            properties: {
-                              innerText: getString("relatedbox.refresh.label")
-                            },
-                            listeners: [
-                              {
-                                type: "mousedown",
-                                listener: (event: any) => {
-                                  timer = window.setTimeout(async () => {
-                                    timer = undefined
-                                    // 不从本地储存读取
-                                    await this.refreshReferences(panel, false, event.ctrlKey || event.metaKey)
-                                  }, 1000)
-                                }
+        window.setTimeout(async () => {          
+          const relatedbox = ztoolkit.UI.createElement(
+            document,
+            "related-box",
+            {
+              id,
+              classList: ["zotero-editpane-related"],
+              namespace: "xul",
+              ignoreIfExists: true,
+              attributes: {
+                flex: "1",
+              },
+              styles: {
+                alignItems: "center"
+              },
+              children: [
+                {
+                  tag: "box",
+                  namespace: "xul",
+                  classList: ["reference"],
+                  attributes: {
+                    flex: "1",
+                  },
+                  styles: {
+                    display: "flex",
+                    // paddingLeft: "0px",
+                    // paddingRight: "0px"
+                  },
+                  children: [
+                    {
+                      tag: "div",
+                      namespace: "html",
+                      styles: {
+                        flexGrow: "1",
+                      },
+                      children: [
+                        {
+                          tag: "div",
+                          classList: ["header"],
+                          namespace: "html",
+                          children: [
+                            {
+                              tag: "label",
+                              id: "reference-num",
+                              properties: {
+                                innerText: `0 ${getString("relatedbox-number-label")}`
                               },
-                              {
-                                type: "mouseup",
-                                listener: async (event: any) => {
-                                  if (timer) {
-                                    window.clearTimeout(timer) 
-                                    timer = undefined
-                                    // 本地储存读取
-                                    await this.refreshReferences(panel, true, event.ctrlKey || event.metaKey)
+                              listeners: [
+                                {
+                                  type: "dblclick",
+                                  listener: () => {
+                                    ztoolkit.log("dblclick: Copy all references")
+                                    let textArray: string[] = []
+                                    let labels = relatedbox.querySelectorAll("#related-grid .box #reference-label")
+                                    ztoolkit.log(labels)
+                                    labels.forEach((e: any) => {
+                                      textArray.push(e.textContent)
+                                    });
+                                    ztoolkit.log(textArray);
+                                    (new ztoolkit.ProgressWindow("Reference"))
+                                      .createLine({text: "Copy all references", type: "success"})
+                                      .show();
+                                    (new ztoolkit.Clipboard())
+                                      .addText(textArray.join("\n"), "text/unicode")
+                                      .copy();
                                   }
                                 }
-                              }
-                            ]
+                              ]
+                            },
+                            {
+                              tag: "button",
+                              id: "refresh-button",
+                              properties: {
+                                innerText: getString("relatedbox-refresh-label")
+                              },
+                              listeners: [
+                                {
+                                  type: "mousedown",
+                                  listener: (event: any) => {
+                                    timer = window.setTimeout(async () => {
+                                      timer = undefined
+                                      // 不从本地储存读取
+                                      await this.refreshReferences(panel, false, event.ctrlKey || event.metaKey)
+                                    }, 1000)
+                                  }
+                                },
+                                {
+                                  type: "mouseup",
+                                  listener: async (event: any) => {
+                                    if (timer) {
+                                      window.clearTimeout(timer) 
+                                      timer = undefined
+                                      // 本地储存读取
+                                      await this.refreshReferences(panel, true, event.ctrlKey || event.metaKey)
+                                    }
+                                  }
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          tag: "div",
+                          namespace: "html",
+                          id: "related-grid",
+                          classList: ["grid"],
+                          styles: {
+                            overflowY: "auto",
+                            alignItems: "center",
+                            display: "grid"
                           }
-                        ]
-                      },
-                      {
-                        tag: "div",
-                        namespace: "html",
-                        id: "related-grid",
-                        classList: ["grid"],
-                        styles: {
-                          overflowY: "auto",
-                          alignItems: "center",
-                          display: "grid"
                         }
-                      }
-                    ]
-                  },
-                ]
-              }
-            ],
-          }
-        );
-
-        panel.append(relatedbox);
-        relatedbox.querySelector("box:not(.reference)")?.remove()
-        // 修改链接
-        window.setTimeout(async () => {
-          await this.pdfLinks(reader, panel)
-        })
-        // 自动刷新
-        window.setTimeout(async () => {
-          if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
-            let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
-            if (panel.getAttribute("isAutoRefresh") != "true") {
-              const item = Zotero.Items.get(reader._itemID).parentItem
-              // @ts-ignore
-              const id = item.getType()
-              const itemType = Zotero.ItemTypes.getTypes().find(i => i.id == id)?.name as string
-              if (excludeItemTypes.indexOf(itemType) == -1) {
-                await this.refreshReferences(panel)
-                panel.setAttribute("isAutoRefresh", "true")
+                      ]
+                    },
+                  ]
+                }
+              ],
+            }
+          );
+  
+          panel.append(relatedbox);
+          relatedbox.querySelector("box:not(.reference)")?.remove()
+          // 修改链接
+          window.setTimeout(async () => {
+            await this.pdfLinks(reader, panel)
+          })
+          // 自动刷新
+          window.setTimeout(async () => {
+            if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
+              let excludeItemTypes = (Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string).split(/,\s*/)
+              if (panel.getAttribute("isAutoRefresh") != "true") {
+                const item = Zotero.Items.get(reader._itemID).parentItem
+                // @ts-ignore
+                const id = item.getType()
+                const itemType = Zotero.ItemTypes.getTypes().find(i => i.id == id)?.name as string
+                if (excludeItemTypes.indexOf(itemType) == -1) {
+                  await this.refreshReferences(panel)
+                  panel.setAttribute("isAutoRefresh", "true")
+                }
               }
             }
-          }
+          })
+          // 推荐关联
+          window.setTimeout(async () => {
+            await this.loadingRelated();
+          })
+          // 分割按钮
+          // window.setTimeout(async () => {
+          //   await this.registerSplitButtons(reader);
+          // })
         })
-        // 推荐关联
-        window.setTimeout(async () => {
-          await this.loadingRelated();
-        })
-        // 分割按钮
-        // window.setTimeout(async () => {
-        //   await this.registerSplitButtons(reader);
-        // })
       },
       {
         // targetIndex: 3,
@@ -456,6 +458,7 @@ export default class Views {
           const isClickLink = Zotero.Prefs.get(`${config.addonRef}.clickLink`) as boolean
           const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`) as boolean
           let _a: any, href = a.getAttribute("href")
+          if (href.indexOf("fig") >=0) {return }
           if (isClickLink) {
             _a = ztoolkit.UI.appendElement({
               tag: "a",
@@ -538,7 +541,7 @@ export default class Views {
   public async refreshReferences(panel: XUL.TabPanel, local: boolean = true, fromCurrentPage: boolean = false) {
     Zotero.ProgressWindowSet.closeAll();
     let label = panel.querySelector("label#reference-num") as XUL.Label;
-    label.innerText = `${0} ${getString("relatedbox.number.label")}`;
+    label.innerText = `${0} ${getString("relatedbox-number-label")}`;
     let source = panel.getAttribute("source")
     if (source) {
       if (local) {
@@ -647,14 +650,14 @@ export default class Views {
     const referenceNum = references.length
     // @ts-ignore
     panel.references = references
-    references.forEach((reference: ItemBaseInfo, refIndex: number) => {
+    references.forEach(async (reference: ItemBaseInfo, refIndex: number) => {
       let { box } = this.addRow(panel, references, refIndex)!;
       // @ts-ignore
       box.reference = reference
-      label.innerText = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
+      label.innerText = `${refIndex + 1}/${referenceNum} ${getString("relatedbox-number-label")}`;
     })
 
-    label.innerText = `${referenceNum} ${getString("relatedbox.number.label")}`;
+    label.innerText = `${referenceNum} ${getString("relatedbox-number-label")}`;
   }
 
   public showTipUI(refRect: Rect, reference: ItemInfo, position: string, idText?: string) {

@@ -9,12 +9,13 @@ class Addon {
     env: "development" | "production";
     ztoolkit: ZoteroToolkit;
     locale?: {
-      stringBundle: any;
+      current: any,
+      default: any,
     };
     prefs?: {
       window: Window;
-      columns: Array<ColumnOptions>;
-      rows: Array<{ [dataKey: string]: string }>;
+      columns?: Array<ColumnOptions>;
+      rows?: Array<{ [dataKey: string]: string }>;
     };
   };
   // Lifecycle hooks

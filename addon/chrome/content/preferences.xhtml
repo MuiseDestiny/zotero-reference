@@ -1,7 +1,10 @@
+<linkset>
+  <html:link rel="localization" href="__addonRef__-preferences.ftl" />
+</linkset>
 <vbox id="zotero-prefpane-__addonRef__" onload="Zotero.__addonInstance__.hooks.onPrefsEvent('load', {window})">
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.refresh;</html:h2>
-    <checkbox native="true" id="__addonRef__-auto-refresh" label="&zotero.__addonRef__.autoRefresh;"
+    <html:h2 data-l10n-id="caption-refresh"></html:h2>
+    <checkbox native="true" id="__addonRef__-auto-refresh" data-l10n-id="autoRefresh"
       preference="extensions.zotero.__addonRef__.autoRefresh" />
     <html:div style="
         display: flex;
@@ -19,14 +22,14 @@
     </html:div>
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.source;</html:h2>
+    <html:h2 data-l10n-id="caption-source"></html:h2>
     <html:div style="
       display: flex;
       flex-direction: row;
       align-items: center;
       margin-left: .7em;
     ">
-      <html:span style="margin: 4px 0;">&zotero.__addonRef__.prioritySource.start;</html:span>
+      <html:span style="margin: 4px 0;" data-l10n-id="prioritySource-start"></html:span>
       <menulist native="true" style="height: 1.5em; margin: auto .5em;" id="__addonRef__-priority-source"
         preference="extensions.zotero.__addonRef__.prioritySource">
         <menupopup>
@@ -34,7 +37,7 @@
           <menuitem value="API" label="API"></menuitem>
         </menupopup>
       </menulist>
-      <html:span style="margin: 4px 0;">&zotero.__addonRef__.prioritySource.end;</html:span>
+      <html:span style="margin: 4px 0;" data-l10n-id="prioritySource-end"></html:span>
     </html:div>
     <html:div style="
       display: flex;
@@ -42,21 +45,21 @@
       align-items: center;
       margin-left: .7em;
     ">
-      <html:span style="margin: 4px 0; margin-right: .5em;">&zotero.__addonRef__.preLoadingPageNum.start;</html:span>
+      <html:span style="margin: 4px 0; margin-right: .5em;" data-l10n-id="preLoadingPageNum-start"></html:span>
       <html:input style="width: 2em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-min-pre-load-page-num"
         preference="extensions.zotero.__addonRef__.preLoadingPageNum">
       </html:input>
-      <html:span style="margin: 4px 0; margin-left: .5em;">&zotero.__addonRef__.preLoadingPageNum.end;</html:span>
+      <html:span style="margin: 4px 0; margin-left: .5em;" data-l10n-id="preLoadingPageNum-end"></html:span>
     </html:div>
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.tip;</html:h2>
+    <html:h2 data-l10n-id="caption-tip"></html:h2>
     <hbox style="margin: 4px 0;margin-left: .7em;">
-      <html:span style="margin: auto 0; margin-right: .5em;">&zotero.__addonRef__.tipBackgroundColor;</html:span>
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="tipBackgroundColor"></html:span>
       <html:input style="width: 6em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-tip-background-color"
         preference="extensions.zotero.__addonRef__.tipBackgroundColor">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: 1em; margin-right: .5em;">&zotero.__addonRef__.tipTitleColor;</html:span>
+      <html:span style="margin: auto 0; margin-left: 1em; margin-right: .5em;" data-l10n-id="tipTitleColor"></html:span>
       <html:input style="width: 6em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-tip-title-color"
         preference="extensions.zotero.__addonRef__.tipTitleColor">
       </html:input>
@@ -65,70 +68,70 @@
       display: flex;
       flex-direction: row;
     ">
-      <checkbox native="true" id="__addonRef__-is-show-tip" label="&zotero.__addonRef__.isShowTip.start;"
+      <checkbox native="true" id="__addonRef__-is-show-tip" data-l10n-id="isShowTip-start"
         preference="extensions.zotero.__addonRef__.isShowTip" style="margin-right: .5em;"/>
       <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
         id="__addonRef__-remove-tip-after-millisecond"
         preference="extensions.zotero.__addonRef__.showTipAfterMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.isShowTip.end;</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="isShowTip-end"></html:span>
     </html:div>
-    <checkbox native="true" id="__addonRef__-ctrl-click-translate" label="&zotero.__addonRef__.ctrlClickTranslate;"
+    <checkbox native="true" id="__addonRef__-ctrl-click-translate" data-l10n-id="ctrlClickTranslate"
       preference="extensions.zotero.__addonRef__.ctrlClickTranslate" />
     <hbox style="margin: 4px 0;margin-left: .7em;">
-      <html:span style="margin: auto 0; margin-right: .5em;">&zotero.__addonRef__.shadeMillisecond.start;</html:span>
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="shadeMillisecond-start"></html:span>
       <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text" id="__addonRef__-shade-millisecond"
         preference="extensions.zotero.__addonRef__.shadeMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.shadeMillisecond.end;</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="shadeMillisecond-end"></html:span>
     </hbox>
     <hbox style="margin: 4px 0;margin-left: .7em;">
-      <html:span style="margin: auto 0;margin-right: .5em;">&zotero.__addonRef__.removeTipAfterMillisecond.start;</html:span>
+      <html:span style="margin: auto 0;margin-right: .5em;" data-l10n-id="removeTipAfterMillisecond-start"></html:span>
       <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
         id="__addonRef__-remove-tip-after-millisecond"
         preference="extensions.zotero.__addonRef__.removeTipAfterMillisecond">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.removeTipAfterMillisecond.end;
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="removeTipAfterMillisecond-end">
       </html:span>
     </hbox>
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.related;</html:h2>
-    <checkbox native="true" id="__addonRef__-loading-related" label="&zotero.__addonRef__.loadingRelated;"
+    <html:h2 data-l10n-id="caption-related"></html:h2>
+    <checkbox native="true" id="__addonRef__-loading-related" data-l10n-id="loadingRelated"
       preference="extensions.zotero.__addonRef__.loadingRelated" />
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.link;</html:h2>
+    <html:h2 data-l10n-id="caption-link"></html:h2>
     <hbox style="display: flex; align-items: center;">
-      <checkbox native="true" id="__addonRef__-click-link" label="&zotero.__addonRef__.clickLink.start;"
+      <checkbox native="true" id="__addonRef__-click-link" data-l10n-id="clickLink-start"
         preference="extensions.zotero.__addonRef__.clickLink" />
       <menulist native="true" style="height: 1.5em;" id="__addonRef__-click-link-cmd"
         preference="extensions.zotero.__addonRef__.clickLink.cmd">
         <menupopup>
-          <menuitem value="splitHorizontally" label="&zotero.__addonRef__.clickLink.splitHorizontally;"></menuitem>
-          <menuitem value="splitVertically" label="&zotero.__addonRef__.clickLink.splitVertically;"></menuitem>
+          <menuitem value="splitHorizontally" data-l10n-id="clickLink-splitHorizontally"></menuitem>
+          <menuitem value="splitVertically" data-l10n-id="clickLink-splitVertically"></menuitem>
         </menupopup>
       </menulist>
-      <html:span style="margin: auto 0; margin-left: .5em">&zotero.__addonRef__.clickLink.end;</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em" data-l10n-id="clickLink-end"></html:span>
     </hbox>
-    <checkbox native="true" id="__addonRef__-hover-links" label="&zotero.__addonRef__.hoverLink;"
+    <checkbox native="true" id="__addonRef__-hover-links" data-l10n-id="hoverLink"
       preference="extensions.zotero.__addonRef__.hoverLink" />
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.save;</html:h2>
-    <checkbox native="true" id="__addonRef__-save-pdf-references" label="&zotero.__addonRef__.savePDFReferences;"
+    <html:h2 data-l10n-id="caption-save"></html:h2>
+    <checkbox native="true" id="__addonRef__-save-pdf-references" data-l10n-id="savePDFReferences"
       preference="extensions.zotero.__addonRef__.savePDFReferences" />
-    <checkbox native="true" id="__addonRef__-save-api-references" label="&zotero.__addonRef__.saveAPIReferences;"
+    <checkbox native="true" id="__addonRef__-save-api-references" data-l10n-id="saveAPIReferences"
       preference="extensions.zotero.__addonRef__.saveAPIReferences" />
   </groupbox>
   <groupbox>
-    <html:h2>&zotero.__addonRef__.caption.match;</html:h2>
+    <html:h2 data-l10n-id="caption-match"></html:h2>
     <hbox style="margin-left: .7em;display: flex;align-items: center;">
-      <html:span style="margin: auto 0; margin-right: .5em;">&zotero.__addonRef__.notInLibarayOpacity.start;</html:span>
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="notInLibarayOpacity-start"></html:span>
       <html:input style="width: 4em; margin: auto 0; height: 1em;" type="range" min="0" max="1" step="0.01" id="__addonRef__-not-in-library-opacity"
         preference="extensions.zotero.__addonRef__.notInLibarayOpacity">
       </html:input>
-      <html:span style="margin: auto 0; margin-left: .5em;">&zotero.__addonRef__.notInLibarayOpacity.end;</html:span>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="notInLibarayOpacity-end"></html:span>
     </hbox>
   </groupbox>
 </vbox>
