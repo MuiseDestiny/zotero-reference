@@ -1,12 +1,12 @@
 import { config } from "../package.json";
-import {initLocale } from "./modules/locale";
+import { initLocale } from "./modules/locale";
 import { registerPrefsScripts, registerPrefs } from "./modules/prefs";
 import Views from "./modules/views";
 import ConnectedPapers from "./modules/connectedpapers";
 import { initValidation } from "../../validation/core";
 
 async function onStartup() {
-  // initValidation(config.addonRef);
+  initValidation(config.addonRef);
   registerPrefs();
   await Promise.all([
     Zotero.initializationPromise,
@@ -31,14 +31,16 @@ async function onStartup() {
   await views.onInit();
   Zotero[config.addonInstance].views = views;
   // connected papers
-  if (Zotero.Prefs.get("sync.server.username") as string == "polygon") {
+  if ((Zotero.Prefs.get("sync.server.username") as string) == "polygon") {
     await new ConnectedPapers(views).init();
   }
 }
 
 function onShutdown(): void {
   ztoolkit.unregisterAll();
-  document.querySelectorAll("#zotero-reference-show-hide-graph-view").forEach(e=>e.remove())
+  document
+    .querySelectorAll("#zotero-reference-show-hide-graph-view")
+    .forEach((e) => e.remove());
   // Remove addon object
   addon.data.alive = false;
   delete Zotero[config.addonInstance];
