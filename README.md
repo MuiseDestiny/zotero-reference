@@ -62,8 +62,8 @@ Hi, [PDF解析失败反馈](https://github.com/MuiseDestiny/zotero-reference/iss
 支持下列源
 * PDF（默认）
 * readpaper（标题搜索）
-* crossref（标题，DOI搜素）
-* semanticscholar（DOI搜素）
+* crossref（标题，DOI搜索）
+* semanticscholar（DOI搜索）
 * arXiv（arXivID搜索）
 
 ![image](https://user-images.githubusercontent.com/51939531/217994089-100d5d20-8a6b-42ec-ad9b-5550cf354366.png)
