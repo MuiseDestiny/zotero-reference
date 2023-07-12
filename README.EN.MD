@@ -1,7 +1,7 @@
 # Zotero Reference
 
 
-中文文档(README.md) |English Document
+[中文文档](README.md) | English Document
 
 
 ![Reference](addon/chrome/content/icons/favicon.png)
