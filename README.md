@@ -1,5 +1,9 @@
 # Zotero Reference
 
+
+📖[English Document](README.EN.MD)
+
+
 ![Reference](addon/chrome/content/icons/favicon.png)
 
 [![Using Zotero Plugin Template](https://img.shields.io/badge/Using-Zotero%20Plugin%20Template-blue?style=flat-round&logo=github)](https://github.com/windingwind/zotero-plugin-template)
