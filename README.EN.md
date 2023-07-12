@@ -23,7 +23,7 @@ This is a Zotero plugin that helps display all the references of the pdf you are
 
 Download the xpi file, if you are Zotero 6 download version 0.5.8, if you are Zotero 7 download the version after > 0.5.8. Then click `Tool` - `Add-ons` - `Install Add-on From File...` - Select xpi file
 
-## 🔔 How to us?
+## 🔔 How to use?
 
 ![image](https://github.com/MuiseDestiny/zotero-reference/assets/51939531/3e3fd958-3995-4e44-aa2f-b04e0aaace40)
 
