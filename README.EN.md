@@ -25,9 +25,26 @@ Download the xpi file, if you are Zotero 6 download version 0.5.8, if you are Zo
 
 ## 🔔 How to us?
 
+![image](https://github.com/MuiseDestiny/zotero-reference/assets/51939531/3e3fd958-3995-4e44-aa2f-b04e0aaace40)
 
 1. Open a paper in Zotero
-2. Click `Reference` in the right panel.
+2. Click `References` in the right panel (Circle 1)
+3. Click `Refresh` (Circle 2)
+4. Mouse over a referenc and a floating window will appear
+5. Click on the dot (Circle 3) at the top of the floating window to switch sources
+6. Click `+` in the right of reference to add it to your Zotero
+ 
+
+
+
+
+
+
+
+
+
+
+
 
 
 
