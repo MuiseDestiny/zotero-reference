@@ -17,8 +17,46 @@
 
 ## 🤔 What's this?
 
-This is a Zotero Pluin to show
+This is a Zotero plugin that helps display all the references of the pdf you are reading. You no longer need to turn to the last few pages of the PDF, according to the body of the reference number to locate which literature it is. All of this, including viewing the abstracts of the literature, importing the references into your Zotero, the plugin allows you to do this only in Zotero.
 
-## 🕊️ How to instal? 
+## 🕊️ How to install? 
+
+Download the xpi file, if you are Zotero 6 download version 0.5.8, if you are Zotero 7 download the version after > 0.5.8. Then click `Tool` - `Add-ons` - `Install Add-on From File...` - Select xpi file
+
+## 🔔 How to us?
+
+
+1. Open a paper in Zotero
+2. Click `Reference` in the right panel.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
