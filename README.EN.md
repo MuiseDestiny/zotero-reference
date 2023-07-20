@@ -182,22 +182,6 @@ preprint=preprint
 - [ ] Whether the reference acquisition strategy needs to be changed for a specific journal
 - [ ] Change reference entry icon according to entry type
 
-## 👋 Description
+## 👋 FYI
 
 1. The automatic correlation function of this plugin is not compatible with `scihub` plugin
-
-## 🍭 Thanks
-
-This plugin is based on a template:
-
-- [zotero-addon-template](https://github.com/windingwind/zotero-addon-template)
-
-Some functions of this plugin are based on the plugin:
-
-- [jasmine/jasminum](https://github.com/l0o0/jasminum)
-- [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
-
-Code reference:
-
-- [zotero-pdf-translate](https://github.com/windingwind/zotero-pdf-translate)
-- [chartero]
