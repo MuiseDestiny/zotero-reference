@@ -11,7 +11,7 @@
 ![Downloads latest release](https://img.shields.io/github/downloads/MuiseDestiny/zotero-reference/latest/total?color=yellow)
 
 Hi, if the PDF fails to parse, give feedback
-[here](https://github.com/MuiseDestiny/zotero-reference/issues/6). This PDF was
+[here](https://github.com/MuiseDestiny/zotero-reference/issues/6). This README was
 translated with Google Translate and then edited by a native English speaker.
 There may be some awkward sentences.
 
