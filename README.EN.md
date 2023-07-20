@@ -34,6 +34,13 @@ only fetches data**
 
 ## 👋 How to use
 
+1. Open a paper in Zotero
+2. Click `References` in the right panel (Circle 1)
+3. Click `Refresh` (Circle 2)
+4. Mouse over a referenc and a floating window will appear
+5. Click on the dot (Circle 3) at the top of the floating window to switch sources
+6. Click `+` in the right of reference to add it to your Zotero
+
 ### Refresh
 
 > Small refresh, big impact (no English image available). After installation,
