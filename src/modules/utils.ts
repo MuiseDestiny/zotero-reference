@@ -380,6 +380,15 @@ class Utils {
     }
   }
 
+  public async getDoiFromTitle(title: string): Promise<string | undefined> {
+    if (typeof title === "undefined") { return undefined; }
+    let DOI = (await this.API.getTitleInfoByConnectedpapers(title))?.identifiers.DOI as string
+    if (!this.isDOI(DOI)) {
+      return undefined
+    }
+    return DOI
+  }
+
   public abs(v: number) {
     return v > 0 ? v : -v
   }
