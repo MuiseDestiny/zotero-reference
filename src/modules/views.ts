@@ -634,6 +634,8 @@ export default class Views {
       let doi = await this.utils.getDoiFromTitle(ref.title)
       // ztoolkit.log(`[2] Doi for ${ref.title} is ${doi}`)
       if (typeof doi !== "undefined") {
+        item.addTag(`reference:doi.org/${doi}`);
+        item.save()
         ztoolkit.log(`[R] Setting field for ${doi}, used to be '${item.getField('extra')}'`)
         item.setField('extra', update_dois(item.getField('extra') as string, doi))
         // Persist the changes to the DB
