@@ -191,6 +191,9 @@ API：
 - [readpaper](https://readpaper.com/)
 - [readcube](https://www.readcube.com/)
 
+其它：
+- `Crush Reference` 插件名称创意来自 @Shyshy CYT 于 2023/08/09
+
 ## 赞助
 
 <img src="https://user-images.githubusercontent.com/51939531/227145474-ca165a93-fcf2-4b47-baf4-ea6b29f43d99.png" width="50%" height="50%">
@@ -198,3 +201,4 @@ API：
 
 感谢[@leichaoL](https://github.com/leichaoL)、[@JOJOdioJosita](https://github.com/JOJOdioJosita)、@小陈、[@YangChunyu1999](https://github.com/YangChunyu1999)、[@遍一认着倒要少至你赌我](https://b23.tv/JjHR5ON)、[@Eunsolfs](https://github.com/Eunsolfs)以及一些匿名赞助的朋友们，也感谢很治愈的留言
   
+
