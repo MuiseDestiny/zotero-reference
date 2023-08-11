@@ -126,7 +126,7 @@ export default class Views {
                             type: "mouseup",
                             listener: async (event: any) => {
                               if (timer) {
-                                window.clearTimeout(timer) 
+                                window.clearTimeout(timer)
                                 timer = undefined
                                 // 本地储存读取
                                 await this.refreshReferences(panel, true, event.ctrlKey)
@@ -278,13 +278,12 @@ export default class Views {
   }
   /**
    * 刷新推荐相关
-   * @param array 
-   * @param node 
-   * @returns 
+   * @param array
+   * @param node
+   * @returns
    */
   public refreshRelated(array: ItemBaseInfo[], node: XUL.Element) {
     let totalNum = 0
-    ztoolkit.log("refreshRelated", array)
     array.forEach((info: ItemBaseInfo, i: number) => {
       let row = this.addRow(node, array, i, false, false) as XUL.Element
       if (!row) { return }
@@ -297,7 +296,7 @@ export default class Views {
 
   /**
  * Only item with DOI is supported
- * @returns 
+ * @returns
  */
   async loadingRelated() {
     if (!Zotero.Prefs.get(`${config.addonRef}.loadingRelated`)) { return }
@@ -316,7 +315,7 @@ export default class Views {
       await Zotero.Promise.delay(50);
     }
     while (!relatedbox.querySelector('#relatedRows'));
-    
+
     let node = relatedbox.querySelector('#relatedRows')!.parentNode as XUL.Element
     // 已经刷新过
     if (node.querySelector(".zotero-clicky-plus")) { return }
@@ -438,13 +437,13 @@ export default class Views {
               try {
                 dest = JSON.parse(dest)
               } catch { }
-              // 有报错，#39 
+              // 有报错，#39
               _window.secondViewIframeWindow.eval(`PDFViewerApplication
                 .pdfViewer.linkService.goToDestination(${JSON.stringify(dest)})`)
 
             })
           }
-          
+
           let timer: undefined | number
           const isHoverLink = Zotero.Prefs.get(`${config.addonRef}.hoverLink`)
           if (isHoverLink) {
@@ -488,7 +487,7 @@ export default class Views {
    * 刷新按钮触发
    * @param local 是否允许从本地读取
    * @param fromCurrentPage 从当前页向前查询参考文献
-   * @returns 
+   * @returns
    */
   public async refreshReferences(panel: XUL.TabPanel, local: boolean = true, fromCurrentPage: boolean = false) {
     Zotero.ProgressWindowSet.closeAll();
@@ -508,7 +507,7 @@ export default class Views {
       panel.setAttribute("source", Zotero.Prefs.get(`${config.addonRef}.prioritySource`))
     }
 
-    // clear 
+    // clear
     panel.querySelectorAll("#referenceRows row").forEach(e => e.remove());
     panel.querySelectorAll("#zotero-reference-search").forEach(e => e.remove());
 
@@ -540,7 +539,7 @@ export default class Views {
           .createLine({ text: `${references.length} references`, type: "success" })
           .show()
       } else {
-        
+
         let DOI = item.getField("DOI") as string
         let url = item.getField("url") as string
         let title = item.getField("title") as string
@@ -573,7 +572,7 @@ export default class Views {
               (new ztoolkit.ProgressWindow("[Fail] API"))
                 .createLine({ text: `Fail, Get CNKI URL`, type: "fail" })
                 .show()
-              return 
+              return
             }
           }
           popupWin = new ztoolkit.ProgressWindow("[Pending] API", { closeTime: -1, closeOtherProgressWindows: true})
@@ -606,6 +605,42 @@ export default class Views {
       // @ts-ignore
       row.reference = reference
       label.value = `${refIndex + 1}/${referenceNum} ${getString("relatedbox.number.label")}`;
+    })
+
+
+    const update_dois = (extras_field: string, new_doi: string) => {
+      // ztoolkit.log(`[X] Calculating new doi for ${new_doi}`)
+      const REGEX = /---\nDOIs_of_references: (\[.*\])\n---/
+      let matches = extras_field.match(REGEX)
+      // ztoolkit.log(`extras_field.match(REGEX): ${extras_field.match(REGEX)}`)
+      let dois = []
+      if (matches !== null) {
+        // ztoolkit.log(`Matches is '${matches}', length is ${matches!.length}`)
+        dois = matches!.length >= 0 ? JSON.parse(matches![1]) : []
+      }
+      const dois_with_new = `---\nDOIs_of_references: ${JSON.stringify([...dois, new_doi])}\n---`
+      // ztoolkit.log(`New DOI section is ${dois_with_new}`)
+
+      let new_dois = extras_field + '\n' + dois_with_new
+      if (matches !== null) {
+        new_dois = extras_field.replace(REGEX, dois_with_new)
+      }
+      ztoolkit.log(`New extras field is '${new_dois}'`)
+      return new_dois
+    }
+
+    references.map(async (ref, idx) => {
+      // ztoolkit.log(`[1] Fetching doi for ${ref.title}`)
+      let doi = await this.utils.getDoiFromTitle(ref.title)
+      // ztoolkit.log(`[2] Doi for ${ref.title} is ${doi}`)
+      if (typeof doi !== "undefined") {
+        item.addTag(`reference:doi.org/${doi}`);
+        item.save()
+        ztoolkit.log(`[R] Setting field for ${doi}, used to be '${item.getField('extra')}'`)
+        item.setField('extra', update_dois(item.getField('extra') as string, doi))
+        // Persist the changes to the DB
+        let _itemID = await item.saveTx();
+      }
     })
 
     label.value = `${referenceNum} ${getString("relatedbox.number.label")}`;
@@ -765,7 +800,7 @@ export default class Views {
       refText = reference.text!
     }
     // 避免重复添加
-    let toText = (s: string) => s.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "") 
+    let toText = (s: string) => s.replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "")
     if (
       [...node.querySelectorAll("row label")].find((e: any) => toText(e.value) == toText(refText))
     ) {
@@ -1038,7 +1073,7 @@ export default class Views {
           popupWin.changeLine({ text: collapseText(`CNKI: ${info.title}`) })
           try {
             refItem = await this.utils.createItemByJasminum(info.title!)
-          } catch (e) { 
+          } catch (e) {
             console.log(e)
           }
           if (!refItem) {
@@ -1054,8 +1089,9 @@ export default class Views {
           if (Object.keys(reference.identifiers).length == 0) {
             popupWin.changeHeadline("Searching DOI")
             popupWin.changeLine({ text: collapseText(`Title: ${info.title!}`) })
-            let DOI = (await this.utils.API.getTitleInfoByConnectedpapers(info.title))?.identifiers.DOI as string
-            if (!this.utils.isDOI(DOI)) {
+            // Fetch the DOI based off of the title
+            let DOI = await this.utils.getDoiFromTitle(info.title);
+            if (typeof DOI === "undefined") {
               setState("+");
               popupWin.changeLine({ type: "fail" })
               popupWin.startCloseTimer(3000)
