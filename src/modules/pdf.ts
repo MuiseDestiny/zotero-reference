@@ -507,7 +507,9 @@ class PDF {
         if (fullText) {
           return false
         } else {
-          return /(\u53c2\u8003\u6587\u732e|reference|bibliography)/i.test(text) && text.length < 20
+          return (
+            /(\u53c2\u8003\u6587\u732e|reference|bibliography|)/i.test(text)
+          ) && text.length < 20
         }
       }
       let doneRefPart = (part: any[]) => {

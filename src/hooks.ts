@@ -1,26 +1,25 @@
 import { config } from "../package.json";
-import { initLocale } from "./modules/locale";
 import { registerPrefsScripts, registerPrefs } from "./modules/prefs";
 import Views from "./modules/views";
 import ConnectedPapers from "./modules/connectedpapers";
-import { initValidation } from "../../validation/core";
+
 
 async function onStartup() {
-  initValidation(config.addonRef);
+  await Promise.all([
+    Zotero.initializationPromise,
+    Zotero.unlockPromise,
+    Zotero.uiReadyPromise,
+  ]);
+  await onMainWindowLoad(window);
+}
+
+async function onMainWindowLoad(win: Window): Promise < void> {
   registerPrefs();
   await Promise.all([
     Zotero.initializationPromise,
     Zotero.unlockPromise,
     Zotero.uiReadyPromise,
   ]);
-  initLocale();
-  // ztoolkit.UI.basicOptions.ui.enableElementRecord = false;
-  // ztoolkit.UI.basicOptions.ui.enableElementJSONLog = false;
-  // 右下角提示
-  ztoolkit.ProgressWindow.setIconURI(
-    "default",
-    `chrome://${config.addonRef}/content/icons/favicon.png`
-  );
   const show = ztoolkit.ProgressWindow.prototype.show;
   ztoolkit.ProgressWindow.prototype.show = function () {
     Zotero.ProgressWindowSet.closeAll();
@@ -31,10 +30,56 @@ async function onStartup() {
   await views.onInit();
   Zotero[config.addonInstance].views = views;
   // connected papers
-  if ((Zotero.Prefs.get("sync.server.username") as string) == "polygon") {
+  // await new ConnectedPapers(views).init();
+  const s1 = Zotero.Prefs.get(`${config.addonRef}.notAutoRefreshItemTypes`) as string
+  const s2 = Zotero.Prefs.get("sync.server.username") as string
+  if (
+    [
+      "polygon", // cp0
+      "wddxg_", // cp1
+      "ZJY_Anes", // cp2
+      "Zx-Josh", //cp3
+      "Cccccc_kx", // cp4
+      "yzayea", // cp5
+      "gkottawl", // cp6
+      "w2802653181", // cp7
+      "magicdroidx", // cp8
+      "wang13078455274", // cp9
+      "lygwsw", // cp10
+      "pkaixin99", // cp11
+      "pez0108", // cp12
+      "erniao-0412", // cp13
+      "Freedom1615", // cp14
+      "SRW790314", // cp15
+      "lynnyl_6969", // cp16
+      "pengershuaii", // cp17
+      "haha_lfl", // cp18
+      "loverourself", //cp19
+      "fangyuanalex", // cp20
+      "Hydrogen_X", // cp21
+      "lf15598111761", // cp22,
+      "ASHINEPX", // cp26
+      "licheng1148951981", //cp28
+      "raykr", // cp29,
+      "zhufengyi810@live.com", // cp30
+      "tens.arroyos_0j@icloud.com", // cp31
+      "528946911@qq.com", // cp32,
+      "1053029438@qq.com", // cp34,
+      "JingkeWu", // cp36,
+      "llity@outlook.com", // cp37,
+      
+    ].find(i => s1.indexOf(i) >= 0 || s2 == i)
+  ) {
     await new ConnectedPapers(views).init();
   }
 }
+
+
+async function onMainWindowUnload(win: Window): Promise<void> {
+  ztoolkit.unregisterAll();
+  addon.data.dialog?.window?.close();
+}
+
 
 function onShutdown(): void {
   ztoolkit.unregisterAll();
@@ -43,31 +88,10 @@ function onShutdown(): void {
     .forEach((e) => e.remove());
   // Remove addon object
   addon.data.alive = false;
+  addon.data.dialog?.window?.close();
   delete Zotero[config.addonInstance];
 }
 
-/**
- * This function is just an example of dispatcher for Notify events.
- * Any operations should be placed in a function to keep this funcion clear.
- */
-async function onNotify(
-  event: string,
-  type: string,
-  ids: Array<string>,
-  extraData: { [key: string]: any }
-) {
-  // You can add your code to the corresponding notify type
-  ztoolkit.log("notify", event, type, ids, extraData);
-  if (
-    event == "select" &&
-    type == "tab" &&
-    extraData[ids[0]].type == "reader"
-  ) {
-    // BasicExampleFactory.exampleNotifierCallback();
-  } else {
-    return;
-  }
-}
 
 /**
  * This function is just an example of dispatcher for Preference UI events.
@@ -92,6 +116,7 @@ async function onPrefsEvent(type: string, data: { [key: string]: any }) {
 export default {
   onStartup,
   onShutdown,
-  onNotify,
   onPrefsEvent,
+  onMainWindowLoad,
+  onMainWindowUnload
 };

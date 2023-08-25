@@ -234,6 +234,7 @@ class Utils {
     // @ts-ignore
     s.addCondition("joinMode", "any");
     if (info.identifiers.DOI) {
+      s.addCondition("DOI", "is", info.identifiers.DOI);
       s.addCondition("DOI", "is", info.identifiers.DOI.toLowerCase());
       s.addCondition("DOI", "is", info.identifiers.DOI.toUpperCase());
     } else {
@@ -371,7 +372,7 @@ class Utils {
   public getItem(): Zotero.Item | undefined {
     let reader = this.getReader()
     if (reader) {
-      return (Zotero.Items.get(this.getReader()._itemID) as Zotero.Item).parentItem as Zotero.Item
+      return reader._item.parentItem 
     }
   }
 

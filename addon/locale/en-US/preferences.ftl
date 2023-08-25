@@ -1,8 +1,7 @@
-caption-refresh = refresh
+caption-refresh = Refresh
 autoRefresh = 
   .label = References are refreshed automatically, but the following item types are not
-
-
+  
 caption-source = Source
 prioritySource-start = Priority is
 prioritySource-end = used to access references

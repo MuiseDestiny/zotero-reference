@@ -5,13 +5,13 @@
       <rdf:Seq>
         <rdf:li>
           <rdf:Description>
-            <em:version>0.5.9</em:version>
+            <em:version>0.6.0</em:version>
             <em:targetApplication>
               <rdf:Description>
                 <em:id>zotero@chnm.gmu.edu</em:id>
                 <em:minVersion>6.999</em:minVersion>
                 <em:maxVersion>*</em:maxVersion>
-                <em:updateLink>https://github.com/MuiseDestiny/zotero-reference</em:updateLink>
+                <em:updateLink>https://github.com/muisedestiny/crush-reference/releases/latest/download/crush-reference.xpi</em:updateLink>
               </rdf:Description>
             </em:targetApplication>
             <em:targetApplication>
@@ -19,7 +19,7 @@
                 <em:id>juris-m@juris-m.github.io</em:id>
                 <em:minVersion>6.999</em:minVersion>
                 <em:maxVersion>*</em:maxVersion>
-                <em:updateLink>https://github.com/MuiseDestiny/zotero-reference</em:updateLink>
+                <em:updateLink>https://github.com/muisedestiny/crush-reference/releases/latest/download/crush-reference.xpi</em:updateLink>
               </rdf:Description>
             </em:targetApplication>
           </rdf:Description>

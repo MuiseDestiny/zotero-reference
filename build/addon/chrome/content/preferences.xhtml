@@ -1,0 +1,137 @@
+<linkset>
+  <html:link rel="localization" href="zoteroreference-preferences.ftl" />
+</linkset>
+<vbox id="zotero-prefpane-zoteroreference" onload="Zotero.ZoteroReference.hooks.onPrefsEvent('load', {window})">
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-refresh"></html:h2>
+    <checkbox native="true" id="zoteroreference-auto-refresh" data-l10n-id="zoteroreference-autoRefresh"
+      preference="extensions.zotero.zoteroreference.autoRefresh" />
+    <html:div style="
+        display: flex;
+        margin-top: .5em;
+        flex-direction: row;
+        align-items: left;
+        width: 80%;
+      ">
+      <html:input style="
+          width: 100%;
+          margin: auto .5em;
+        " type="text" id="zoteroreference-not-auto-refresh-item-types"
+        preference="extensions.zotero.zoteroreference.notAutoRefreshItemTypes">
+      </html:input>
+    </html:div>
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-source"></html:h2>
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-left: .7em;
+    ">
+      <html:span style="margin: 4px 0;" data-l10n-id="zoteroreference-prioritySource-start"></html:span>
+      <menulist native="true" style="height: 1.5em; margin: auto .5em;" id="zoteroreference-priority-source"
+        preference="extensions.zotero.zoteroreference.prioritySource">
+        <menupopup>
+          <menuitem value="PDF" label="PDF"></menuitem>
+          <menuitem value="API" label="API"></menuitem>
+        </menupopup>
+      </menulist>
+      <html:span style="margin: 4px 0;" data-l10n-id="zoteroreference-prioritySource-end"></html:span>
+    </html:div>
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      margin-left: .7em;
+    ">
+      <html:span style="margin: 4px 0; margin-right: .5em;" data-l10n-id="zoteroreference-preLoadingPageNum-start"></html:span>
+      <html:input style="width: 2em; margin: auto 0; height: 1em;" type="text" id="zoteroreference-min-pre-load-page-num"
+        preference="extensions.zotero.zoteroreference.preLoadingPageNum">
+      </html:input>
+      <html:span style="margin: 4px 0; margin-left: .5em;" data-l10n-id="zoteroreference-preLoadingPageNum-end"></html:span>
+    </html:div>
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-tip"></html:h2>
+    <hbox style="margin: 4px 0;margin-left: .7em;">
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="zoteroreference-tipBackgroundColor"></html:span>
+      <html:input style="width: 6em; margin: auto 0; height: 1em;" type="text" id="zoteroreference-tip-background-color"
+        preference="extensions.zotero.zoteroreference.tipBackgroundColor">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: 1em; margin-right: .5em;" data-l10n-id="zoteroreference-tipTitleColor"></html:span>
+      <html:input style="width: 6em; margin: auto 0; height: 1em;" type="text" id="zoteroreference-tip-title-color"
+        preference="extensions.zotero.zoteroreference.tipTitleColor">
+      </html:input>
+    </hbox>
+    <html:div style="
+      display: flex;
+      flex-direction: row;
+    ">
+      <checkbox native="true" id="zoteroreference-is-show-tip" data-l10n-id="zoteroreference-isShowTip-start"
+        preference="extensions.zotero.zoteroreference.isShowTip" style="margin-right: .5em;"/>
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
+        id="zoteroreference-remove-tip-after-millisecond"
+        preference="extensions.zotero.zoteroreference.showTipAfterMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="zoteroreference-isShowTip-end"></html:span>
+    </html:div>
+    <checkbox native="true" id="zoteroreference-ctrl-click-translate" data-l10n-id="zoteroreference-ctrlClickTranslate"
+      preference="extensions.zotero.zoteroreference.ctrlClickTranslate" />
+    <hbox style="margin: 4px 0;margin-left: .7em;">
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="zoteroreference-shadeMillisecond-start"></html:span>
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text" id="zoteroreference-shade-millisecond"
+        preference="extensions.zotero.zoteroreference.shadeMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="zoteroreference-shadeMillisecond-end"></html:span>
+    </hbox>
+    <hbox style="margin: 4px 0;margin-left: .7em;">
+      <html:span style="margin: auto 0;margin-right: .5em;" data-l10n-id="zoteroreference-removeTipAfterMillisecond-start"></html:span>
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="text"
+        id="zoteroreference-remove-tip-after-millisecond"
+        preference="extensions.zotero.zoteroreference.removeTipAfterMillisecond">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="zoteroreference-removeTipAfterMillisecond-end">
+      </html:span>
+    </hbox>
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-related"></html:h2>
+    <checkbox native="true" id="zoteroreference-loading-related" data-l10n-id="zoteroreference-loadingRelated"
+      preference="extensions.zotero.zoteroreference.loadingRelated" />
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-link"></html:h2>
+    <hbox style="display: flex; align-items: center;">
+      <checkbox native="true" id="zoteroreference-click-link" data-l10n-id="zoteroreference-clickLink-start"
+        preference="extensions.zotero.zoteroreference.clickLink" />
+      <menulist native="true" style="height: 1.5em;" id="zoteroreference-click-link-cmd"
+        preference="extensions.zotero.zoteroreference.clickLink.cmd">
+        <menupopup>
+          <menuitem value="splitHorizontally" data-l10n-id="zoteroreference-clickLink-splitHorizontally"></menuitem>
+          <menuitem value="splitVertically" data-l10n-id="zoteroreference-clickLink-splitVertically"></menuitem>
+        </menupopup>
+      </menulist>
+      <html:span style="margin: auto 0; margin-left: .5em" data-l10n-id="zoteroreference-clickLink-end"></html:span>
+    </hbox>
+    <checkbox native="true" id="zoteroreference-hover-links" data-l10n-id="zoteroreference-hoverLink"
+      preference="extensions.zotero.zoteroreference.hoverLink" />
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-save"></html:h2>
+    <checkbox native="true" id="zoteroreference-save-pdf-references" data-l10n-id="zoteroreference-savePDFReferences"
+      preference="extensions.zotero.zoteroreference.savePDFReferences" />
+    <checkbox native="true" id="zoteroreference-save-api-references" data-l10n-id="zoteroreference-saveAPIReferences"
+      preference="extensions.zotero.zoteroreference.saveAPIReferences" />
+  </groupbox>
+  <groupbox>
+    <html:h2 data-l10n-id="zoteroreference-caption-match"></html:h2>
+    <hbox style="margin-left: .7em;display: flex;align-items: center;">
+      <html:span style="margin: auto 0; margin-right: .5em;" data-l10n-id="zoteroreference-notInLibarayOpacity-start"></html:span>
+      <html:input style="width: 4em; margin: auto 0; height: 1em;" type="range" min="0" max="1" step="0.01" id="zoteroreference-not-in-library-opacity"
+        preference="extensions.zotero.zoteroreference.notInLibarayOpacity">
+      </html:input>
+      <html:span style="margin: auto 0; margin-left: .5em;" data-l10n-id="zoteroreference-notInLibarayOpacity-end"></html:span>
+    </hbox>
+  </groupbox>
+</vbox>

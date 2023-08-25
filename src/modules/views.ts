@@ -1,5 +1,5 @@
 import { config } from "../../package.json";
-import { getString, initLocale } from "../modules/locale";
+import { initLocale, getString } from "../utils/locale";
 import TipUI from "./tip";
 import Utils from "./utils";
 import LocalStorge from "./localStorage";
@@ -7,20 +7,6 @@ const localStorage = new LocalStorge(config.addonRef);
 
 export default class Views {
   public utils!: Utils;
-  private iconStyles = {
-    bacogroundColor: "none",
-    backgroundSize: "16px 16px",
-    backgroundRepeat: "no-repeat",
-    backgroundPositionX: "center",
-    backgroundPositionY: "center",
-    backgroundClip: "border-box",
-    backgroundOrigin: "padding-box",
-    width: "16px",
-    "margin-inline-start": "0px",
-    "margin-inline-end": "0px",
-    marginTop: "0px",
-    marginBottom: "0px",
-  };
   constructor() {
     initLocale();
     this.utils = new Utils()
@@ -189,9 +175,9 @@ export default class Views {
           panel.append(relatedbox);
           relatedbox.querySelector("box:not(.reference)")?.remove()
           // 修改链接
-          window.setTimeout(async () => {
-            await this.pdfLinks(reader, panel)
-          })
+          // window.setTimeout(async () => {
+          //   await this.pdfLinks(reader, panel)
+          // })
           // 自动刷新
           window.setTimeout(async () => {
             if (Zotero.Prefs.get(`${config.addonRef}.autoRefresh`)) {
@@ -391,21 +377,6 @@ export default class Views {
       ztoolkit.log(relatedArray)
       this.refreshRelated(relatedArray, node)
 
-      // node.querySelectorAll(".box image.zotero-box-icon")
-      //   .forEach((e: any) => {
-      //     let label = ztoolkit.UI.createElement(
-      //       document,
-      //       "label",
-      //       {
-      //         namespace: "xul",
-      //         styles: {
-      //           backgroundImage: `url(${e.src})`,
-      //           ...this.iconStyles
-      //         }
-      //       }
-      //     )
-      //     e.parentNode.replaceChild(label, e)
-      //   })
     }
     relatedbox.refresh()
   }
@@ -900,7 +871,9 @@ export default class Views {
         ],
         styles: {
           alignItems: "center",
-          opacity: String(notInLibarayOpacity)
+          opacity: String(notInLibarayOpacity),
+          paddingTop: "1px",
+          paddingBottom: "1px"
         },
         children: [
           {
@@ -1131,14 +1104,13 @@ export default class Views {
             return
           }
         }
+        for (let collectionID of (collections || item.getCollections())) {
+          refItem.addToCollection(collectionID)
+          await refItem.saveTx()
+        }
       }
       popupWin.changeHeadline("Adding Item")
       popupWin.changeLine({ text: collapseText(refItem.getField("title")) })
-
-      for (let collectionID of (collections || item.getCollections())) {
-        refItem.addToCollection(collectionID)
-        await refItem.saveTx()
-      }
       // addRelatedItem
       reference._item = refItem
       item.addRelatedItem(refItem)

@@ -86,7 +86,7 @@ export default class ConnectedPapers {
           width: 16px;
           height: 16px;
         }
-        `)
+        `) 
       },
       // #output-container div.streaming span:after,  
     }, document.documentElement);
@@ -120,7 +120,6 @@ export default class ConnectedPapers {
 
   private registerButton() {
     const node = document.querySelector("#zotero-tb-advanced-search")
-    ztoolkit.log(node)
     let newNode = node?.cloneNode(true) as XUL.ToolBarButton
     newNode.setAttribute("id", "zotero-reference-show-hide-graph-view")
     newNode.setAttribute("tooltiptext", "show/hide")
@@ -141,10 +140,8 @@ export default class ConnectedPapers {
         Zotero.Prefs.set(`${config.addonRef}.graphView.enable`, false)
       }
     })
-    newNode.setAttribute("class", "")
     newNode.style.listStyleImage = `url(chrome://${config.addonRef}/content/icons/connectedpapers.png)`
     document.querySelector("#zotero-items-toolbar")?.insertBefore(newNode, node?.nextElementSibling!)
-    ztoolkit.log(document.querySelector("#zotero-items-toolbar"))
   }
 
   /**
@@ -279,6 +276,9 @@ export default class ConnectedPapers {
                   type: "click",
                   listener: async () => {
                     const item = ZoteroPane.getSelectedItems()[0]
+                    const popupWin = new ztoolkit.ProgressWindow("Add Origin", {closeTime: -1})
+                      .createLine({ text: item.getField("title") as string, type: "connectedpapers" })
+                      .show()
                     let info: ItemInfo = {
                       identifiers: { DOI: item.getField("DOI") as string, paperID: await this.getPaperID(item) },
                       authors: item.getCreators().map((i: any) => i.firstName + " " + i.lastName),
@@ -306,6 +306,8 @@ export default class ConnectedPapers {
                     )
                     this.itemIDs.push(item.id)
                     this.updateAddOrRemove()
+                    popupWin.changeLine({ text: item.getField("title") as string, type: "success" })
+                    .startCloseTimer(1000)
                   }
                 }
               ]
@@ -413,7 +415,7 @@ export default class ConnectedPapers {
                 const app = this.frame.contentWindow.app
                 // app.graphdata = graphdata
                 // items
-                Object.values(graphdata.nodes).forEach((paper: any) => {
+                Object.values(graphdata.nodes).sort((a: any, b: any) => b.year - a.year).forEach((paper: any) => {
                   this.addItem(
                     relatedContainer.querySelector(".normal-items") as HTMLDivElement,
                     this.paper2Info(paper),
@@ -421,7 +423,7 @@ export default class ConnectedPapers {
                   )
                 })
                 // prior
-                graphdata.common_references.forEach((paper: any) => {
+                graphdata.common_references.sort((a: any, b: any) => b.year - a.year).forEach((paper: any) => {
                   const itemNode = this.addItem(
                     relatedContainer.querySelector(".prior-items") as HTMLDivElement,
                     this.paper2Info(paper),
@@ -430,7 +432,7 @@ export default class ConnectedPapers {
                   itemNode.setAttribute("local", paper.local_citations.join("+"))
                 })
                 // deriv
-                graphdata.common_citations.forEach((paper: any) => {
+                graphdata.common_citations.sort((a: any, b: any) => b.year - a.year).forEach((paper: any) => {
                   const itemNode = this.addItem(
                     relatedContainer.querySelector(".deriv-items") as HTMLDivElement,
                     this.paper2Info(paper),
@@ -457,11 +459,9 @@ export default class ConnectedPapers {
             {
               tag: "div",
               classList: ["prior-items"],
-
               styles: {
                 display: "none",
                 overflowY: "auto",
-                borderRight: "1px solid #cecece"
               }
             },
             {
@@ -477,7 +477,6 @@ export default class ConnectedPapers {
               styles: {
                 display: "none",
                 overflowY: "auto",
-                borderLeft: "1px solid #cecece"
               }
             }
           ]
@@ -503,14 +502,22 @@ export default class ConnectedPapers {
                     const w2 = this.relatedContainer?.querySelector("#deriv-works")!
                     const i1 = this.relatedContainer!.querySelector(".prior-items") as HTMLDivElement
                     const i2 = this.relatedContainer!.querySelector(".deriv-items") as HTMLDivElement
+                    const i0 = this.relatedContainer!.querySelector(".normal-items") as HTMLDivElement
                     w2.classList.remove("activate")
                     i2.style.display = "none"
+                    i0.style.borderLeft = i0.style.borderRight = i1.style.borderLeft = i1.style.borderRight = "none"
                     if (w1?.classList.contains("activate")) {
                       w1.classList.remove("activate")
                       i1.style.display = "none"
+                      i1.style.borderLeft = "none"
+                      i0.style.borderRight = "none"
+                      i0.style.width = "100%"
                     } else {
                       w1.classList.add("activate")
                       i1.style.display = ""
+                      i0.style.width = i1.style.width = "50%"
+                      i0.style.borderLeft = ".5px solid #cecece"
+                      i1.style.borderRight = ".5px solid #cecece"
                     }
                   }
                 }
@@ -534,14 +541,20 @@ export default class ConnectedPapers {
                     const w1 = this.relatedContainer?.querySelector("#deriv-works")!
                     const i2 = this.relatedContainer!.querySelector(".prior-items") as HTMLDivElement
                     const i1 = this.relatedContainer!.querySelector(".deriv-items") as HTMLDivElement
+                    const i0 = this.relatedContainer!.querySelector(".normal-items") as HTMLDivElement
                     w2.classList.remove("activate")
                     i2.style.display = "none"
+                    i0.style.borderLeft = i0.style.borderRight = i1.style.borderLeft = i1.style.borderRight = "none"
                     if (w1?.classList.contains("activate")) {
                       w1.classList.remove("activate")
                       i1.style.display = "none"
+                      i0.style.width = "100%"
                     } else {
                       w1.classList.add("activate")
                       i1.style.display = ""
+                      i0.style.width = i1.style.width = "50%"
+                      i0.style.borderRight = ".5px solid #cecece"
+                      i1.style.borderLeft = ".5px solid #cecece"
                     }
                   }
                 }
@@ -686,7 +699,7 @@ export default class ConnectedPapers {
                   {
                     type: "mouseenter",
                     listener: () => {
-                      this.setNodeState({state: "hover", paperID: info.identifiers.paperID as string})
+                      this.setNodeState({ state: "hover", paperID: info.identifiers.paperID as string })
                     }
                   },
                   {
@@ -698,7 +711,8 @@ export default class ConnectedPapers {
                   {
                     type: "click",
                     listener: () => {
-                      this.setNodeState({ state: "selected", paperID: info.identifiers.paperID as string })
+                      this.setNodeState({ state: "selected", paperID: info.identifiers.paperID as string });
+                      new ztoolkit.Clipboard().addText(info.identifiers!.DOI!, "text/unicode").copy()
                     }
                   }
                 ]
@@ -805,12 +819,13 @@ export default class ConnectedPapers {
                 // 清除浮窗，定位
                 tipUI && tipUI.clear()
                 this.setNodeState({ state: "selected", paperID: info.identifiers.paperID as string })
+                new ztoolkit.Clipboard().addText(info.identifiers!.DOI!, "text/unicode").copy()
               }
             }
           ]
         },
         
-      ]
+      ],
     }, parent)
 
     ztoolkit.UI.appendElement({
@@ -832,33 +847,65 @@ export default class ConnectedPapers {
       listeners: [
         {
           type: "click",
-          listener: async () => {
+          listener: async (event: any) => {
             if (info._itemID) {
               ZoteroPane.selectItem(info._itemID as number)
             } else {
               const DOI = info.identifiers.DOI
               const originItems = this.itemIDs.map(id => Zotero.Items.get(id))
-              let popupWin = new ztoolkit.ProgressWindow("[Pending] Adding", { closeTime: -1 })
-                .createLine({ text: DOI, type: "default" })
-                .show()
+              
+              let add = async (collections: number[]) => {
+                let popupWin = new ztoolkit.ProgressWindow("[Pending] Adding", { closeTime: -1 })
+                  .createLine({ text: DOI, type: "default" })
+                  .show()
+                const newItem = await this.views.utils.createItemByZotero({ DOI }, collections) as Zotero.Item
+                originItems.forEach(async (item) => {
+                  newItem.addRelatedItem(item)
+                  item.addRelatedItem(newItem)
+                  await item.saveTx({ skipSelect: true, skipNotifier: true })
+                  await newItem.saveTx({ skipSelect: true, skipNotifier: true });
+                  // ZoteroPane.selectItem(item.id);
+                  // (document.querySelector("#zotero-editpane-related-tab") as HTMLDivElement).click()
+                })
+                popupWin.changeHeadline("[Done] Adding")
+                popupWin.changeLine({ type: "success" })
+                popupWin.startCloseTimer(3000);
+                (document.querySelector("#build-graph") as HTMLDivElement).click()
+              }
+              // 获取分类
               const collection = ZoteroPane.getSelectedCollection()
               let collections: number[] = []
               if (collection) {
                 collections = [collection.id]
               }
-              const newItem = await this.views.utils.createItemByZotero({ DOI }, collections) as Zotero.Item
-              originItems.forEach(async (item) => {
-                newItem.addRelatedItem(item)
-                item.addRelatedItem(newItem)
-                await item.saveTx({ skipSelect: true, skipNotifier: true})
-                await newItem.saveTx({ skipSelect: true, skipNotifier: true });
-                // ZoteroPane.selectItem(item.id);
-                // (document.querySelector("#zotero-editpane-related-tab") as HTMLDivElement).click()
-              })
-              popupWin.changeHeadline("[Done] Adding")
-              popupWin.changeLine({ type: "success" })
-              popupWin.startCloseTimer(3000)
-              return (document.querySelector("#build-graph") as HTMLDivElement).click()
+              if (event.ctrlKey || event.metaKey) {
+                let rect = itemNode.getBoundingClientRect()
+                // 构建分类选择
+                let menuPopup = document.createElementNS("http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul", 'menupopup') as XUL.MenuPopup;
+                document.querySelector("#browser")!.append(menuPopup);
+                let collections = Zotero.Collections.getByLibrary(1);
+                for (let col of collections) {
+                  let menuItem = Zotero.Utilities.Internal.createMenuForTarget(
+                    col,
+                    menuPopup,
+                    null as any,
+                    async (event: any, collection: any) => {
+                      if (event.target.tagName == 'menuitem') {
+                        ztoolkit.log(collection)
+                        menuPopup.remove()
+                        add([collection.id])
+                        event.stopPropagation();
+                      }
+                    }
+                  );
+                  menuPopup.append(menuItem);
+                }
+                // @ts-ignore
+                menuPopup.openPopupAtScreen(rect.left, rect.top + rect.height, true);
+              } else {
+                add(collections)
+              }
+
             }
           }
         }
@@ -939,7 +986,8 @@ export default class ConnectedPapers {
       return res.paperId
     } else {
       // 通过标题粗确定标题
-      const api = `https://rest.connectedpapers.com/search/${title}/1`
+      // const api = 'https://rest.connectedpapers.com/autocomplete/${title}`
+      const api = `https://rest.connectedpapers.com/search/${escape(title)}/1`
       let response = await this.requests.post(api)
       if (response) {
         if (response?.results?.length) {
