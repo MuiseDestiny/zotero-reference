@@ -3,7 +3,7 @@ import { config } from "../../package.json";
 
 import Views from "./views";
 import TipUI from "./tip";
-import buildGraphData from "./GraphData-vip";
+import buildGraphData from "./GraphData";
 const d3 = require("./d3")
 
 export default class ConnectedPapers {
