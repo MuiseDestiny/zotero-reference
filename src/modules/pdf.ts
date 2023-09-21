@@ -24,10 +24,9 @@ class PDF {
 
   async getReferences(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean): Promise<ItemInfo[]> {
     let refLines = await this.getRefLines(reader, fromCurrentPage)
-    const maxHeight = (reader._iframeWindow as any).wrappedJSObject.PDFViewerApplication.pdfViewer._pages[0].viewport.viewBox[3]
-    Zotero.ProgressWindowSet.closeAll();
+    const maxHeight = (reader._internalReader._lastView as any)._iframeWindow.PDFViewerApplication.pdfViewer._pages[0].viewport.viewBox[3]
     if (refLines.length == 0) {
-      (new ztoolkit.ProgressWindow("[Fail] PDF"))
+      new ztoolkit.ProgressWindow("[Fail] PDF", {closeOtherProgressWindows: true})
         .createLine({
           text: "Function getRefLines: 0 refLines",
           type: "fail"
@@ -38,14 +37,14 @@ class PDF {
 
     let references = this.mergeSameRef(refLines)
     if (references.length > 0) {
-      (new ztoolkit.ProgressWindow("[Done] PDF"))
+      new ztoolkit.ProgressWindow("[Done] PDF", {closeOtherProgressWindows: true})
         .createLine({
           text: `${references.length} references`,
           type: "success"
         })
         .show();
     } else {
-      (new ztoolkit.ProgressWindow("[Fail] PDF"))
+      new ztoolkit.ProgressWindow("[Fail] PDF", { closeOtherProgressWindows: true })
         .createLine({
           text: "Function mergeSameRef: 0 reference",
           type: "fail"
@@ -289,7 +288,7 @@ class PDF {
     fromCurrentPage: boolean,
     fullText: boolean = false
   ) {
-    const PDFViewerApplication = (reader._iframeWindow as any).wrappedJSObject.PDFViewerApplication;
+    const PDFViewerApplication = (reader._internalReader._lastView as any)._iframeWindow.PDFViewerApplication;
     await PDFViewerApplication.pdfLoadingTask.promise;
     await PDFViewerApplication.pdfViewer.pagesPromise;
     let pages = PDFViewerApplication.pdfViewer._pages;
@@ -305,7 +304,7 @@ class PDF {
     const totalPageNum = pages.length - offset
     const minPreLoadPageNum = parseInt(Zotero.Prefs.get(`${config.addonRef}.preLoadingPageNum`) as string)
     let preLoadPageNum = totalPageNum > minPreLoadPageNum ? minPreLoadPageNum : totalPageNum
-    const popupWin = new ztoolkit.ProgressWindow("[Pending] PDF", {closeTime: -1});
+    const popupWin = new ztoolkit.ProgressWindow("[Pending] PDF", {closeTime: -1, closeOtherProgressWindows: true});
     popupWin.createLine({
       text: `[0/${preLoadPageNum}] Analysis PDF`,
       type: "success",
@@ -351,7 +350,6 @@ class PDF {
       if (lines.length == 0) { continue }
       // 移除PDF页面首尾关于期刊页码等信息
       // 正向匹配移除PDF顶部无效信息
-      let removeLines = new Set()
       let removeNumber = (text: string) => {
         // 英文页码
         if (/^[A-Z]{1,3}$/.test(text)) {
@@ -361,79 +359,43 @@ class PDF {
         text = text.replace(/\s+/g, "").replace(/\d+/g, "")
         return text
       }
-      // 是否跨页同位置
-      let isIntersectLines = (lineA: any, lineB: any) => {
-        let rectA = {
-          left: lineA.x / maxWidth,
-          right: (lineA.x + lineA.width) / maxWidth,
-          bottom: lineA.y / maxHeight,
-          top: (lineA.y + lineA.height) / maxHeight
+      const isSamePosition = (lineA: PDFLine, lineB: PDFLine) => {
+        const round = (n: number) => Math.round(n)
+        if (
+          round(lineA.x) == round(lineB.x) &&
+          round(lineA.y) == round(lineB.y) &&
+          round(lineA.width) == round(lineB.width) &&
+          round(lineA.height) == round(lineB.height)
+        ) {
+          return true
+        } else {
+          return false
         }
-        let rectB = {
-          left: lineB.x / maxWidth,
-          right: (lineB.x + lineB.width) / maxWidth,
-          bottom: lineB.y / maxHeight,
-          top: (lineB.y + lineB.height) / maxHeight
-        }
-        return this.isIntersect(rectA, rectB)
       }
       // 是否为重复
-      let isRepeat = (line: PDFLine, _line: PDFLine) => {
-        let text = removeNumber(line.text)
-        let _text = removeNumber(_line.text)
-        return text == _text && isIntersectLines(line, _line)
+      const isSameText = (lineA: PDFLine, lineB: PDFLine) => {
+        const textA = removeNumber(lineA.text)
+        const textB = removeNumber(lineB.text)
+        return textA == textB
       }
-      // 存在于数据起始结尾的无效行
-      for (let i of Object.keys(pageLines)) {
-        if (Number(i) == pageNum) { continue }
-        // 两个不同页，开始对比
-        let _lines = pageLines[i]
-        let directions = {
-          forward: {
-            factor: 1,
-            done: false
-          },
-          backward: {
-            factor: -1,
-            done: false
-          }
-        }
-        for (let offset = 0; offset < lines.length && offset < _lines.length; offset++) {
-          ["forward", "backward"].forEach((direction: string) => {
-            if (directions[direction as keyof typeof directions].done) { return }
-            let factor = directions[direction as keyof typeof directions].factor
-            let index = factor * offset + (factor > 0 ? 0 : -1)
-            let line = lines.slice(index)[0]
-            let _line = _lines.slice(index)[0]
-            if (isRepeat(line, _line)) {
-              // 认为是相同的
-              line[direction] = true
-              removeLines.add(line)
-            } else {
-              directions[direction as keyof typeof directions].done = true
+      lines.forEach((line: PDFLine) => {
+        // 100%正文区域保护
+        if (line.x / maxWidth > .2 && line.y / maxHeight > .2 && (line.x + line.width) / maxWidth < .8 && (line.y + line.height) / maxHeight < .8 || line.same) { return }
+        for (const _pageIndex in pageLines) {
+          // 排除自身页面
+          if (Number(_pageIndex) == pageNum) { continue }
+          pageLines[_pageIndex].find((_line: PDFLine) => {
+            if (isSameText(line, _line) && isSamePosition(line, _line)) {
+              ztoolkit.log(line, _line)
+              line.same = _line
+              return true
             }
           })
         }
-        // 内部的
-        // 设定一个百分百正文区域防止误杀
-        const content = { x: 0.2 * maxWidth, width: .6 * maxWidth, y: .2 * maxHeight, height: .6 * maxHeight }
-        for (let j = 0; j < lines.length; j++) {
-          let line = lines[j]
-          if (isIntersectLines(content, line)) { continue }
-          for (let k = 0; k < _lines.length; k++) {
-            let _line = _lines[k]
-            if (isRepeat(line, _line)) {
-              line.repeat = line.repeat == undefined ? 1 : (line.repeat + 1)
-              line.repateWith = _line
-              removeLines.add(line)
-            }
-          }
-        }
-      }
-      lines = lines.filter((e: any) => !(e.forward || e.backward || (e.repeat && e.repeat > preLoadPageNum / 2)));
+      })
+      lines = lines.filter((e: any) => !e.same);
       if (lines.length == 0) { continue }
-      ztoolkit.log("remove", [...removeLines])
-
+      ztoolkit.log("remove", [...lines.filter((e: any) => e.same)])
       // 分栏
       // 跳过图表影响正常分栏
       let isFigureOrTable = (text: string) => {
@@ -508,7 +470,7 @@ class PDF {
           return false
         } else {
           return (
-            /(\u53c2\u8003\u6587\u732e|reference|bibliography|)/i.test(text)
+            /(\u53c2\u8003\u6587\u732e|reference|bibliography)/i.test(text)
           ) && text.length < 20
         }
       }

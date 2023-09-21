@@ -222,7 +222,7 @@ async function esbuild() {
       `addon/chrome/content/scripts/${config.addonRef}.js`,
     ),
     // Don't turn minify on
-    minify: true,
+    // minify: true,
   }).catch(() => exit(1));
 }
 

@@ -3,10 +3,10 @@ import { config } from "../../package.json";
 
 import Views from "./views";
 import TipUI from "./tip";
+import buildGraphData from "./GraphData-vip";
 const d3 = require("./d3")
 
 export default class ConnectedPapers {
-  private popupWin: any;
   private requests!: Requests;
   private frame!: HTMLIFrameElement;
   private views!: Views
@@ -15,7 +15,6 @@ export default class ConnectedPapers {
   // private splitterAfter!: HTMLElement;
   private boxAfter!: XUL.Box;
   private itemIDs: number[] = []
-  private cache: any = {}
   private zoteroColor: boolean = true
   constructor(views: Views) {
     this.requests = new Requests()
@@ -27,7 +26,7 @@ export default class ConnectedPapers {
     this.registerButton()
     this.initOnSelect()
     document.querySelectorAll("#graph").forEach(e => e.remove());
-    document.querySelectorAll(".resizer").forEach(e => e.remove())
+    // document.querySelectorAll(".resizer").forEach(e => e.remove())
     while (!document.querySelector("#item-tree-main-default")) {
       await Zotero.Promise.delay(100)
     }
@@ -125,7 +124,7 @@ export default class ConnectedPapers {
     newNode.setAttribute("tooltiptext", "show/hide")
     newNode.setAttribute("command", "")
     newNode.setAttribute("oncommand", "")
-    newNode.addEventListener("click", () => {
+    newNode.addEventListener("click", async () => {
       let node = this.graphContainer;
       if (!node) {return }
       if (node.style.display == "none") {
@@ -148,7 +147,6 @@ export default class ConnectedPapers {
    * 注册右侧面板
    */
   private initEditPane() {
-    const isEnable = Zotero.Prefs.get(`${config.addonRef}.graphView.enable`)
     // let relatedbox = (document.querySelector("#zotero-editpane-related") as Element);
     let beforeBox = (document.querySelector("#zotero-item-pane-content") as Element);
     beforeBox.parentElement?.setAttribute("orient", "vertical");
@@ -157,49 +155,10 @@ export default class ConnectedPapers {
     boxAfter.style.overflow = "hidden"
     boxAfter.style.backgroundColor = "#fff"
     beforeBox.after(boxAfter);
-    // const splitterAfter = this.splitterAfter =  document.createElement("splitter") as HTMLElement;
-    // splitterAfter.id = "connected-papers-relatedsplit-splitter-after";
-    // splitterAfter.id = "zotero-tags-splitter";
-    // splitterAfter.setAttribute("collapse", "after");
-    // splitterAfter.style.display = isEnable ? "" : "none";
-    boxAfter.style.display = isEnable ? "block" : "none";
+    boxAfter.style.display = "none";
     boxAfter.style.height = Zotero.Prefs.get(`${config.addonRef}.graphView.height`) as string
-    // const grippyAfter = document.createElement("grippy"); 
-    // splitterAfter.append(grippyAfter);
-    // @ts-ignore
-    // splitterAfter.style["padding-top"] = "0"
     // @ts-ignore
     boxAfter.style["padding-top"] = "0"
-    // const minHeight = 300
-    // splitterAfter.addEventListener("mousemove", (e) => {
-    //   if (splitterAfter.getAttribute("state") != "dragging") { return }
-    //   const currentHeight = Number(boxAfter.getAttribute("height"))
-    //   const parentBox = beforeBox.parentNode as XUL.Box
-    //   const totalHeight = parentBox.getBoundingClientRect().height
-    //   const beforeHeight = Number(beforeBox.getAttribute("height"))
-    //   ztoolkit.log(currentHeight, totalHeight, beforeHeight, totalHeight - beforeHeight)
-    //   if (currentHeight == 0) {
-    //     boxAfter.setAttribute("state", "")
-    //     grippyAfter.style.display = "none"
-    //     boxAfter.setAttribute("height", String(minHeight))
-    //     e.stopPropagation()
-    //     e.preventDefault()
-    //   } else if  (currentHeight < minHeight) {
-    //     ztoolkit.log("set collapsed")
-    //     splitterAfter.setAttribute("state", "collapsed")
-    //     grippyAfter.style.display = ""
-    //     boxAfter.setAttribute("height", String(minHeight))
-    //     e.stopPropagation()
-    //     e.preventDefault()
-    //   } 
-    //   else if (currentHeight > (totalHeight - beforeHeight)) {
-    //     boxAfter.setAttribute("state", "")
-    //     boxAfter.setAttribute("height", String(totalHeight - beforeHeight))
-    //     e.stopPropagation()
-    //     e.preventDefault()
-    //   }
-    // })
-    // boxAfter.before(splitterAfter);
     this.buildRelatedPanel(boxAfter)
   }
 
@@ -251,7 +210,7 @@ export default class ConnectedPapers {
                 justifyContent: "center",
                 alignContent: "center",
                 cursor: "pointer",
-                height: "2em"
+                height: "2em",
               },
               children: [
                 {
@@ -307,7 +266,7 @@ export default class ConnectedPapers {
                     this.itemIDs.push(item.id)
                     this.updateAddOrRemove()
                     popupWin.changeLine({ text: item.getField("title") as string, type: "success" })
-                    .startCloseTimer(1000)
+                      .startCloseTimer(1000)
                   }
                 }
               ]
@@ -322,7 +281,8 @@ export default class ConnectedPapers {
                 justifyContent: "center",
                 alignContent: "center",
                 cursor: "pointer",
-                height: "2em"
+                height: "2em",
+                backgroundColor: "#fff !important",
               },
               children: [
                 {
@@ -404,6 +364,12 @@ export default class ConnectedPapers {
             {
               type: "click",
               listener: async () => {
+                if (this.itemIDs.length == 0) {
+                  new ztoolkit.ProgressWindow("Connected Papers")
+                    .createLine({ text: "Please select a Zotero Item and click Add Origin first, then click Build Graph.", type: "connectedpapers"})
+                    .show()
+                  return
+                }
                 // 构建图谱
                 const items = this.itemIDs.map((id: number) => Zotero.Items.get(id)) as Zotero.Item[]
                 relatedContainer.querySelectorAll(".normal-items .item")?.forEach(e => e.remove())
@@ -914,66 +880,6 @@ export default class ConnectedPapers {
     return itemNode
   }
 
-  public async getGraphData(id: string): Promise<any> {
-    this.popupWin ??= new ztoolkit.ProgressWindow("[Pending] Connected Papers", { closeOtherProgressWindows: true, closeTime: -1 })
-      .createLine({ text: "Initializing", type: "default" })
-      .show()
-    const Q: any = {
-      "1": "OK",
-      "2": "LONG_PAPER",
-      "3": "IN_PROGRESS",
-      "4": "NOT_RUN",
-      "5": "ADDED_TO_QUEUE",
-      "6": "ERROR",
-      "7": "OVERLOADED",
-      "8": "IN_QUEUE",
-      "9": "NOT_IN_API"
-    }
-    let parse = async (t: ArrayBuffer) => {
-      let a = t;
-      const J = 16
-      const s = a.slice(0, J)
-      const l = new Uint32Array(s.slice(4, 8))
-        , c = l[0];
-      const pako = require('pako');
-      var F = new window.TextDecoder("utf-8");
-      a = a.slice(8);
-      const p = new window.Uint32Array(a.slice(0, 4))
-        , d = p[0]
-        , u = a.slice(4, 4 + d);
-      if (c == 1) {
-        const e = new window.Uint8Array(u),
-          t = pako.inflate(e),
-          i = F.decode(t),
-          r = JSON.parse(i)
-        return r
-      } else {
-        const e = new window.Uint32Array(u)[0];
-        this.popupWin.changeLine({ progress: e, text: `[${e || 1}/100] Building` })
-        await Zotero.Promise.delay(100);
-        return 
-      }
-    }
-    let e = await window.fetch(
-      `https://rest.connectedpapers.com/graph_no_build/${id}`,
-      {
-        credentials: "same-origin",
-        headers: {
-          accept: "application/json, text/plain, */*",
-          referer: "https://www.connectedpapers.com/",
-          origin: "https://www.connectedpapers.com",
-          "sec-fetch-site": "same-site"
-        }
-      }
-    )
-    let a = await e.arrayBuffer() as ArrayBuffer
-    const data: any = await parse(a)
-    if (data) {
-      return data
-    } else {
-      return await this.getGraphData(id)
-    }
-  }
 
   private async getPaperID(item: Zotero.Item) {
     const DOI = item.getField("DOI") as string
@@ -998,29 +904,15 @@ export default class ConnectedPapers {
     }
   }
 
-  public async buildGraphData(items: Zotero.Item[]) {
-    // const cacheKey = items.map(i => i.id).join("+")
-    // if (this.cache[cacheKey]) { return this.cache[cacheKey] }
-    this.popupWin = new ztoolkit.ProgressWindow("[Pending] Connected Papers", { closeOtherProgressWindows: true, closeTime: -1 })
-      .createLine({ text: "Initializing", type: "default" })
+  private async buildGraphData(items: Zotero.Item[]) {
+    const popupWin = new ztoolkit.ProgressWindow("Connected Papers", { closeOtherProgressWindows: true, closeTime: -1 })
+      .createLine({ text: "Initializing", type: "connectedpapers" })
       .show()
-    // 获取id
     let id = (await Promise.all(items.map(async (item) => await this.getPaperID(item)))).join("+")
-    ztoolkit.log("id", id)
-    if (id) {
-      this.popupWin.changeLine({ progress: 1, text: "[1/100] Building" })
-    } else{
-      this.popupWin.changeHeadline("[Fail] Connected Papers")
-      this.popupWin.changeLine({ type: "fail" })
-      this.popupWin.startCloseTimer(3000)
-    }
-    this.requests.post(
-      `https://rest.connectedpapers.com/graph/${id}`,
-    )
-    let graphData = await this.getGraphData(id);
-    ztoolkit.log(graphData)
-    const totalNum = Object.keys(graphData.nodes).length  
-    this.popupWin.changeLine({ text: `[1/${totalNum}] Indexing`, progress: 1, type: "default"})
+    const graphData = await buildGraphData(id, popupWin)
+    if (!graphData) { return }
+    const totalNum = Object.keys(graphData.nodes).length
+    popupWin.changeLine({ text: `[1/${totalNum}] Indexing`, progress: 1, type: "default" })
     let search: any = {}
     for (let paperID in graphData.nodes) {
       search[paperID] = this.views.utils.searchItem(this.paper2Info(graphData.nodes[paperID]))
@@ -1032,15 +924,12 @@ export default class ConnectedPapers {
       try {
         localItem = await search[paperID]
       } catch { }
-      this.popupWin.changeLine({ text: `[${i}/${totalNum}] Indexing`, progress: 100 * i / totalNum })
+      popupWin.changeLine({ text: `[${i}/${totalNum}] Indexing`, progress: 100 * i / totalNum })
       graphData.nodes[paperID]._itemID = localItem?.id
     }
     ztoolkit.log(graphData)
-    this.popupWin.changeHeadline("[Done] Connected Papers")
-    this.popupWin.changeLine({ text: `[${totalNum}/${totalNum}] Indexing`, type: "success" })
-    this.popupWin.startCloseTimer(3000)
-    this.popupWin = undefined
-    // this.cache[cacheKey] = graphData
+    popupWin.changeLine({ text: `[${totalNum}/${totalNum}] Indexing`, type: "success" })
+    popupWin.startCloseTimer(3000)
     return graphData
   }
 
@@ -1054,7 +943,7 @@ export default class ConnectedPapers {
         width: "100%",
         minHeight: `${minHeight}px`,
         height: Zotero.Prefs.get(`${config.addonRef}.graphView.height`) as string,
-        display: Zotero.Prefs.get(`${config.addonRef}.graphView.enable`) ? "" : "none",
+        display: "none",
       }
     })
     this.graphContainer = graphContainer
@@ -1068,7 +957,6 @@ export default class ConnectedPapers {
     frame.style.backgroundColor = "#ffffff"
     graphContainer.append(frame)
     mainNode.append(graphContainer)
-
     const resizer = ztoolkit.UI.createElement(document, "div", {
       styles: {
         height: `1px`,
@@ -1105,7 +993,6 @@ export default class ConnectedPapers {
       document.removeEventListener('mouseup', mouseUpHandler);
     };
     resizer.addEventListener('mousedown', mouseDownHandler);
-    
   }
 
   private paper2Info(paper: any) {
@@ -1125,7 +1012,7 @@ export default class ConnectedPapers {
 
   private async refresh(items: Zotero.Item[]) {
     ztoolkit.log("refresh", items)
-    const graphData = await this.buildGraphData(items)
+    const graphData = await this.buildGraphData(items) as  Graph
     ztoolkit.log(graphData)
     const app = (this.frame.contentWindow! as any).app as any
     app.graphdata = graphData;
