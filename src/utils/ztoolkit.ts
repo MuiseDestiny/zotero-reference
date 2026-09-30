@@ -1,4 +1,4 @@
-import ZoteroToolkit from "zotero-plugin-toolkit";
+import { ZoteroToolkit } from "zotero-plugin-toolkit/ztoolkit";
 import { config } from "../../package.json";
 
 export { createZToolkit };
@@ -26,9 +26,5 @@ function initZToolkit(_ztoolkit: ReturnType<typeof createZToolkit>) {
   _ztoolkit.ProgressWindow.setIconURI(
     "default",
     `chrome://${config.addonRef}/content/icons/favicon.png`,
-  );
-  _ztoolkit.ProgressWindow.setIconURI(
-    "connectedpapers",
-    `chrome://${config.addonRef}/content/icons/connectedpapers.png`
   );
 }

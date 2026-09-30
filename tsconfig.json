@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
-    "experimentalDecorators": true,
-    "module": "commonjs",
-    "target": "ES2016",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM"],
     "resolveJsonModule": true,
     "skipLibCheck": true,
-    "strict": true
+    "strict": false,
+    "noEmit": true,
+    "types": ["zotero-types"]
   },
-  "include": ["src", "typing", "node_modules/zotero-types"],
-  "exclude": ["builds", "addon"]
+  "include": ["src", "typing", "test"]
 }

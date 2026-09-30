@@ -1,8 +1,6 @@
 import Utils from "./utils"
-var xml2js = require('xml2js')
 import { config } from "../../package.json";
 import Requests from "./requests";
-import { inflate } from "zlib";
 
 /**
  * 放弃知网，默认PDF处理完全可以解析出中文参考文献
@@ -244,7 +242,7 @@ class API {
           `https://www.semanticscholar.org/paper/${response.paperId}`,
           "text/html"
         )
-        let parser = ztoolkit.getDOMParser()
+        let parser = new (Zotero.getMainWindow() as any).DOMParser()
         let doc = parser.parseFromString(text, "text/html")
         const abstract = doc.head.querySelector("meta[name=description]")?.getAttribute("content")
         if (!abstract?.startsWith("Semantic Scholar")) {
@@ -382,7 +380,7 @@ class API {
       "application/xhtml+xml"
     )
     if (response) {
-      let data = (await xml2js.parseStringPromise(response))?.feed?.entry[0]
+      let data = parseArXivEntry(response)
       if (data) {
         data.arXiv = arXiv
         return this.Info.arXiv(data)
@@ -458,50 +456,7 @@ class API {
     }
   }
 
-  // For CNKI
-  async _getCNKIURL(title: string, author: string) {
-    ztoolkit.log("getCNKIURL", title, author)
-    let cnkiURL
-    let oldFunc = Zotero.Jasminum.Scrape.getItemFromSearch
-    ztoolkit.patch(
-      Zotero.Jasminum.Scrape,
-      "createPostData",
-      config.addonRef,
-      (original) => 
-        (arg: any) => {
-          let text = original.call(Zotero.Jasminum.Scrape, arg)
-          ztoolkit.log(text)
-          text = escape(unescape(text)
-            .replace(/SCDB/g, "CFLS")
-          )
-          ztoolkit.log(text)
-          return text
-        }
-    )
-    Zotero.Jasminum.Scrape.getItemFromSearch = function (htmlString: string) {
-      try {
-        let res = htmlString.match(/href='(.+FileName=.+?&DbName=.+?)'/i) as any[]
-        if (res.length) {
-          return res[1]
-        }
-      } catch {
-        return
-      }
-    }.bind(Zotero.Jasminum);
-    cnkiURL = await Zotero.Jasminum.Scrape.search({ keyword: title })
-    Zotero.Jasminum.Scrape.getItemFromSearch = oldFunc.bind(Zotero.Jasminum);
-    if (!cnkiURL) {
-      ztoolkit.log("cnkiURL", cnkiURL)
-      return
-    }
-    let args = this.utils.parseCNKIURL(cnkiURL)
-    if (args) {
-      cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
-      return cnkiURL
-    }
-  }
-
-  async getCNKIURL(keywords: string, slience: boolean = false) {
+  async getCNKIURL(keywords: string, slience: boolean = false): Promise<string | undefined> {
     if (!slience) {
       (new ztoolkit.ProgressWindow("[Pending] API", {closeOtherProgressWindows: true}))
         .createLine({ text: `Get CNKI URL`, type: "default" })
@@ -532,11 +487,11 @@ class API {
     )
     try {
       if (res) {
-        let cnkiURL = res.responseText.match(/href='(.+FileName=.+?&DbName=.+?)'/i)
-        if (cnkiURL) {
-          let args = this.utils.parseCNKIURL(cnkiURL[1])
+        const match = res.responseText.match(/href='(.+FileName=.+?&DbName=.+?)'/i)
+        if (match) {
+          let args = this.utils.parseCNKIURL(match[1])
           if (args) {
-            cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
+            const cnkiURL = `https://kns.cnki.net/kcms/detail/detail.aspx?FileName=${args.fileName}&DbName=${args.dbName}&DbCode=${args.dbCode}`
             return cnkiURL
           }
         }
@@ -563,7 +518,7 @@ class API {
 
     let htmlString = await this.requests.get(url, "text")
     ztoolkit.log(url, htmlString)
-    const parser = ztoolkit.getDOMParser();
+    const parser = new (Zotero.getMainWindow() as any).DOMParser();
     let doc = parser.parseFromString(htmlString, "text/html").childNodes[1] as any
     let aTags = doc.querySelectorAll(".top-tip span a")
     let info: ItemInfo = {
@@ -729,3 +684,30 @@ class API {
 
 export default  API
 
+
+/**
+ * First <entry> of an arXiv Atom feed in the shape xml2js produced
+ * (arrays per child name, attributes under "$", text under "_"), so the
+ * Info.arXiv mapper stays unchanged. DOMParser instead of xml2js: the latter
+ * needs Node's stream/events/timers, which the plugin sandbox lacks.
+ */
+function parseArXivEntry(xml: string) {
+  const doc = new (Zotero.getMainWindow() as any).DOMParser().parseFromString(xml, "application/xml")
+  const entry = doc.getElementsByTagNameNS("*", "entry")[0]
+  if (!entry) { return }
+  const data: any = {}
+  for (const el of Array.from(entry.children) as Element[]) {
+    const value: any = { _: el.textContent }
+    if (el.attributes.length) {
+      value.$ = {}
+      for (const a of Array.from(el.attributes)) { value.$[a.name] = a.value }
+    }
+    // Simple elements (title, summary, ...) are plain strings in xml2js, nested ones objects.
+    if (el.children.length) {
+      for (const c of Array.from(el.children)) { (value[c.localName] ??= []).push(c.textContent) }
+    }
+    const node = el.children.length || el.attributes.length ? value : el.textContent;
+    (data[el.tagName] ??= []).push(node)
+  }
+  return data
+}

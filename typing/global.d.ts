@@ -1,8 +1,8 @@
 declare const _globalThis: {
   [key: string]: any;
   Zotero: _ZoteroTypes.Zotero;
-  ZoteroPane: _ZoteroTypes.ZoteroPane;
-  Zotero_Tabs: typeof Zotero_Tabs;
+  ZoteroPane: any;
+  Zotero_Tabs: any;
   window: Window;
   document: Document;
   ztoolkit: ZToolkit;
@@ -216,4 +216,15 @@ declare class ConnectedPapersClient {
   }): Promise<GraphResponse>;
   getRemainingUsages(): Promise<number>;
   getFreeAccessPapers(): Promise<PaperId[]>;
+}
+
+// Main window globals, resolved through BasicTool.getGlobal in src/index.ts
+declare const Zotero_Tabs: any;
+declare const ZoteroPane: any;
+
+// Optional integrations of other plugins (Jasminum, Translate for Zotero)
+declare namespace Zotero {
+  let Jasminum: any;
+  let ZoteroPDFTranslate: any;
+  let PDFTranslate: any;
 }

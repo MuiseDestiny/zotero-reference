@@ -1,7 +1,6 @@
 import { config } from "../package.json";
 import { registerPrefsScripts, registerPrefs } from "./modules/prefs";
 import Views from "./modules/views";
-import ConnectedPapers from "./modules/connectedpapers";
 
 async function onStartup() {
   await Promise.all([
@@ -9,39 +8,34 @@ async function onStartup() {
     Zotero.unlockPromise,
     Zotero.uiReadyPromise,
   ]);
-  await onMainWindowLoad(window);
-}
-
-async function onMainWindowLoad(win: Window): Promise<void> {
   registerPrefs();
-  await Promise.all([
-    Zotero.initializationPromise,
-    Zotero.unlockPromise,
-    Zotero.uiReadyPromise,
-  ]);
   const show = ztoolkit.ProgressWindow.prototype.show;
   ztoolkit.ProgressWindow.prototype.show = function () {
     Zotero.ProgressWindowSet.closeAll();
     return show.call(this, ...arguments);
   };
-  // 界面
+  // The item pane section is registered once; Zotero adds it to every main window.
   const views = new Views();
   await views.onInit();
-  Zotero[config.addonInstance].views = views;
-  await new ConnectedPapers(views).init();
+  addon.views = views;
+  const win = Zotero.getMainWindow();
+  if (win) { await onMainWindowLoad(win); }
+}
+
+async function onMainWindowLoad(win: Window): Promise<void> {
+  // Fluent strings of the section header / sidenav
+  (win as any).MozXULElement.insertFTLIfNeeded(`${config.addonRef}-addon.ftl`);
 }
 
 async function onMainWindowUnload(win: Window): Promise<void> {
-  ztoolkit.unregisterAll();
+  win.document.querySelector(`[href="${config.addonRef}-addon.ftl"]`)?.remove();
   addon.data.dialog?.window?.close();
 }
 
 
 function onShutdown(): void {
+  addon.views?.unregister();
   ztoolkit.unregisterAll();
-  document
-    .querySelectorAll("#zotero-reference-show-hide-graph-view")
-    .forEach((e) => e.remove());
   // Remove addon object
   addon.data.alive = false;
   addon.data.dialog?.window?.close();

@@ -17,7 +17,7 @@ export default class Requests {
         responseType: responseType,
         headers,
         credentials: "include"
-      }
+      } as any
     )
     if (res.status == 200) {
       this.cache[k] = res.response

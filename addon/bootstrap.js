@@ -66,7 +66,10 @@ function shutdown({ id, version, resourceURI, rootURI }, reason) {
     .getService(Components.interfaces.nsIStringBundleService)
     .flushBundles();
 
-  Cu.unload(`${rootURI}/chrome/content/scripts/__addonRef__.js`);
+  // Cu.unload is gone in newer Firefox (Zotero 8+); the sandbox is dropped with the addon object anyway
+  if (typeof Cu.unload === "function") {
+    Cu.unload(`${rootURI}/chrome/content/scripts/__addonRef__.js`);
+  }
 
   if (chromeHandle) {
     chromeHandle.destruct();

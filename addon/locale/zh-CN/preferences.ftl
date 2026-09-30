@@ -32,9 +32,8 @@ tipTitleColor = 标题色
 
 
 
-caption-related = 关联
-loadingRelated = 
-  .label = 关联文献面板显示推荐关联文献
+
+
 
 
 caption-link = 链接

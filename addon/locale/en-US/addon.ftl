@@ -6,3 +6,8 @@ relatedbox-search-placeholder =Search References
 
 
 
+
+section-header =
+    .label = References
+section-sidenav =
+    .tooltiptext = References

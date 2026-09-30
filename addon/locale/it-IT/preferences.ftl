@@ -28,9 +28,8 @@ tipBackgroundColor = Colore di sfondo
 tipTitleColor = Colore del titolo
 
 
-caption-related = Correlati
-loadingRelated = 
-  .label = Il pannello dei correlati carica elementi correlati
+
+
 
 
 
