@@ -10,7 +10,8 @@ class Utils {
   public regex = {
     DOI: /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/,
     arXiv: /arXiv[\.:](\d+\.\d+)/,
-    URL: /https?:\/\/[^\s\.]+/
+    // Up to the next space, without trailing punctuation (the old [^\s.]+ stopped at the first dot)
+    URL: /https?:\/\/[^\s]*[^\s.,;)\]]/
   }
   constructor() {
     this.API = new API(this);
