@@ -1,5 +1,8 @@
-**/builds
-node_modules
-package-lock.json
-zotero-cmd.json
-*-ignore.ts
+node_modules/
+build/
+build-e2e/
+dist/
+.test-build/
+e2e/out/
+logs/
+docker/certs/

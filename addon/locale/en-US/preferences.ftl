@@ -28,9 +28,8 @@ tipBackgroundColor = Background Color
 tipTitleColor = Title Color
 
 
-caption-related = Related
-loadingRelated = 
-  .label = Related panel loads recommended related items
+
+
 
 
 

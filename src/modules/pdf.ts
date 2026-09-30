@@ -3,6 +3,18 @@ import Utils from "./utils";
 
 
 /**
+ * pdf.js application of the reader's primary view. `_lastView` is only set once a
+ * view had focus; the iframe content sits behind an Xray wrapper.
+ */
+export function getPDFViewerApplication(reader: any) {
+  const view = reader._internalReader?._lastView || reader._internalReader?._primaryView
+  const win = view?._iframeWindow
+  const app = win?.PDFViewerApplication || win?.wrappedJSObject?.PDFViewerApplication
+  if (!app) { throw new Error("PDF viewer not ready") }
+  return app
+}
+
+/**
  * 解析PDF的参考文献
  */
 class PDF {
@@ -24,7 +36,6 @@ class PDF {
 
   async getReferences(reader: _ZoteroTypes.ReaderInstance, fromCurrentPage: boolean): Promise<ItemInfo[]> {
     let refLines = await this.getRefLines(reader, fromCurrentPage)
-    const maxHeight = (reader._internalReader._lastView as any)._iframeWindow.PDFViewerApplication.pdfViewer._pages[0].viewport.viewBox[3]
     if (refLines.length == 0) {
       new ztoolkit.ProgressWindow("[Fail] PDF", {closeOtherProgressWindows: true})
         .createLine({
@@ -288,8 +299,10 @@ class PDF {
     fromCurrentPage: boolean,
     fullText: boolean = false
   ) {
-    const PDFViewerApplication = (reader._internalReader._lastView as any)._iframeWindow.PDFViewerApplication;
-    await PDFViewerApplication.pdfLoadingTask.promise;
+    const PDFViewerApplication = getPDFViewerApplication(reader);
+    // pdf.js in Zotero 7 drops pdfLoadingTask once loaded: wait for the document instead
+    await PDFViewerApplication.pdfLoadingTask?.promise;
+    while (!PDFViewerApplication.pdfDocument) { await Zotero.Promise.delay(50) }
     await PDFViewerApplication.pdfViewer.pagesPromise;
     let pages = PDFViewerApplication.pdfViewer._pages;
     // skip the pdf with page less than 3

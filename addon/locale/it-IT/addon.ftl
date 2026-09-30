@@ -6,3 +6,8 @@ relatedbox-search-placeholder =Cerca riferimenti
 
 
 
+
+section-header =
+    .label = Bibliografia
+section-sidenav =
+    .tooltiptext = Bibliografia

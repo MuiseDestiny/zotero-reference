@@ -10,15 +10,9 @@ class LocalStorage {
   }
 
   async init(filename: string) {
-    const window = Zotero.getMainWindow();
-    // @ts-ignore
-    const OS = window.OS;
-    if (!(await OS.File.exists(filename))) {
-      const temp = Zotero.getTempDirectory();
-      this.filename = OS.Path.join(temp.path.replace(temp.leafName, ""), `${filename}.json`);
-    } else {
-      this.filename = filename
-    }
+    // <Zotero temp dir>/../<filename>.json; OS.File is gone in newer Firefox, IOUtils/PathUtils work in 7-10
+    const temp = Zotero.getTempDirectory();
+    this.filename = PathUtils.join(PathUtils.parent(temp.path)!, `${filename}.json`);
     try {
       const rawString = await Zotero.File.getContentsAsync(this.filename) as string
       this.cache = JSON.parse(rawString)

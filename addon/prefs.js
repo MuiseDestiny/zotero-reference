@@ -14,7 +14,6 @@ pref("extensions.zotero.__addonRef__.tipBackgroundColor", "#ffffff");
 pref("extensions.zotero.__addonRef__.tipTitleColor", "#2270d9");
 
 
-pref("extensions.zotero.__addonRef__.loadingRelated", true);
 
 pref("extensions.zotero.__addonRef__.clickLink", true);
 pref("extensions.zotero.__addonRef__.clickLink.cmd", "splitHorizontally");
@@ -32,8 +31,6 @@ pref("extensions.zotero.__addonRef__.notInLibarayOpacity", "1");
 pref("extensions.zotero.__addonRef__.CNKI.username", "");
 pref("extensions.zotero.__addonRef__.CNKI.password", "");
 
-pref("extensions.zotero.__addonRef__.graphView.enable", false);
-pref("extensions.zotero.__addonRef__.graphView.height", "400px");
 
 
 

@@ -5,12 +5,13 @@ import PDF from "./pdf";
 class Utils {
   API: API;
   PDF: PDF;
-  private lock?: _ZoteroTypes.PromiseObject;
+  private lock?: any;
   private cache: { [key: string]: any } = {};
   public regex = {
     DOI: /10\.\d{4,9}\/[-\._;\(\)\/:A-z0-9><]+[^\.\]]/,
     arXiv: /arXiv[\.:](\d+\.\d+)/,
-    URL: /https?:\/\/[^\s\.]+/
+    // Up to the next space, without trailing punctuation (the old [^\s.]+ stopped at the first dot)
+    URL: /https?:\/\/[^\s]*[^\s.,;)\]]/
   }
   constructor() {
     this.API = new API(this);
@@ -308,7 +309,7 @@ class Utils {
   public getItemType(item: Zotero.Item) {
     if (!item) { return }
     return Zotero.ItemTypes.getName(
-      item.getField("itemTypeID" as any) as number
+      item.itemTypeID
     )
   }
 
@@ -369,10 +370,12 @@ class Utils {
     }
   }
 
+  /** Parent of the PDF open in the selected reader tab, or the PDF itself when it is top-level. */
   public getItem(): Zotero.Item | undefined {
     let reader = this.getReader()
     if (reader) {
-      return reader._item.parentItem 
+      const attachment = Zotero.Items.get(reader.itemID!) as Zotero.Item
+      return attachment?.parentItem || attachment
     }
   }
 
